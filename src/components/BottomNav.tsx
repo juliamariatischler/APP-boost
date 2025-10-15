@@ -19,14 +19,16 @@ export const BottomNav = () => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
           
+          const isBoost = item.path === "/boost";
+          
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                isActive
+                isBoost
                   ? "text-primary"
-                  : "text-primary/70 hover:text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="h-6 w-6 mb-1" />
