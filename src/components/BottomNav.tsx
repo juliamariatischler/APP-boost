@@ -26,7 +26,7 @@ export const BottomNav = () => {
               className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
                 isActive
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-primary/70 hover:text-primary"
               }`}
             >
               <Icon className="h-6 w-6 mb-1" />
