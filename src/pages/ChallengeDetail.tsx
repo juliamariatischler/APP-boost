@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { ChallengeVariants } from "@/components/ChallengeVariants";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
@@ -86,6 +87,12 @@ const ChallengeDetail = () => {
           <p className="text-lg text-muted-foreground mb-8 text-center">
             {challenge.description}
           </p>
+
+          {id === "daily" && (
+            <div className="mb-8">
+              <ChallengeVariants />
+            </div>
+          )}
 
           <Button
             onClick={handleComplete}
