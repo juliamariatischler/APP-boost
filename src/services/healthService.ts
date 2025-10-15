@@ -1,31 +1,26 @@
 import { Capacitor } from '@capacitor/core';
+import { Health } from '@awesome-cordova-plugins/health';
 
 export interface StepData {
   steps: number;
   date: Date;
 }
 
-// Mock implementation for web development - real implementation needs native build
 export class HealthService {
   static async requestAuthorization(): Promise<boolean> {
     if (!Capacitor.isNativePlatform()) {
       console.log('Health Kit ist nur auf nativen Plattformen verfügbar');
-      return false;
+      return true; // Return true for web to test UI
     }
     
     try {
-      // This will work when app is built as native iOS app
-      // @ts-ignore - Health plugin will be available in native build
-      if (window.plugins && window.plugins.healthkit) {
-        // @ts-ignore
-        return new Promise((resolve) => {
-          // @ts-ignore
-          window.plugins.healthkit.requestAuthorization({
-            readTypes: ['HKQuantityTypeIdentifierStepCount']
-          }, () => resolve(true), () => resolve(false));
-        });
-      }
-      return false;
+      await Health.requestAuthorization([
+        {
+          read: ['steps'],
+          write: []
+        }
+      ]);
+      return true;
     } catch (error) {
       console.error('Health authorization error:', error);
       return false;
@@ -34,29 +29,30 @@ export class HealthService {
 
   static async getTodaySteps(): Promise<number> {
     if (!Capacitor.isNativePlatform()) {
-      // Mock data for web development
-      return Math.floor(Math.random() * 5000) + 1000;
+      // Consistent test data for web development
+      console.log('Web-Modus: Zeige Test-Daten. Für echte Daten auf iPhone testen.');
+      return 2456; // Consistent test value
     }
 
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const now = new Date();
       
-      // @ts-ignore - Health plugin will be available in native build
-      if (window.plugins && window.plugins.healthkit) {
-        return new Promise((resolve) => {
-          // @ts-ignore
-          window.plugins.healthkit.querySampleType({
-            sampleType: 'HKQuantityTypeIdentifierStepCount',
-            startDate: today,
-            endDate: new Date(),
-            unit: 'count'
-          }, (data: any) => {
-            const totalSteps = data.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
-            resolve(totalSteps);
-          }, () => resolve(0));
-        });
+      const result = await Health.query({
+        startDate: today,
+        endDate: now,
+        dataType: 'steps',
+        limit: 1000
+      });
+
+      if (result && Array.isArray(result)) {
+        const totalSteps = result.reduce((sum: number, item: any) => {
+          return sum + (item.value || 0);
+        }, 0);
+        return Math.floor(totalSteps);
       }
+      
       return 0;
     } catch (error) {
       console.error('Error fetching steps:', error);
@@ -66,13 +62,12 @@ export class HealthService {
 
   static async isAvailable(): Promise<boolean> {
     if (!Capacitor.isNativePlatform()) {
-      // Return true for web to allow testing the UI
-      return true;
+      return true; // Return true for web to allow testing the UI
     }
     
     try {
-      // @ts-ignore
-      return !!(window.plugins && window.plugins.healthkit);
+      const available = await Health.isAvailable();
+      return available;
     } catch (error) {
       console.error('Health availability check error:', error);
       return false;
