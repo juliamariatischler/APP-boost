@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Zap } from "lucide-react";
 import boostLogo from "@/assets/boost-logo.png";
 import { ChallengeScroll } from "@/components/ChallengeScroll";
 import { ChallengeVariants } from "@/components/ChallengeVariants";
@@ -31,9 +32,15 @@ const Dashboard = () => {
       {/* Header */}
       <div className="bg-card shadow-sm p-4 mb-6">
         <div className="max-w-screen-xl mx-auto flex justify-between items-center">
-          <div>
-            <p className="text-sm text-muted-foreground">{userData.school}</p>
-            <p className="font-bold text-foreground text-lg">{userData.name}</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">{userData.school}</p>
+              <p className="font-bold text-foreground text-lg">{userData.name}</p>
+            </div>
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+              <Zap className="h-5 w-5 text-primary fill-primary" />
+              <span className="font-bold text-primary">125</span>
+            </div>
           </div>
           <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
         </div>
