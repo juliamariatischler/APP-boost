@@ -15,7 +15,7 @@ interface Challenge {
 
 const challenges: Challenge[] = [
   { id: "daily", title: "Tägliche Challenge", image: dailyImg, progress: 75 },
-  { id: "weekly", title: "Wochenaufgaben Challenge", image: weeklyImg, progress: 40 },
+  { id: "weekly", title: "Wochenchallenge", image: weeklyImg, progress: 40 },
   { id: "friend", title: "Friendquest Challenge", image: friendImg, progress: 100 },
   { id: "tryit", title: "Try It Challenge", image: tryitImg, progress: 0 },
 ];
