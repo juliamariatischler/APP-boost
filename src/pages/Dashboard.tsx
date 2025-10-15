@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import boostLogo from "@/assets/boost-logo.png";
 import { ChallengeScroll } from "@/components/ChallengeScroll";
-import { ChallengeVariants } from "@/components/ChallengeVariants";
 import { BottomNav } from "@/components/BottomNav";
 
 interface UserData {
@@ -53,8 +52,6 @@ const Dashboard = () => {
         </h2>
         
         <ChallengeScroll />
-        
-        <ChallengeVariants />
       </div>
 
       <BottomNav />
