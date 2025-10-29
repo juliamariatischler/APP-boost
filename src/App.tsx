@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ChallengeDetail from "./pages/ChallengeDetail";
+import PushUpCounter from "./pages/PushUpCounter";
 import Rewards from "./pages/Rewards";
 import Activity from "./pages/Activity";
 import Boost from "./pages/Boost";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/challenge/:id" element={<ChallengeDetail />} />
+          <Route path="/pushup-counter" element={<PushUpCounter />} />
           <Route path="/rewards" element={<Rewards />} />
           <Route path="/activity" element={<Activity />} />
           <Route path="/boost" element={<Boost />} />

@@ -4,6 +4,7 @@ import { CheckCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
+import { useNavigate } from "react-router-dom";
 
 const variants = [
   { id: 1, title: "Variante 1", description: "Mind. 3000 Schritte am Tag", requiresSteps: true },
@@ -13,6 +14,7 @@ const variants = [
 ];
 
 export const ChallengeVariants = () => {
+  const navigate = useNavigate();
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [currentSteps, setCurrentSteps] = useState<number>(0);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
@@ -58,6 +60,12 @@ export const ChallengeVariants = () => {
     
     if (variant?.requiresSteps && currentSteps < 3000) {
       toast.error(`Du hast erst ${currentSteps} Schritte. Ziel: 3000 Schritte!`);
+      return;
+    }
+    
+    // Navigate to push-up counter for Variante 2
+    if (id === 2) {
+      navigate("/pushup-counter");
       return;
     }
     
