@@ -63,12 +63,6 @@ export const ChallengeVariants = () => {
       return;
     }
     
-    // Navigate to push-up counter for Variante 2
-    if (id === 2) {
-      navigate("/pushup-counter");
-      return;
-    }
-    
     toast.success(`${variant?.title} ausgewählt!`);
   };
 
