@@ -58,6 +58,7 @@ const ChallengeDetail = () => {
     const squatsResult = localStorage.getItem('squats_result');
     const situpsResult = localStorage.getItem('situps_result');
     const pushupsResult = localStorage.getItem('pushups_result');
+    const planksResult = localStorage.getItem('planks_result');
     
     const newResults: Record<string, number> = {};
     
@@ -79,6 +80,11 @@ const ChallengeDetail = () => {
     if (pushupsResult) {
       newResults['Push-ups'] = parseInt(pushupsResult, 10);
       localStorage.removeItem('pushups_result');
+    }
+    
+    if (planksResult) {
+      newResults['Planks'] = parseInt(planksResult, 10);
+      localStorage.removeItem('planks_result');
     }
     
     if (Object.keys(newResults).length > 0) {
@@ -115,6 +121,11 @@ const ChallengeDetail = () => {
     
     if (exerciseName === "Push-ups") {
       window.location.href = '/pushup-counter.html';
+      return;
+    }
+    
+    if (exerciseName === "Planks") {
+      window.location.href = '/plank-timer.html';
       return;
     }
     
