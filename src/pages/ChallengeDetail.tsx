@@ -1,14 +1,28 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { ChallengeVariants } from "@/components/ChallengeVariants";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import boostLogo from "@/assets/boost-logo.png";
+
+type Exercise = {
+  name: string;
+  goal: number;
+};
+
+const exercises: Exercise[] = [
+  { name: "Push-ups", goal: 20 },
+  { name: "Squats", goal: 30 },
+  { name: "Planks", goal: 60 },
+  { name: "Sit-ups", goal: 25 },
+  { name: "Jumping Jacks", goal: 40 },
+];
 
 const challengeData: Record<string, { title: string; image: string; description: string }> = {
   daily: {
@@ -36,6 +50,7 @@ const challengeData: Record<string, { title: string; image: string; description:
 const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [results, setResults] = useState<Record<string, number>>({});
 
   const challenge = id ? challengeData[id] : null;
 
@@ -47,9 +62,25 @@ const ChallengeDetail = () => {
     );
   }
 
-  const handleComplete = () => {
-    toast.success("🎉 Challenge abgeschlossen! Weiter so!");
-    navigate("/dashboard");
+  const handleExerciseClick = (exerciseName: string) => {
+    const currentResult = results[exerciseName] || 0;
+    const exercise = exercises.find(e => e.name === exerciseName);
+    
+    if (!exercise) return;
+    
+    // Simulate recording exercise - increment by 1
+    const newResult = currentResult + 1;
+    setResults({ ...results, [exerciseName]: newResult });
+    
+    if (newResult >= exercise.goal) {
+      toast.success(`🎉 ${exerciseName} Ziel erreicht!`);
+    }
+  };
+
+  const isGoalReached = (exerciseName: string) => {
+    const exercise = exercises.find(e => e.name === exerciseName);
+    if (!exercise) return false;
+    return (results[exerciseName] || 0) >= exercise.goal;
   };
 
   return (
@@ -89,19 +120,56 @@ const ChallengeDetail = () => {
           </p>
 
           {id === "daily" && (
-            <div className="mb-8">
-              <ChallengeVariants />
+            <div className="space-y-6">
+              {/* Exercise Buttons */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {exercises.map((exercise) => (
+                  <Button
+                    key={exercise.name}
+                    onClick={() => handleExerciseClick(exercise.name)}
+                    className="h-20 text-sm font-medium"
+                    variant={isGoalReached(exercise.name) ? "default" : "outline"}
+                  >
+                    {exercise.name}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Results Table */}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Übung</TableHead>
+                      <TableHead>Goal</TableHead>
+                      <TableHead>Ergebnis</TableHead>
+                      <TableHead className="text-center">Erreicht</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {exercises.map((exercise) => {
+                      const result = results[exercise.name] || 0;
+                      const reached = isGoalReached(exercise.name);
+                      
+                      return (
+                        <TableRow key={exercise.name}>
+                          <TableCell className="font-medium">{exercise.name}</TableCell>
+                          <TableCell>{exercise.goal}</TableCell>
+                          <TableCell>{result}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <span>{reached ? "Ja" : "Nein"}</span>
+                              {reached && <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500" />}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
-
-          <Button
-            onClick={handleComplete}
-            className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all"
-            size="lg"
-          >
-            <CheckCircle className="mr-2 h-5 w-5" />
-            Challenge abschließen
-          </Button>
         </Card>
       </div>
     </div>
