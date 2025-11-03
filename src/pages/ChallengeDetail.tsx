@@ -63,6 +63,12 @@ const ChallengeDetail = () => {
   }
 
   const handleExerciseClick = (exerciseName: string) => {
+    // Navigate to Jumping Jacks counter
+    if (exerciseName === "Jumping Jacks") {
+      navigate("/jumping-jacks-counter");
+      return;
+    }
+    
     const currentResult = results[exerciseName] || 0;
     const exercise = exercises.find(e => e.name === exerciseName);
     
