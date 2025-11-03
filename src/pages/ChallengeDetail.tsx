@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
@@ -51,16 +52,54 @@ const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [results, setResults] = useState<Record<string, number>>({});
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Load exercise results from localStorage on mount
   useEffect(() => {
+    checkAuthAndLoadResults();
+  }, []);
+
+  const checkAuthAndLoadResults = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+
+    setUserId(session.user.id);
+    await loadTodayResults(session.user.id);
+    checkLocalStorageResults();
+  };
+
+  const loadTodayResults = async (uid: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data } = await supabase
+      .from("daily_results")
+      .select("*")
+      .eq("user_id", uid)
+      .eq("date", today)
+      .maybeSingle();
+
+    if (data) {
+      setResults({
+        "Push-ups": data.push_ups || 0,
+        "Squats": data.squats || 0,
+        "Planks": data.planks || 0,
+        "Sit-ups": data.sit_ups || 0,
+        "Jumping Jacks": data.jumping_jacks || 0,
+      });
+    }
+  };
+
+  const checkLocalStorageResults = () => {
+    const newResults: Record<string, number> = {};
+    
     const jumpingJacksResult = localStorage.getItem('jumpingjacks_result');
     const squatsResult = localStorage.getItem('squats_result');
     const situpsResult = localStorage.getItem('situps_result');
     const pushupsResult = localStorage.getItem('pushups_result');
     const planksResult = localStorage.getItem('planks_result');
-    
-    const newResults: Record<string, number> = {};
     
     if (jumpingJacksResult) {
       newResults['Jumping Jacks'] = parseInt(jumpingJacksResult, 10);
@@ -88,9 +127,40 @@ const ChallengeDetail = () => {
     }
     
     if (Object.keys(newResults).length > 0) {
-      setResults(prev => ({ ...prev, ...newResults }));
+      setResults(prev => {
+        const updated = { ...prev, ...newResults };
+        saveTodayResults(updated);
+        return updated;
+      });
     }
-  }, []);
+  };
+
+  const saveTodayResults = async (currentResults: Record<string, number>) => {
+    if (!userId) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { error } = await supabase
+      .from("daily_results")
+      .upsert({
+        user_id: userId,
+        date: today,
+        push_ups: currentResults["Push-ups"] || 0,
+        squats: currentResults["Squats"] || 0,
+        planks: currentResults["Planks"] || 0,
+        sit_ups: currentResults["Sit-ups"] || 0,
+        jumping_jacks: currentResults["Jumping Jacks"] || 0,
+      }, {
+        onConflict: "user_id,date"
+      });
+
+    if (error) {
+      console.error("Error saving results:", error);
+      toast.error("Fehler beim Speichern der Ergebnisse");
+    } else {
+      toast.success("Ergebnisse gespeichert!");
+    }
+  };
 
   const challenge = id ? challengeData[id] : null;
 
@@ -127,19 +197,6 @@ const ChallengeDetail = () => {
     if (exerciseName === "Planks") {
       window.location.href = '/plank-timer.html';
       return;
-    }
-    
-    const currentResult = results[exerciseName] || 0;
-    const exercise = exercises.find(e => e.name === exerciseName);
-    
-    if (!exercise) return;
-    
-    // Simulate recording exercise - increment by 1
-    const newResult = currentResult + 1;
-    setResults({ ...results, [exerciseName]: newResult });
-    
-    if (newResult >= exercise.goal) {
-      toast.success(`🎉 ${exerciseName} Ziel erreicht!`);
     }
   };
 
