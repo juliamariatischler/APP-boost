@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -52,6 +52,15 @@ const ChallengeDetail = () => {
   const navigate = useNavigate();
   const [results, setResults] = useState<Record<string, number>>({});
 
+  // Load Jumping Jacks result from localStorage on mount
+  useEffect(() => {
+    const savedResult = localStorage.getItem('jumpingjacks_result');
+    if (savedResult) {
+      setResults(prev => ({ ...prev, 'Jumping Jacks': parseInt(savedResult, 10) }));
+      localStorage.removeItem('jumpingjacks_result'); // Clear after reading
+    }
+  }, []);
+
   const challenge = id ? challengeData[id] : null;
 
   if (!challenge) {
@@ -63,9 +72,9 @@ const ChallengeDetail = () => {
   }
 
   const handleExerciseClick = (exerciseName: string) => {
-    // Navigate to Jumping Jacks counter
+    // Navigate to standalone HTML page for Jumping Jacks
     if (exerciseName === "Jumping Jacks") {
-      navigate("/jumping-jacks-counter");
+      window.location.href = '/jumping-jacks-counter.html';
       return;
     }
     
