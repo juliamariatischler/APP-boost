@@ -52,12 +52,25 @@ const ChallengeDetail = () => {
   const navigate = useNavigate();
   const [results, setResults] = useState<Record<string, number>>({});
 
-  // Load Jumping Jacks result from localStorage on mount
+  // Load exercise results from localStorage on mount
   useEffect(() => {
-    const savedResult = localStorage.getItem('jumpingjacks_result');
-    if (savedResult) {
-      setResults(prev => ({ ...prev, 'Jumping Jacks': parseInt(savedResult, 10) }));
-      localStorage.removeItem('jumpingjacks_result'); // Clear after reading
+    const jumpingJacksResult = localStorage.getItem('jumpingjacks_result');
+    const squatsResult = localStorage.getItem('squats_result');
+    
+    const newResults: Record<string, number> = {};
+    
+    if (jumpingJacksResult) {
+      newResults['Jumping Jacks'] = parseInt(jumpingJacksResult, 10);
+      localStorage.removeItem('jumpingjacks_result');
+    }
+    
+    if (squatsResult) {
+      newResults['Squats'] = parseInt(squatsResult, 10);
+      localStorage.removeItem('squats_result');
+    }
+    
+    if (Object.keys(newResults).length > 0) {
+      setResults(prev => ({ ...prev, ...newResults }));
     }
   }, []);
 
@@ -72,9 +85,14 @@ const ChallengeDetail = () => {
   }
 
   const handleExerciseClick = (exerciseName: string) => {
-    // Navigate to standalone HTML page for Jumping Jacks
+    // Navigate to standalone HTML pages for AI-powered exercises
     if (exerciseName === "Jumping Jacks") {
       window.location.href = '/jumping-jacks-counter.html';
+      return;
+    }
+    
+    if (exerciseName === "Squats") {
+      window.location.href = '/squat-counter.html';
       return;
     }
     
