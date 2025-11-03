@@ -56,6 +56,7 @@ const ChallengeDetail = () => {
   useEffect(() => {
     const jumpingJacksResult = localStorage.getItem('jumpingjacks_result');
     const squatsResult = localStorage.getItem('squats_result');
+    const situpsResult = localStorage.getItem('situps_result');
     
     const newResults: Record<string, number> = {};
     
@@ -67,6 +68,11 @@ const ChallengeDetail = () => {
     if (squatsResult) {
       newResults['Squats'] = parseInt(squatsResult, 10);
       localStorage.removeItem('squats_result');
+    }
+    
+    if (situpsResult) {
+      newResults['Sit-ups'] = parseInt(situpsResult, 10);
+      localStorage.removeItem('situps_result');
     }
     
     if (Object.keys(newResults).length > 0) {
@@ -93,6 +99,11 @@ const ChallengeDetail = () => {
     
     if (exerciseName === "Squats") {
       window.location.href = '/squat-counter.html';
+      return;
+    }
+    
+    if (exerciseName === "Sit-ups") {
+      window.location.href = '/situp-counter.html';
       return;
     }
     
