@@ -1,8 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChallengeVariants } from "./ChallengeVariants";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
@@ -24,18 +22,11 @@ const challenges: Challenge[] = [
 
 export const ChallengeScroll = () => {
   const navigate = useNavigate();
-  const [showVariants, setShowVariants] = useState(true);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollLeft = e.currentTarget.scrollLeft;
-    setShowVariants(scrollLeft < 50);
-  };
 
   return (
     <div className="mb-6">
       <div 
         className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
-        onScroll={handleScroll}
       >
         {challenges.map((challenge) => (
           <div
@@ -67,8 +58,6 @@ export const ChallengeScroll = () => {
           </div>
         ))}
       </div>
-      
-      {showVariants && <ChallengeVariants />}
     </div>
   );
 };
