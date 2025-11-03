@@ -57,6 +57,7 @@ const ChallengeDetail = () => {
     const jumpingJacksResult = localStorage.getItem('jumpingjacks_result');
     const squatsResult = localStorage.getItem('squats_result');
     const situpsResult = localStorage.getItem('situps_result');
+    const pushupsResult = localStorage.getItem('pushups_result');
     
     const newResults: Record<string, number> = {};
     
@@ -73,6 +74,11 @@ const ChallengeDetail = () => {
     if (situpsResult) {
       newResults['Sit-ups'] = parseInt(situpsResult, 10);
       localStorage.removeItem('situps_result');
+    }
+    
+    if (pushupsResult) {
+      newResults['Push-ups'] = parseInt(pushupsResult, 10);
+      localStorage.removeItem('pushups_result');
     }
     
     if (Object.keys(newResults).length > 0) {
@@ -104,6 +110,11 @@ const ChallengeDetail = () => {
     
     if (exerciseName === "Sit-ups") {
       window.location.href = '/situp-counter.html';
+      return;
+    }
+    
+    if (exerciseName === "Push-ups") {
+      window.location.href = '/pushup-counter.html';
       return;
     }
     
