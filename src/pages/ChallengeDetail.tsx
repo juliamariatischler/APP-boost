@@ -142,8 +142,9 @@ const ChallengeDetail = () => {
                     <TableRow>
                       <TableHead>Übung</TableHead>
                       <TableHead>Goal</TableHead>
-                      <TableHead>Ergebnis</TableHead>
+                      <TableHead className="w-20">Ergebnis</TableHead>
                       <TableHead className="text-center">Erreicht</TableHead>
+                      <TableHead className="w-16 text-center"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -155,12 +156,12 @@ const ChallengeDetail = () => {
                         <TableRow key={exercise.name}>
                           <TableCell className="font-medium">{exercise.name}</TableCell>
                           <TableCell>{exercise.goal}</TableCell>
-                          <TableCell>{result}</TableCell>
+                          <TableCell className="w-20">{result}</TableCell>
                           <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <span>{reached ? "Ja" : "Nein"}</span>
-                              {reached && <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500" />}
-                            </div>
+                            {reached ? "Ja" : "Nein"}
+                          </TableCell>
+                          <TableCell className="w-16 text-center">
+                            {reached && <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500 mx-auto" />}
                           </TableCell>
                         </TableRow>
                       );
