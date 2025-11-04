@@ -18,6 +18,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     checkAuthAndLoadProfile();
@@ -30,6 +31,8 @@ const Dashboard = () => {
       navigate("/auth");
       return;
     }
+
+    setUserId(session.user.id);
 
     // Load profile
     const { data: profileData } = await supabase
@@ -97,7 +100,7 @@ const Dashboard = () => {
           Deine Challenges
         </h2>
         
-        <ChallengeScroll />
+        {userId && <ChallengeScroll userId={userId} />}
       </div>
 
       <BottomNav />
