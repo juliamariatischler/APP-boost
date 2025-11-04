@@ -60,20 +60,34 @@ const Auth = () => {
       // Validate input
       const validatedData = loginSchema.parse(loginData);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: validatedData.email,
         password: validatedData.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific auth errors
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("E-Mail oder Passwort falsch");
+        } else if (error.message.includes("Email not confirmed")) {
+          toast.error("Bitte bestätige deine E-Mail-Adresse");
+        } else {
+          toast.error("Login fehlgeschlagen: " + error.message);
+        }
+        return;
+      }
 
-      toast.success("Erfolgreich angemeldet!");
-      navigate("/dashboard");
+      if (data.session) {
+        toast.success("Erfolgreich angemeldet!");
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error("Eingabefehler: " + error.errors[0].message);
+      } else if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
+        toast.error("Netzwerkfehler. Bitte überprüfe deine Internetverbindung und versuche es erneut.");
       } else {
-        toast.error("Login fehlgeschlagen: " + error.message);
+        toast.error("Ein Fehler ist aufgetreten. Bitte versuche es später erneut.");
       }
     } finally {
       setLoading(false);
@@ -88,7 +102,7 @@ const Auth = () => {
       // Validate input
       const validatedData = signupSchema.parse(signupData);
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
         options: {
@@ -101,15 +115,34 @@ const Auth = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific auth errors
+        if (error.message.includes("User already registered")) {
+          toast.error("Ein Konto mit dieser E-Mail existiert bereits. Bitte melde dich an.");
+        } else if (error.message.includes("Password should be at least")) {
+          toast.error("Das Passwort muss mindestens 6 Zeichen haben");
+        } else {
+          toast.error("Registrierung fehlgeschlagen: " + error.message);
+        }
+        return;
+      }
 
-      toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
-      navigate("/dashboard");
+      if (data.session) {
+        toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
+        navigate("/dashboard");
+      } else if (data.user) {
+        // User created but needs email confirmation
+        toast.success("Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach.");
+        // Auto-confirm is enabled, so this shouldn't happen, but handle it gracefully
+        setTimeout(() => navigate("/dashboard"), 2000);
+      }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error("Eingabefehler: " + error.errors[0].message);
+      } else if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
+        toast.error("Netzwerkfehler. Bitte überprüfe deine Internetverbindung und versuche es erneut.");
       } else {
-        toast.error("Registrierung fehlgeschlagen: " + error.message);
+        toast.error("Ein Fehler ist aufgetreten. Bitte versuche es später erneut.");
       }
     } finally {
       setLoading(false);
