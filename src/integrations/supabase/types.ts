@@ -66,6 +66,7 @@ export type Database = {
           class: string
           created_at: string
           id: string
+          points: number
           school: string
           updated_at: string
           username: string
@@ -74,6 +75,7 @@ export type Database = {
           class: string
           created_at?: string
           id: string
+          points?: number
           school: string
           updated_at?: string
           username: string
@@ -82,6 +84,7 @@ export type Database = {
           class?: string
           created_at?: string
           id?: string
+          points?: number
           school?: string
           updated_at?: string
           username?: string

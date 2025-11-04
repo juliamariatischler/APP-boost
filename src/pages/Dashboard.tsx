@@ -12,6 +12,7 @@ interface Profile {
   username: string;
   school: string;
   class: string;
+  points: number;
 }
 
 const Dashboard = () => {
@@ -37,7 +38,7 @@ const Dashboard = () => {
     // Load profile
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("username, school, class")
+      .select("username, school, class, points")
       .eq("id", session.user.id)
       .single();
 
@@ -76,7 +77,7 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
               <Zap className="h-5 w-5 text-primary fill-primary" />
-              <span className="font-bold text-primary">125</span>
+              <span className="font-bold text-primary">{profile.points}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
