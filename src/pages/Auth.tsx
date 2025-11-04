@@ -9,6 +9,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
 import { Loader2 } from "lucide-react";
+import { z } from "zod";
+
+// Input validation schemas
+const loginSchema = z.object({
+  email: z.string().trim().email("Ungültige E-Mail-Adresse").max(255, "E-Mail zu lang"),
+  password: z.string().min(1, "Passwort erforderlich")
+});
+
+const signupSchema = z.object({
+  username: z.string()
+    .trim()
+    .min(2, "Benutzername muss mindestens 2 Zeichen haben")
+    .max(50, "Benutzername zu lang")
+    .regex(/^[a-zA-Z0-9äöüÄÖÜß_-]+$/, "Nur Buchstaben, Zahlen, - und _ erlaubt"),
+  email: z.string().trim().email("Ungültige E-Mail-Adresse").max(255, "E-Mail zu lang"),
+  password: z.string()
+    .min(8, "Passwort muss mindestens 8 Zeichen haben")
+    .max(100, "Passwort zu lang"),
+  school: z.string().trim().min(2, "Schule erforderlich").max(100, "Schulname zu lang"),
+  class: z.string().trim().min(1, "Klasse erforderlich").max(20, "Klassenname zu lang")
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -35,50 +56,64 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginData.email,
-      password: loginData.password,
-    });
+    try {
+      // Validate input
+      const validatedData = loginSchema.parse(loginData);
 
-    if (error) {
-      toast.error("Login fehlgeschlagen: " + error.message);
-    } else {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
+
+      if (error) throw error;
+
       toast.success("Erfolgreich angemeldet!");
       navigate("/dashboard");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error("Eingabefehler: " + error.errors[0].message);
+      } else {
+        toast.error("Login fehlgeschlagen: " + error.message);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!signupData.username || !signupData.email || !signupData.password || !signupData.school || !signupData.class) {
-      toast.error("Bitte alle Felder ausfüllen");
-      setLoading(false);
-      return;
-    }
+    try {
+      // Validate input
+      const validatedData = signupSchema.parse(signupData);
 
-    const { error } = await supabase.auth.signUp({
-      email: signupData.email,
-      password: signupData.password,
-      options: {
-        data: {
-          username: signupData.username,
-          school: signupData.school,
-          class: signupData.class,
+      const { error } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
+        options: {
+          data: {
+            username: validatedData.username,
+            school: validatedData.school,
+            class: validatedData.class,
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
+      });
 
-    if (error) {
-      toast.error("Registrierung fehlgeschlagen: " + error.message);
-    } else {
+      if (error) throw error;
+
       toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
       navigate("/dashboard");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error("Eingabefehler: " + error.errors[0].message);
+      } else {
+        toast.error("Registrierung fehlgeschlagen: " + error.message);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

@@ -4,13 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
 import boostLogo from "@/assets/boost-logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Settings = () => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem("boostUser");
-    navigate("/register");
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Erfolgreich abgemeldet");
+      navigate("/auth");
+    } catch (error: any) {
+      toast.error("Fehler beim Abmelden: " + error.message);
+    }
   };
 
   return (

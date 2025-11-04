@@ -95,35 +95,39 @@ const ChallengeDetail = () => {
   const checkLocalStorageResults = () => {
     const newResults: Record<string, number> = {};
     
-    const jumpingJacksResult = localStorage.getItem('jumpingjacks_result');
-    const squatsResult = localStorage.getItem('squats_result');
-    const situpsResult = localStorage.getItem('situps_result');
-    const pushupsResult = localStorage.getItem('pushups_result');
-    const planksResult = localStorage.getItem('planks_result');
+    // Define maximum reasonable values for each exercise
+    const MAX_VALUES: Record<string, number> = {
+      'Jumping Jacks': 500,
+      'Squats': 300,
+      'Sit-ups': 300,
+      'Push-ups': 200,
+      'Planks': 600, // seconds
+    };
     
-    if (jumpingJacksResult) {
-      newResults['Jumping Jacks'] = parseInt(jumpingJacksResult, 10);
-      localStorage.removeItem('jumpingjacks_result');
-    }
+    const storageKeys = [
+      { key: 'jumpingjacks_result', name: 'Jumping Jacks' },
+      { key: 'squats_result', name: 'Squats' },
+      { key: 'situps_result', name: 'Sit-ups' },
+      { key: 'pushups_result', name: 'Push-ups' },
+      { key: 'planks_result', name: 'Planks' },
+    ];
     
-    if (squatsResult) {
-      newResults['Squats'] = parseInt(squatsResult, 10);
-      localStorage.removeItem('squats_result');
-    }
-    
-    if (situpsResult) {
-      newResults['Sit-ups'] = parseInt(situpsResult, 10);
-      localStorage.removeItem('situps_result');
-    }
-    
-    if (pushupsResult) {
-      newResults['Push-ups'] = parseInt(pushupsResult, 10);
-      localStorage.removeItem('pushups_result');
-    }
-    
-    if (planksResult) {
-      newResults['Planks'] = parseInt(planksResult, 10);
-      localStorage.removeItem('planks_result');
+    for (const { key, name } of storageKeys) {
+      const result = localStorage.getItem(key);
+      
+      if (result) {
+        const value = parseInt(result, 10);
+        
+        // Validate: must be a number, positive, and within reasonable limits
+        if (!isNaN(value) && value >= 0 && value <= MAX_VALUES[name]) {
+          newResults[name] = value;
+        } else {
+          console.warn(`Invalid exercise result detected for ${name}: ${result}`);
+          toast.error(`Ungültiges Ergebnis für ${name} erkannt und ignoriert`);
+        }
+        
+        localStorage.removeItem(key);
+      }
     }
     
     if (Object.keys(newResults).length > 0) {
