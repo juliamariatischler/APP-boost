@@ -132,7 +132,14 @@ const ChallengeDetail = () => {
     
     if (Object.keys(newResults).length > 0) {
       setResults(prev => {
-        const updated = { ...prev, ...newResults };
+        // WICHTIG: Addiere neue Ergebnisse zu den bestehenden, überschreibe sie nicht
+        const updated = {
+          "Push-ups": (prev["Push-ups"] || 0) + (newResults["Push-ups"] || 0),
+          "Squats": (prev["Squats"] || 0) + (newResults["Squats"] || 0),
+          "Planks": (prev["Planks"] || 0) + (newResults["Planks"] || 0),
+          "Sit-ups": (prev["Sit-ups"] || 0) + (newResults["Sit-ups"] || 0),
+          "Jumping Jacks": (prev["Jumping Jacks"] || 0) + (newResults["Jumping Jacks"] || 0),
+        };
         saveTodayResults(updated);
         return updated;
       });

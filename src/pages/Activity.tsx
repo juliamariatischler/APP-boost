@@ -1,12 +1,28 @@
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
+import { WeekOverview } from "@/components/WeekOverview";
+import { supabase } from "@/integrations/supabase/client";
 import boostLogo from "@/assets/boost-logo.png";
 
 const Activity = () => {
   const navigate = useNavigate();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+    setUserId(session.user.id);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -24,14 +40,10 @@ const Activity = () => {
         </div>
       </div>
 
-      <div className="max-w-screen-xl mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-6 text-foreground">Meine Aktivitäten</h1>
+      <div className="max-w-screen-xl mx-auto px-4 space-y-6">
+        <h1 className="text-3xl font-bold text-foreground">Meine Aktivitäten</h1>
 
-        <Card className="p-6 bg-card shadow-card">
-          <p className="text-muted-foreground text-center">
-            Hier siehst du bald deine Aktivitäten der letzten Wochen und Monate!
-          </p>
-        </Card>
+        {userId && <WeekOverview userId={userId} />}
       </div>
 
       <BottomNav />
