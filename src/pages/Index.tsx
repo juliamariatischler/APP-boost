@@ -39,7 +39,7 @@ const Index = () => {
           >
             <Dumbbell className="h-20 w-20 mx-auto mb-4 text-primary" />
             <h2 className="text-2xl font-bold mb-3 text-foreground">
-              Körperliche Challenge
+              Body Boost
             </h2>
             <p className="text-muted-foreground mb-4">
               Bewege dich, sammle Punkte und fordere deine Freunde heraus!
@@ -55,7 +55,7 @@ const Index = () => {
           >
             <Brain className="h-20 w-20 mx-auto mb-4 text-secondary" />
             <h2 className="text-2xl font-bold mb-3 text-foreground">
-              Mentale Challenge
+              Mind Boost
             </h2>
             <p className="text-muted-foreground mb-4">
               Trainiere deinen Geist und verbessere deine mentale Stärke!
