@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import heroImage from "@/assets/hero-bg.jpg";
 import boostLogo from "@/assets/boost-logo.png";
+import { Dumbbell, Brain } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -17,26 +18,53 @@ const Index = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-6">
-      <div className="text-center max-w-2xl">
+    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="text-center max-w-4xl w-full">
         <img 
           src={boostLogo} 
           alt="BOOST Logo" 
           className="h-32 w-auto mx-auto mb-8"
         />
-        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gray-900">
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-foreground">
           BOOST Challenge
         </h1>
-        <p className="text-xl md:text-2xl mb-8 text-gray-700">
-          Bewege dich, sammle Punkte und fordere deine Freunde heraus!
+        <p className="text-xl md:text-2xl mb-12 text-muted-foreground">
+          Wähle deine Challenge aus
         </p>
-        <Button 
-          size="lg" 
-          className="text-lg px-8 py-6"
-          onClick={() => navigate("/auth")}
-        >
-          Jetzt starten
-        </Button>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card 
+            className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
+            onClick={() => navigate("/physical")}
+          >
+            <Dumbbell className="h-20 w-20 mx-auto mb-4 text-primary" />
+            <h2 className="text-2xl font-bold mb-3 text-foreground">
+              Körperliche Challenge
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Bewege dich, sammle Punkte und fordere deine Freunde heraus!
+            </p>
+            <Button size="lg" className="w-full">
+              Starten
+            </Button>
+          </Card>
+
+          <Card 
+            className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
+            onClick={() => navigate("/mental")}
+          >
+            <Brain className="h-20 w-20 mx-auto mb-4 text-secondary" />
+            <h2 className="text-2xl font-bold mb-3 text-foreground">
+              Mentale Challenge
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Trainiere deinen Geist und verbessere deine mentale Stärke!
+            </p>
+            <Button size="lg" variant="secondary" className="w-full">
+              Starten
+            </Button>
+          </Card>
+        </div>
       </div>
     </div>
   );
