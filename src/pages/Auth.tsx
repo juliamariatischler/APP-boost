@@ -47,7 +47,7 @@ const Auth = () => {
     // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/");
       }
     });
   }, [navigate]);
@@ -79,7 +79,7 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich angemeldet!");
-        navigate("/dashboard");
+        navigate("/");
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -111,7 +111,7 @@ const Auth = () => {
             school: validatedData.school,
             class: validatedData.class,
           },
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
@@ -129,12 +129,12 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
-        navigate("/dashboard");
+        navigate("/");
       } else if (data.user) {
         // User created but needs email confirmation
         toast.success("Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach.");
         // Auto-confirm is enabled, so this shouldn't happen, but handle it gracefully
-        setTimeout(() => navigate("/dashboard"), 2000);
+        setTimeout(() => navigate("/"), 2000);
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {

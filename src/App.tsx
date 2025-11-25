@@ -4,8 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import PhysicalIndex from "./pages/PhysicalIndex";
-import MentalIndex from "./pages/MentalIndex";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ChallengeDetail from "./pages/ChallengeDetail";
@@ -26,8 +24,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/physical" element={<PhysicalIndex />} />
-          <Route path="/mental" element={<MentalIndex />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/challenge/:id" element={<ChallengeDetail />} />
