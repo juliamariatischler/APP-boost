@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,14 +8,30 @@ import { Dumbbell, Brain } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-  }, [navigate]);
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsAuthenticated(!!session);
+    setLoading(false);
+    
+    if (!session) {
+      navigate("/auth");
+    }
+  };
+
+  if (loading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
@@ -35,7 +51,7 @@ const Index = () => {
         <div className="grid md:grid-cols-2 gap-6">
           <Card 
             className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
-            onClick={() => navigate("/physical")}
+            onClick={() => navigate("/dashboard")}
           >
             <Dumbbell className="h-20 w-20 mx-auto mb-4 text-primary" />
             <h2 className="text-2xl font-bold mb-3 text-foreground">
