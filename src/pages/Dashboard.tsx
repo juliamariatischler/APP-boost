@@ -29,21 +29,33 @@ const Dashboard = () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      navigate("/auth");
+      navigate("/");
       return;
     }
 
     setUserId(session.user.id);
 
-    // Load profile
-    const { data: profileData } = await supabase
+    // Load profile with error handling
+    const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("username, school, class, points")
       .eq("id", session.user.id)
       .single();
 
+    if (profileError) {
+      console.error("Error loading profile:", profileError);
+      toast.error("Fehler beim Laden des Profils");
+      navigate("/");
+      return;
+    }
+
     if (profileData) {
       setProfile(profileData);
+    } else {
+      console.error("No profile found for user:", session.user.id);
+      toast.error("Kein Profil gefunden");
+      navigate("/");
+      return;
     }
 
     // Check if admin
@@ -60,7 +72,7 @@ const Dashboard = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Abgemeldet");
-    navigate("/auth");
+    navigate("/");
   };
 
   if (!profile) return null;
