@@ -11,6 +11,7 @@ import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import boostLogo from "@/assets/boost-logo.png";
+import TrialSessionsList from "@/components/TrialSessionsList";
 
 type Exercise = {
   name: string;
@@ -304,6 +305,10 @@ const ChallengeDetail = () => {
                 </Table>
               </div>
             </div>
+          )}
+
+          {id === "tryit" && (
+            <TrialSessionsList />
           )}
         </Card>
       </div>

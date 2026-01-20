@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      clubs: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          sport_type: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          sport_type: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          sport_type?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       daily_results: {
         Row: {
           created_at: string
@@ -90,6 +129,113 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      trial_registrations: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          session_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_registrations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "trial_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_registrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trial_sessions: {
+        Row: {
+          address: string | null
+          club_id: string
+          created_at: string
+          date: string
+          description: string | null
+          end_time: string | null
+          id: string
+          location: string
+          max_age: number | null
+          max_participants: number
+          min_age: number | null
+          requirements: string | null
+          start_time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          club_id: string
+          created_at?: string
+          date: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location: string
+          max_age?: number | null
+          max_participants?: number
+          min_age?: number | null
+          requirements?: string | null
+          start_time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          club_id?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string
+          max_age?: number | null
+          max_participants?: number
+          min_age?: number | null
+          requirements?: string | null
+          start_time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_sessions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
