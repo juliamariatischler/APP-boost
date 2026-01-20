@@ -16,42 +16,51 @@ export type Database = {
     Tables: {
       challenge_invitations: {
         Row: {
+          battle_started_at: string | null
           challenge_id: string
           challenger_id: string
+          challenger_ready: boolean | null
           challenger_result: number | null
           completed_at: string | null
           created_at: string
           id: string
           invite_code: string | null
           opponent_id: string
+          opponent_ready: boolean | null
           opponent_result: number | null
           status: string
           updated_at: string
           winner_id: string | null
         }
         Insert: {
+          battle_started_at?: string | null
           challenge_id: string
           challenger_id: string
+          challenger_ready?: boolean | null
           challenger_result?: number | null
           completed_at?: string | null
           created_at?: string
           id?: string
           invite_code?: string | null
           opponent_id: string
+          opponent_ready?: boolean | null
           opponent_result?: number | null
           status?: string
           updated_at?: string
           winner_id?: string | null
         }
         Update: {
+          battle_started_at?: string | null
           challenge_id?: string
           challenger_id?: string
+          challenger_ready?: boolean | null
           challenger_result?: number | null
           completed_at?: string | null
           created_at?: string
           id?: string
           invite_code?: string | null
           opponent_id?: string
+          opponent_ready?: boolean | null
           opponent_result?: number | null
           status?: string
           updated_at?: string
