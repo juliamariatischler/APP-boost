@@ -12,6 +12,7 @@ import Rewards from "./pages/Rewards";
 import Activity from "./pages/Activity";
 import Boost from "./pages/Boost";
 import Settings from "./pages/Settings";
+import FriendQuest from "./pages/FriendQuest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/activity" element={<Activity />} />
           <Route path="/boost" element={<Boost />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/challenge/friend" element={<FriendQuest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
