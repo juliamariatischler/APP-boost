@@ -13,6 +13,7 @@ import { InviteCodeDisplay } from '@/components/InviteCodeDisplay';
 import { ChallengeInvitationsList } from '@/components/ChallengeInvitationsList';
 import { LiveBattle } from '@/components/LiveBattle';
 import boostLogo from '@/assets/boost-logo.png';
+import friendImg from '@/assets/challenge-friend.jpg';
 
 interface Profile {
   id: string;
@@ -237,148 +238,164 @@ const FriendQuest = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground p-4">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="h-6 w-6" />
+      {/* Header - matching ChallengeDetail style */}
+      <div className="bg-card shadow-sm p-4 mb-6">
+        <div className="max-w-screen-xl mx-auto flex justify-between items-center">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Zurück
           </Button>
-          <img src={boostLogo} alt="BOOST" className="h-8" />
-          <div className="w-10" />
-        </div>
-        <div className="text-center mt-4">
-          <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
-            <Swords className="h-6 w-6" />
-            Friend Quest
-          </h1>
-          <p className="text-sm opacity-90 mt-1">Fordere deine Freunde heraus!</p>
+          <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
-        <Tabs defaultValue="create" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="create">
-              <UserPlus className="h-4 w-4 mr-1" />
-              Erstellen
-            </TabsTrigger>
-            <TabsTrigger value="join">
-              <Ticket className="h-4 w-4 mr-1" />
-              Beitreten
-            </TabsTrigger>
-            <TabsTrigger value="challenges">
-              <Users className="h-4 w-4 mr-1" />
-              Meine
-            </TabsTrigger>
-          </TabsList>
+      <div className="max-w-screen-xl mx-auto px-4 pb-8">
+        <Card className="p-6 bg-card shadow-card">
+          <h1 className="text-3xl font-bold mb-4 text-center text-foreground flex items-center justify-center gap-3">
+            <Swords className="h-8 w-8" />
+            Friendquest Challenge
+          </h1>
 
-          {/* Create Challenge Tab */}
-          <TabsContent value="create" className="space-y-6 mt-4">
-            {inviteCode ? (
-              <>
-                <InviteCodeDisplay 
-                  inviteCode={inviteCode} 
-                  challengeName={selectedChallenge?.name || ''} 
-                />
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => {
-                    setInviteCode(null);
-                    setSelectedChallenge(null);
-                  }}
-                >
-                  Neue Challenge erstellen
-                </Button>
-              </>
-            ) : (
-              <>
-                <div>
-                  <h3 className="font-semibold mb-3">1. Freund suchen (optional)</h3>
-                  <FriendSearch 
-                    currentUserId={userId} 
-                    onFriendSelect={setSelectedFriend} 
+          <div className="mb-6 rounded-lg overflow-hidden">
+            <img
+              src={friendImg}
+              alt="Friendquest Challenge"
+              className="w-full h-auto"
+            />
+          </div>
+
+          <p className="text-lg text-muted-foreground mb-8 text-center">
+            Fordere deine Freunde heraus und habt zusammen Spaß an der Bewegung!
+          </p>
+
+          <Tabs defaultValue="create" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="create">
+                <UserPlus className="h-4 w-4 mr-1" />
+                Erstellen
+              </TabsTrigger>
+              <TabsTrigger value="join">
+                <Ticket className="h-4 w-4 mr-1" />
+                Beitreten
+              </TabsTrigger>
+              <TabsTrigger value="challenges">
+                <Users className="h-4 w-4 mr-1" />
+                Meine
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Create Challenge Tab */}
+            <TabsContent value="create" className="space-y-6 mt-4">
+              {inviteCode ? (
+                <>
+                  <InviteCodeDisplay 
+                    inviteCode={inviteCode} 
+                    challengeName={selectedChallenge?.name || ''} 
                   />
-                  {selectedFriend && (
-                    <Card className="p-3 mt-3 bg-primary/10 border-primary/20">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{selectedFriend.username}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedFriend.school} • Klasse {selectedFriend.class}
-                          </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      setInviteCode(null);
+                      setSelectedChallenge(null);
+                    }}
+                  >
+                    Neue Challenge erstellen
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="font-semibold mb-3 text-foreground">1. Freund suchen (optional)</h3>
+                    <FriendSearch 
+                      currentUserId={userId} 
+                      onFriendSelect={setSelectedFriend} 
+                    />
+                    {selectedFriend && (
+                      <Card className="p-3 mt-3 bg-primary/10 border-primary/20">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">{selectedFriend.username}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedFriend.school} • Klasse {selectedFriend.class}
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => setSelectedFriend(null)}
+                          >
+                            ✕
+                          </Button>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => setSelectedFriend(null)}
-                        >
-                          ✕
-                        </Button>
-                      </div>
-                    </Card>
+                      </Card>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3 text-foreground">2. Challenge auswählen</h3>
+                    <ChallengeSelector
+                      selectedChallenge={selectedChallenge}
+                      onChallengeSelect={setSelectedChallenge}
+                    />
+                  </div>
+
+                  {selectedFriend ? (
+                    <Button
+                      onClick={handleCreateDirectChallenge}
+                      disabled={!selectedChallenge || isCreating}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {isCreating ? 'Wird gesendet...' : `${selectedFriend.username} herausfordern 💪`}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleCreateChallenge}
+                      disabled={!selectedChallenge || isCreating}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {isCreating ? 'Wird erstellt...' : 'Einladungscode erstellen 🎯'}
+                    </Button>
                   )}
-                </div>
+                </>
+              )}
+            </TabsContent>
 
-                <div>
-                  <h3 className="font-semibold mb-3">2. Challenge auswählen</h3>
-                  <ChallengeSelector
-                    selectedChallenge={selectedChallenge}
-                    onChallengeSelect={setSelectedChallenge}
-                  />
-                </div>
+            {/* Join Challenge Tab */}
+            <TabsContent value="join" className="space-y-4 mt-4">
+              <Card className="p-6 bg-muted/30">
+                <h3 className="font-semibold text-center mb-4 text-foreground">Code eingeben</h3>
+                <Input
+                  placeholder="Z.B. ABC123"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  className="text-center text-2xl tracking-widest font-bold"
+                  maxLength={6}
+                />
+                <Button
+                  onClick={handleJoinChallenge}
+                  disabled={joinCode.length < 6 || isJoining}
+                  className="w-full mt-4"
+                  size="lg"
+                >
+                  {isJoining ? 'Wird geladen...' : 'Challenge beitreten ⚡'}
+                </Button>
+              </Card>
+            </TabsContent>
 
-                {selectedFriend ? (
-                  <Button
-                    onClick={handleCreateDirectChallenge}
-                    disabled={!selectedChallenge || isCreating}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isCreating ? 'Wird gesendet...' : `${selectedFriend.username} herausfordern 💪`}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleCreateChallenge}
-                    disabled={!selectedChallenge || isCreating}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isCreating ? 'Wird erstellt...' : 'Einladungscode erstellen 🎯'}
-                  </Button>
-                )}
-              </>
-            )}
-          </TabsContent>
-
-          {/* Join Challenge Tab */}
-          <TabsContent value="join" className="space-y-4 mt-4">
-            <Card className="p-6">
-              <h3 className="font-semibold text-center mb-4">Code eingeben</h3>
-              <Input
-                placeholder="Z.B. ABC123"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                className="text-center text-2xl tracking-widest font-bold"
-                maxLength={6}
-              />
-              <Button
-                onClick={handleJoinChallenge}
-                disabled={joinCode.length < 6 || isJoining}
-                className="w-full mt-4"
-                size="lg"
-              >
-                {isJoining ? 'Wird geladen...' : 'Challenge beitreten ⚡'}
-              </Button>
-            </Card>
-          </TabsContent>
-
-          {/* My Challenges Tab */}
-          <TabsContent value="challenges" className="mt-4">
-            <ChallengeInvitationsList userId={userId} onStartChallenge={handleStartBattle} />
-          </TabsContent>
-        </Tabs>
+            {/* My Challenges Tab */}
+            <TabsContent value="challenges" className="mt-4">
+              <ChallengeInvitationsList userId={userId} onStartChallenge={handleStartBattle} />
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
     </div>
   );
