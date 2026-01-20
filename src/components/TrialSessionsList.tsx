@@ -13,10 +13,13 @@ import {
   Mail, 
   Globe,
   CheckCircle,
-  Loader2
+  Loader2,
+  Zap
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+
+const POINTS_PER_VISIT = 25;
 
 type Club = {
   id: string;
@@ -148,7 +151,16 @@ const TrialSessionsList = () => {
         toast.error("Fehler bei der Anmeldung");
       }
     } else {
-      toast.success("Erfolgreich angemeldet!");
+      // Award points for registration
+      try {
+        await (supabase.rpc as any)('increment_points', { 
+          user_id_param: userId, 
+          points_to_add: POINTS_PER_VISIT 
+        });
+        toast.success(`Erfolgreich angemeldet! +${POINTS_PER_VISIT} ⚡ Blitze`);
+      } catch (e) {
+        toast.success("Erfolgreich angemeldet!");
+      }
       setRegistrations(prev => [...prev, { session_id: sessionId, status: "registered" }]);
       setRegistrationCounts(prev => ({
         ...prev,
@@ -221,7 +233,13 @@ const TrialSessionsList = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">Verfügbare Schnuppertermine</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-foreground">Verfügbare Schnuppertermine</h2>
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Zap className="h-3 w-3 text-yellow-500" />
+          +{POINTS_PER_VISIT} pro Anmeldung
+        </Badge>
+      </div>
       
       {sessions.map((session) => {
         const availableSpots = getAvailableSpots(session);
@@ -353,6 +371,10 @@ const TrialSessionsList = () => {
                       <CheckCircle className="h-5 w-5" />
                       <span className="font-medium">Angemeldet</span>
                     </div>
+                    <div className="flex items-center gap-1 text-yellow-600">
+                      <Zap className="h-4 w-4" />
+                      <span className="text-sm font-medium">+{POINTS_PER_VISIT} Blitze</span>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
@@ -367,19 +389,27 @@ const TrialSessionsList = () => {
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    onClick={() => handleRegister(session.id)}
-                    disabled={isFull || registering === session.id}
-                    className="min-w-[120px]"
-                  >
-                    {registering === session.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isFull ? (
-                      "Ausgebucht"
-                    ) : (
-                      "Anmelden"
+                  <div className="flex flex-col items-center gap-2">
+                    <Button
+                      onClick={() => handleRegister(session.id)}
+                      disabled={isFull || registering === session.id}
+                      className="min-w-[120px]"
+                    >
+                      {registering === session.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isFull ? (
+                        "Ausgebucht"
+                      ) : (
+                        "Anmelden"
+                      )}
+                    </Button>
+                    {!isFull && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Zap className="h-3 w-3 text-yellow-500" />
+                        <span className="text-xs">+{POINTS_PER_VISIT} Blitze</span>
+                      </div>
                     )}
-                  </Button>
+                  </div>
                 )}
               </div>
             </div>
