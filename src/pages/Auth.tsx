@@ -20,14 +20,12 @@ const loginSchema = z.object({
 const signupSchema = z.object({
   username: z.string()
     .trim()
-    .min(2, "Benutzername muss mindestens 2 Zeichen haben")
-    .max(50, "Benutzername zu lang")
-    .regex(/^[a-zA-Z0-9äöüÄÖÜß_-]+$/, "Nur Buchstaben, Zahlen, - und _ erlaubt"),
+    .min(1, "Benutzername erforderlich")
+    .max(50, "Benutzername zu lang"),
   email: z.string().trim().email("Ungültige E-Mail-Adresse").max(255, "E-Mail zu lang"),
   password: z.string()
-    .min(8, "Passwort muss mindestens 8 Zeichen haben")
-    .max(100, "Passwort zu lang"),
-  school: z.string().trim().min(2, "Schule erforderlich").max(100, "Schulname zu lang"),
+    .min(1, "Passwort erforderlich"),
+  school: z.string().trim().min(1, "Schule erforderlich").max(100, "Schulname zu lang"),
   class: z.string().trim().min(1, "Klasse erforderlich").max(20, "Klassenname zu lang")
 });
 
