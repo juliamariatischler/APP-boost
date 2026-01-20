@@ -11,6 +11,7 @@ import { FriendSearch } from '@/components/FriendSearch';
 import { ChallengeSelector } from '@/components/ChallengeSelector';
 import { InviteCodeDisplay } from '@/components/InviteCodeDisplay';
 import { ChallengeInvitationsList } from '@/components/ChallengeInvitationsList';
+import { LiveBattle } from '@/components/LiveBattle';
 import boostLogo from '@/assets/boost-logo.png';
 
 interface Profile {
@@ -29,15 +30,30 @@ interface Challenge {
   loser_points: number;
 }
 
+interface ActiveBattle {
+  invitationId: string;
+  challengeData: {
+    name: string;
+    icon: string;
+    winner_points: number;
+    loser_points: number;
+  };
+  isChallenger: boolean;
+  challengerName: string;
+  opponentName: string;
+}
+
 const FriendQuest = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string>('');
   const [selectedFriend, setSelectedFriend] = useState<Profile | null>(null);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [activeBattle, setActiveBattle] = useState<ActiveBattle | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -50,6 +66,36 @@ const FriendQuest = () => {
       return;
     }
     setUserId(session.user.id);
+    
+    // Load username
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    
+    if (profile) {
+      setUsername(profile.username);
+    }
+  };
+
+  const handleStartBattle = async (invitation: any) => {
+    // Load challenge and profile data
+    const challengeData = invitation.challenge;
+    const isChallenger = invitation.challenger_id === userId;
+    
+    setActiveBattle({
+      invitationId: invitation.id,
+      challengeData: {
+        name: challengeData.name,
+        icon: challengeData.icon,
+        winner_points: challengeData.winner_points,
+        loser_points: challengeData.loser_points,
+      },
+      isChallenger,
+      challengerName: invitation.challenger_profile?.username || 'Spieler 1',
+      opponentName: invitation.opponent_profile?.username || 'Spieler 2',
+    });
   };
 
   const generateInviteCode = () => {
@@ -173,6 +219,21 @@ const FriendQuest = () => {
   };
 
   if (!userId) return null;
+
+  // Show Live Battle if active
+  if (activeBattle) {
+    return (
+      <LiveBattle
+        invitationId={activeBattle.invitationId}
+        challengeData={activeBattle.challengeData}
+        userId={userId}
+        isChallenger={activeBattle.isChallenger}
+        challengerName={activeBattle.challengerName}
+        opponentName={activeBattle.opponentName}
+        onClose={() => setActiveBattle(null)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -315,7 +376,7 @@ const FriendQuest = () => {
 
           {/* My Challenges Tab */}
           <TabsContent value="challenges" className="mt-4">
-            <ChallengeInvitationsList userId={userId} />
+            <ChallengeInvitationsList userId={userId} onStartChallenge={handleStartBattle} />
           </TabsContent>
         </Tabs>
       </div>

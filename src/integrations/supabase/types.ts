@@ -386,6 +386,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_points: {
+        Args: { points_to_add: number; user_id_param: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "student"
