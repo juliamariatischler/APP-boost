@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenge_invitations: {
+        Row: {
+          challenge_id: string
+          challenger_id: string
+          challenger_result: number | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          invite_code: string | null
+          opponent_id: string
+          opponent_result: number | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          challenge_id: string
+          challenger_id: string
+          challenger_result?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          invite_code?: string | null
+          opponent_id: string
+          opponent_result?: number | null
+          status?: string
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          challenge_id?: string
+          challenger_id?: string
+          challenger_result?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          invite_code?: string | null
+          opponent_id?: string
+          opponent_result?: number | null
+          status?: string
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_invitations_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "friend_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clubs: {
         Row: {
           contact_email: string | null
@@ -99,6 +152,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      friend_challenges: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          loser_points: number
+          name: string
+          winner_points: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          loser_points?: number
+          name: string
+          winner_points?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          loser_points?: number
+          name?: string
+          winner_points?: number
+        }
+        Relationships: []
+      }
+      friend_requests: {
+        Row: {
+          created_at: string
+          id: string
+          receiver_id: string
+          sender_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          receiver_id: string
+          sender_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
