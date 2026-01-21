@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Zap } from "lucide-react";
+import { ArrowLeft, Zap, Dumbbell, Timer, RotateCcw, Activity, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
@@ -258,16 +258,30 @@ const ChallengeDetail = () => {
             <div className="space-y-6">
               {/* Exercise Buttons */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {exercises.map((exercise) => (
-                  <Button
-                    key={exercise.name}
-                    onClick={() => handleExerciseClick(exercise.name)}
-                    className="h-20 text-sm font-medium"
-                    variant={isGoalReached(exercise.name) ? "default" : "outline"}
-                  >
-                    {exercise.name}
-                  </Button>
-                ))}
+                {exercises.map((exercise) => {
+                  const getExerciseIcon = (name: string) => {
+                    switch (name) {
+                      case "Push-ups": return <Dumbbell className="h-4 w-4" />;
+                      case "Squats": return <ChevronDown className="h-4 w-4" />;
+                      case "Planks": return <Timer className="h-4 w-4" />;
+                      case "Sit-ups": return <RotateCcw className="h-4 w-4" />;
+                      case "Jumping Jacks": return <Activity className="h-4 w-4" />;
+                      default: return null;
+                    }
+                  };
+                  
+                  return (
+                    <Button
+                      key={exercise.name}
+                      onClick={() => handleExerciseClick(exercise.name)}
+                      className="h-20 text-sm font-medium flex flex-col gap-1"
+                      variant={isGoalReached(exercise.name) ? "default" : "outline"}
+                    >
+                      {getExerciseIcon(exercise.name)}
+                      {exercise.name}
+                    </Button>
+                  );
+                })}
               </div>
 
               {/* Results Table */}
