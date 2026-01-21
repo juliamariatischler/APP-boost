@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Zap, Dumbbell, Timer, RotateCcw, Activity, ChevronDown } from "lucide-react";
+import { ArrowLeft, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
@@ -12,6 +12,7 @@ import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import boostLogo from "@/assets/boost-logo.png";
 import TrialSessionsList from "@/components/TrialSessionsList";
+import { PushUpIcon, SquatIcon, PlankIcon, SitUpIcon, JumpingJacksIcon } from "@/components/ExerciseIcons";
 
 type Exercise = {
   name: string;
@@ -261,11 +262,11 @@ const ChallengeDetail = () => {
                 {exercises.map((exercise) => {
                   const getExerciseIcon = (name: string) => {
                     switch (name) {
-                      case "Push-ups": return <Dumbbell className="h-4 w-4" />;
-                      case "Squats": return <ChevronDown className="h-4 w-4" />;
-                      case "Planks": return <Timer className="h-4 w-4" />;
-                      case "Sit-ups": return <RotateCcw className="h-4 w-4" />;
-                      case "Jumping Jacks": return <Activity className="h-4 w-4" />;
+                      case "Push-ups": return <PushUpIcon className="h-5 w-5" />;
+                      case "Squats": return <SquatIcon className="h-5 w-5" />;
+                      case "Planks": return <PlankIcon className="h-5 w-5" />;
+                      case "Sit-ups": return <SitUpIcon className="h-5 w-5" />;
+                      case "Jumping Jacks": return <JumpingJacksIcon className="h-5 w-5" />;
                       default: return null;
                     }
                   };
