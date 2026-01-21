@@ -262,11 +262,11 @@ const ChallengeDetail = () => {
                 {exercises.map((exercise) => {
                   const getExerciseIcon = (name: string) => {
                     switch (name) {
-                      case "Push-ups": return <PushUpIcon className="h-7 w-7" />;
-                      case "Squats": return <SquatIcon className="h-7 w-7" />;
-                      case "Planks": return <PlankIcon className="h-7 w-7" />;
-                      case "Sit-ups": return <SitUpIcon className="h-7 w-7" />;
-                      case "Jumping Jacks": return <JumpingJacksIcon className="h-7 w-7" />;
+                      case "Push-ups": return <PushUpIcon className="h-10 w-10" />;
+                      case "Squats": return <SquatIcon className="h-10 w-10" />;
+                      case "Planks": return <PlankIcon className="h-10 w-10" />;
+                      case "Sit-ups": return <SitUpIcon className="h-10 w-10" />;
+                      case "Jumping Jacks": return <JumpingJacksIcon className="h-10 w-10" />;
                       default: return null;
                     }
                   };
