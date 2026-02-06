@@ -65,17 +65,6 @@ export const TopHeader = () => {
     <div className="bg-card shadow-sm p-4 mb-6">
       <div className="max-w-screen-xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-4">
-          {!isDashboard && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="gap-1 px-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Zurück
-            </Button>
-          )}
           <div>
             <p className="text-sm text-muted-foreground">{profile.school} - {profile.class}</p>
             <p className="font-bold text-foreground text-lg">{profile.username}</p>
@@ -84,6 +73,16 @@ export const TopHeader = () => {
             <Zap className="h-5 w-5 text-primary fill-primary" />
             <span className="font-bold text-primary">{profile.points}</span>
           </div>
+          {!isDashboard && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard")}
+              className="h-8 w-8"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
