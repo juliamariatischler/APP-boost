@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { WalkingIcon } from "@/components/ExerciseIcons";
-import { Zap, Play, CheckCircle } from "lucide-react";
+import { Zap, Play, CheckCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HealthService } from "@/services/healthService";
+import { Capacitor } from "@capacitor/core";
 
 interface StepCounterProps {
   userId: string;
@@ -22,27 +24,26 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const [steps, setSteps] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [earnedFlashes, setEarnedFlashes] = useState(0);
+  const [lastAwardedFlashes, setLastAwardedFlashes] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform());
     loadTodaySteps();
   }, [userId]);
 
-  // Simulate step counting when active (in real app, use Health API)
+  // Auto-refresh steps every 30 seconds when active
   useEffect(() => {
     if (!isActive) return;
 
     const interval = setInterval(() => {
-      setSteps(prev => {
-        const newSteps = prev + Math.floor(Math.random() * 3) + 1;
-        saveSteps(newSteps);
-        checkRewards(newSteps);
-        return newSteps;
-      });
-    }, 2000);
+      fetchAndUpdateSteps();
+    }, 30000); // Every 30 seconds
 
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isActive, userId]);
 
   const loadTodaySteps = async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -57,19 +58,21 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     if (!error && data) {
       setSteps(data.steps || 0);
       setIsActive(data.steps_tracking_active || false);
-      calculateEarnedFlashes(data.steps || 0);
+      const earned = calculateEarnedFlashes(data.steps || 0);
+      setEarnedFlashes(earned);
+      setLastAwardedFlashes(earned); // Don't re-award on page load
     }
     setLoading(false);
   };
 
-  const calculateEarnedFlashes = (currentSteps: number) => {
+  const calculateEarnedFlashes = (currentSteps: number): number => {
     let earned = 0;
     for (const reward of STEP_REWARDS) {
       if (currentSteps >= reward.steps) {
         earned = reward.flashes;
       }
     }
-    setEarnedFlashes(earned);
+    return earned;
   };
 
   const saveSteps = async (newSteps: number) => {
@@ -94,19 +97,13 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     }
   };
 
-  const checkRewards = async (currentSteps: number) => {
-    const previousFlashes = earnedFlashes;
-    let newFlashes = 0;
-    
-    for (const reward of STEP_REWARDS) {
-      if (currentSteps >= reward.steps) {
-        newFlashes = reward.flashes;
-      }
-    }
+  const checkAndAwardRewards = useCallback(async (currentSteps: number) => {
+    const newFlashes = calculateEarnedFlashes(currentSteps);
+    setEarnedFlashes(newFlashes);
 
-    if (newFlashes > previousFlashes) {
-      const pointsToAdd = newFlashes - previousFlashes;
-      setEarnedFlashes(newFlashes);
+    if (newFlashes > lastAwardedFlashes) {
+      const pointsToAdd = newFlashes - lastAwardedFlashes;
+      setLastAwardedFlashes(newFlashes);
       
       // Award points
       await supabase.rpc('increment_points', {
@@ -120,9 +117,33 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
 
       onPointsEarned?.(pointsToAdd);
     }
+  }, [lastAwardedFlashes, userId, onPointsEarned]);
+
+  const fetchAndUpdateSteps = async () => {
+    setRefreshing(true);
+    try {
+      const realSteps = await HealthService.getTodaySteps();
+      setSteps(realSteps);
+      await saveSteps(realSteps);
+      await checkAndAwardRewards(realSteps);
+    } catch (error) {
+      console.error("Error fetching steps:", error);
+      toast.error("Fehler beim Abrufen der Schritte");
+    }
+    setRefreshing(false);
   };
 
   const activateTracking = async () => {
+    // Request health authorization first
+    const authorized = await HealthService.requestAuthorization();
+    
+    if (!authorized) {
+      toast.error("Zugriff auf Gesundheitsdaten verweigert", {
+        description: "Bitte erlaube den Zugriff in den Einstellungen."
+      });
+      return;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     
     const { data: existing } = await supabase
@@ -154,8 +175,14 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     }
 
     setIsActive(true);
+    
+    // Fetch real steps immediately
+    await fetchAndUpdateSteps();
+
     toast.success("Schrittzähler aktiviert! 🚶", {
-      description: "Deine Schritte werden jetzt gezählt."
+      description: isNative 
+        ? "Deine echten Schritte werden jetzt gezählt." 
+        : "Im Browser werden Testdaten angezeigt."
     });
   };
 
@@ -204,7 +231,9 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         <div className="flex-1">
           <h3 className="font-bold text-foreground">Schrittzähler</h3>
           <p className="text-xs text-muted-foreground">
-            {isActive ? "Aktiv – zählt deine Schritte" : "Tippe zum Starten"}
+            {isActive 
+              ? (isNative ? "Aktiv – zählt deine echten Schritte" : "Aktiv – Testmodus im Browser")
+              : "Tippe zum Starten"}
           </p>
         </div>
         {!isActive ? (
@@ -216,9 +245,20 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
             Starten
           </Button>
         ) : (
-          <div className="flex items-center gap-1 bg-green-500/20 px-3 py-1.5 rounded-full">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <span className="text-sm font-medium text-green-600">Aktiv</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchAndUpdateSteps}
+              disabled={refreshing}
+              className="p-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <div className="flex items-center gap-1 bg-green-500/20 px-3 py-1.5 rounded-full">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium text-green-600">Aktiv</span>
+            </div>
           </div>
         )}
       </div>
@@ -228,7 +268,10 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         <div className="text-4xl font-bold text-foreground mb-1">
           {steps.toLocaleString()}
         </div>
-        <div className="text-sm text-muted-foreground">Schritte heute</div>
+        <div className="text-sm text-muted-foreground">
+          Schritte heute
+          {!isNative && <span className="text-xs ml-1">(Testdaten)</span>}
+        </div>
       </div>
 
       {/* Earned Flashes */}
@@ -298,6 +341,15 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
           ))}
         </div>
       </div>
+
+      {/* Native hint */}
+      {!isNative && (
+        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+          <p className="text-xs text-muted-foreground text-center">
+            💡 Für echte Schrittzählung die App auf deinem Handy installieren.
+          </p>
+        </div>
+      )}
     </Card>
   );
 };
