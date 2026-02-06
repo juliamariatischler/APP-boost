@@ -281,90 +281,60 @@ const Boost = () => {
           )}
         </Card>
 
-        {/* D) CTA */}
-        <Card className="p-5 bg-gradient-to-br from-primary to-accent text-white shadow-lg">
-          {todayComplete ? (
-            <div className="text-center">
-              <CheckCircle className="h-10 w-10 mx-auto mb-2" />
-              <h3 className="font-bold text-lg mb-1">Super gemacht! 🎉</h3>
-              <p className="text-sm opacity-90 mb-3">Du hast heute alles erledigt.</p>
-              <p className="text-sm opacity-75">Morgen wieder sammeln!</p>
-            </div>
-          ) : (
-            <div className="text-center">
-              <Zap className="h-10 w-10 mx-auto mb-2 fill-white" />
-              <h3 className="font-bold text-lg mb-1">Hol dir deine Blitze!</h3>
-              <p className="text-sm opacity-90 mb-4">Schließe die Tageschallenge ab.</p>
-              <Button 
-                onClick={() => navigate("/challenge/daily")}
-                className="bg-white text-primary hover:bg-white/90 font-bold"
-              >
-                Zur Tageschallenge
-              </Button>
-            </div>
-          )}
-        </Card>
-
-        {/* E) Extra Challenges - More Flashes */}
+        {/* D) Challenges - All 4 as buttons */}
         <Card className="p-5 bg-card shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-bold text-foreground">Mehr Blitze sammeln?</h3>
-              <p className="text-xs text-muted-foreground">Diese Challenges bringen extra viele ⚡</p>
-            </div>
+            <h3 className="font-bold text-lg text-foreground">Mehr Blitze gefällig?</h3>
             <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />
           </div>
           
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Tageschallenge */}
+            <button 
+              onClick={() => navigate("/challenge/daily")}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors border-2 border-primary/30"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Zap className="h-6 w-6 text-primary fill-primary" />
+              </div>
+              <span className="font-bold text-foreground text-sm">Tageschallenge</span>
+              <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">+1-3 ⚡</span>
+            </button>
+
             {/* 2-Wochen Challenge */}
             <button 
               onClick={() => navigate("/challenge/weekly")}
-              className="w-full flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 transition-colors border-2 border-blue-500/30"
             >
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-blue-500" />
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-blue-500" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground">2-Wochen Challenge</span>
-                  <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">+50 ⚡</span>
-                </div>
-                <p className="text-xs text-muted-foreground">14 Tage durchhalten = Mega-Bonus!</p>
-              </div>
+              <span className="font-bold text-foreground text-sm">2-Wochen</span>
+              <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">+50 ⚡</span>
             </button>
 
             {/* Friendquest */}
             <button 
               onClick={() => navigate("/challenge/friend")}
-              className="w-full flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 transition-colors border-2 border-purple-500/30"
             >
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Swords className="h-5 w-5 text-purple-500" />
+              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <Swords className="h-6 w-6 text-purple-500" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground">Friendquest</span>
-                  <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+20-50 ⚡</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Fordere Freunde zum Duell heraus!</p>
-              </div>
+              <span className="font-bold text-foreground text-sm">Friendquest</span>
+              <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+20-50 ⚡</span>
             </button>
 
             {/* Try It */}
             <button 
               onClick={() => navigate("/challenge/tryit")}
-              className="w-full flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 transition-colors border-2 border-orange-500/30"
             >
-              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-orange-500" />
+              <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                <MapPin className="h-6 w-6 text-orange-500" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground">Try It</span>
-                  <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">+25 ⚡</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Schnuppertermine bei Sportvereinen</p>
-              </div>
+              <span className="font-bold text-foreground text-sm">Try It</span>
+              <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">+25 ⚡</span>
             </button>
           </div>
         </Card>
