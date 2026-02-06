@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Zap, LogOut, Settings } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Zap, LogOut, Settings, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import boostLogo from "@/assets/boost-logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,8 +15,11 @@ interface Profile {
 
 export const TopHeader = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const isDashboard = location.pathname === "/dashboard";
 
   useEffect(() => {
     loadProfile();
@@ -62,6 +65,17 @@ export const TopHeader = () => {
     <div className="bg-card shadow-sm p-4 mb-6">
       <div className="max-w-screen-xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-4">
+          {!isDashboard && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/dashboard")}
+              className="gap-1 px-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Zurück
+            </Button>
+          )}
           <div>
             <p className="text-sm text-muted-foreground">{profile.school} - {profile.class}</p>
             <p className="font-bold text-foreground text-lg">{profile.username}</p>
