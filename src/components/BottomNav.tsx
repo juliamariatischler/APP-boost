@@ -6,9 +6,9 @@ export const BottomNav = () => {
   const location = useLocation();
 
   const navItems = [
-    { icon: Settings, label: "Einstellungen", path: "/settings" },
     { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: Zap, label: "Blitz", path: "/boost" },
+    { icon: Settings, label: "Einstellungen", path: "/settings" },
+    { icon: Zap, label: "Blitze", path: "/boost" },
     { icon: Crown, label: "Geschenke", path: "/rewards" },
   ];
 
