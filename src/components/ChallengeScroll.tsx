@@ -11,6 +11,8 @@ import tryitImg from "@/assets/challenge-tryit.jpg";
 interface Challenge {
   id: string;
   title: string;
+  description: string;
+  subInfo: string;
   image: string;
   progress: number;
 }
@@ -64,10 +66,38 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
   };
 
   const challenges: Challenge[] = [
-    { id: "daily", title: "Tägliche Challenge", image: dailyImg, progress: dailyProgress },
-    { id: "weekly", title: "Wochenchallenge", image: weeklyImg, progress: 40 },
-    { id: "friend", title: "Friendquest", image: friendImg, progress: 100 },
-    { id: "tryit", title: "Try It", image: tryitImg, progress: 0 },
+    { 
+      id: "daily", 
+      title: "Tägliche Challenge", 
+      description: "Jeden Tag eine kurze Aufgabe – für Bewegung, Fokus oder Ausdauer.",
+      subInfo: "⏱ 5–10 Minuten",
+      image: dailyImg, 
+      progress: dailyProgress 
+    },
+    { 
+      id: "weekly", 
+      title: "2-Wochenchallenge", 
+      description: "Hol dir die Challenge eines Spitzensportlers – und wachse über dich hinaus.",
+      subInfo: "🏆 14 Tage",
+      image: weeklyImg, 
+      progress: 40 
+    },
+    { 
+      id: "friend", 
+      title: "Friendquest", 
+      description: "Gemeinsam stärker: Erfülle Challenges mit Freund:innen.",
+      subInfo: "👥 Gemeinsam spielen",
+      image: friendImg, 
+      progress: 100 
+    },
+    { 
+      id: "tryit", 
+      title: "Try It", 
+      description: "Probiere neue Sportarten & Aktivitäten aus – ganz unverbindlich.",
+      subInfo: "📍 In deiner Nähe",
+      image: tryitImg, 
+      progress: 0 
+    },
   ];
 
   return (
@@ -80,9 +110,15 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
             key={challenge.id}
             className="flex-shrink-0 w-[280px] snap-start"
           >
-            <h3 className="text-lg font-bold text-foreground mb-3">
+            <h3 className="text-lg font-bold text-foreground mb-1">
               {challenge.title}
             </h3>
+            <p className="text-xs text-muted-foreground mb-1 line-clamp-2">
+              {challenge.description}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mb-2">
+              {challenge.subInfo}
+            </p>
             <Card
               className="bg-card shadow-card overflow-hidden cursor-pointer hover:shadow-lg transition-all relative"
               onClick={() => navigate(`/challenge/${challenge.id}`)}

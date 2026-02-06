@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Settings, LogOut } from "lucide-react";
+import { Zap, Settings, LogOut, Flame } from "lucide-react";
 import boostLogo from "@/assets/boost-logo.png";
 import { ChallengeScroll } from "@/components/ChallengeScroll";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { startOfWeek, endOfWeek, format } from "date-fns";
+import { de } from "date-fns/locale";
 
 interface Profile {
   username: string;
@@ -20,6 +23,8 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string>("");
+  const [weeklyCompleted, setWeeklyCompleted] = useState(0);
+  const [weeklyTotal] = useState(28); // 4 challenges * 7 days
 
   useEffect(() => {
     checkAuthAndLoadProfile();
@@ -67,6 +72,30 @@ const Dashboard = () => {
       .maybeSingle();
 
     setIsAdmin(!!roleData);
+
+    // Load weekly progress
+    const today = new Date();
+    const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
+    
+    const { data: weeklyData } = await supabase
+      .from("daily_results")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .gte("date", format(weekStart, "yyyy-MM-dd"))
+      .lte("date", format(weekEnd, "yyyy-MM-dd"));
+
+    if (weeklyData) {
+      // Count days with any activity as "completed challenges"
+      const daysWithActivity = weeklyData.filter(day => 
+        (day.jumping_jacks || 0) > 0 || 
+        (day.push_ups || 0) > 0 || 
+        (day.squats || 0) > 0 || 
+        (day.planks || 0) > 0 || 
+        (day.sit_ups || 0) > 0
+      ).length;
+      setWeeklyCompleted(daysWithActivity);
+    }
   };
 
   const handleLogout = async () => {
@@ -109,7 +138,34 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-screen-xl mx-auto px-4">
-        <h2 className="text-2xl font-bold mb-4 text-foreground">
+        {/* Personal Greeting */}
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            Hi {profile.username} 👋
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Bereit für deine nächste Challenge?
+          </p>
+        </div>
+
+        {/* Weekly Progress */}
+        <div className="bg-card rounded-lg p-4 mb-6 shadow-sm border">
+          <div className="flex items-center gap-2 mb-2">
+            <Flame className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-foreground">Wochenfortschritt</span>
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted-foreground">
+              {weeklyCompleted} von {weeklyTotal} Challenges erledigt
+            </span>
+            <span className="text-xs font-bold text-primary">
+              {Math.round((weeklyCompleted / weeklyTotal) * 100)}%
+            </span>
+          </div>
+          <Progress value={(weeklyCompleted / weeklyTotal) * 100} className="h-2" />
+        </div>
+
+        <h2 className="text-lg font-bold mb-3 text-foreground">
           Deine Challenges
         </h2>
         
