@@ -125,6 +125,9 @@ export type Database = {
           push_ups: number | null
           sit_ups: number | null
           squats: number | null
+          steps: number | null
+          steps_started_at: string | null
+          steps_tracking_active: boolean | null
           updated_at: string
           user_id: string
         }
@@ -137,6 +140,9 @@ export type Database = {
           push_ups?: number | null
           sit_ups?: number | null
           squats?: number | null
+          steps?: number | null
+          steps_started_at?: string | null
+          steps_tracking_active?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -149,6 +155,9 @@ export type Database = {
           push_ups?: number | null
           sit_ups?: number | null
           squats?: number | null
+          steps?: number | null
+          steps_started_at?: string | null
+          steps_tracking_active?: boolean | null
           updated_at?: string
           user_id?: string
         }
