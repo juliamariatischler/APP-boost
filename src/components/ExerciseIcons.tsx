@@ -20,16 +20,18 @@ export const PushUpIcon = ({ className }: IconProps) => (
 
 export const SquatIcon = ({ className }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    {/* Head */}
-    <circle cx="12" cy="4" r="2" />
-    {/* Torso */}
-    <line x1="12" y1="6" x2="12" y2="12" />
-    {/* Arms out */}
-    <line x1="12" y1="8" x2="8" y2="10" />
-    <line x1="12" y1="8" x2="16" y2="10" />
-    {/* Bent legs (squat position) */}
-    <polyline points="12,12 8,16 6,20" />
-    <polyline points="12,12 16,16 18,20" />
+    {/* Head - side view */}
+    <circle cx="10" cy="5" r="2" />
+    {/* Torso - angled forward in squat */}
+    <line x1="10" y1="7" x2="8" y2="12" />
+    {/* Arms stretched forward for balance */}
+    <line x1="9" y1="9" x2="16" y2="8" />
+    {/* Upper leg - horizontal in deep squat */}
+    <line x1="8" y1="12" x2="14" y2="13" />
+    {/* Lower leg - vertical */}
+    <line x1="14" y1="13" x2="13" y2="20" />
+    {/* Foot */}
+    <line x1="11" y1="20" x2="15" y2="20" />
   </svg>
 );
 
