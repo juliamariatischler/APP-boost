@@ -126,7 +126,7 @@ const Rewards = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-6 pb-8">
+      <div className="bg-gradient-to-br from-primary to-accent p-6 pb-8">
         <div className="max-w-screen-xl mx-auto">
           <div className="flex justify-between items-center mb-2">
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -251,6 +251,70 @@ const Rewards = () => {
                 );
               })}
             </div>
+
+            {/* Extra Challenges */}
+            <Card className="p-5 bg-card shadow-lg mt-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-foreground">Mehr Blitze sammeln?</h3>
+                  <p className="text-xs text-muted-foreground">Diese Challenges bringen extra viele ⚡</p>
+                </div>
+                <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />
+              </div>
+              
+              <div className="space-y-3">
+                {/* 2-Wochen Challenge */}
+                <button 
+                  onClick={() => navigate("/challenge/weekly")}
+                  className="w-full flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Calendar className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">2-Wochen Challenge</span>
+                      <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">+50 ⚡</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">14 Tage durchhalten = Mega-Bonus!</p>
+                  </div>
+                </button>
+
+                {/* Friendquest */}
+                <button 
+                  onClick={() => navigate("/challenge/friend")}
+                  className="w-full flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                >
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <Swords className="h-5 w-5 text-purple-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">Friendquest</span>
+                      <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+20-50 ⚡</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Fordere Freunde zum Duell heraus!</p>
+                  </div>
+                </button>
+
+                {/* Try It */}
+                <button 
+                  onClick={() => navigate("/challenge/tryit")}
+                  className="w-full flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+                >
+                  <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                    <MapPin className="h-5 w-5 text-orange-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">Try It</span>
+                      <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">+25 ⚡</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Schnuppertermine bei Sportvereinen</p>
+                  </div>
+                </button>
+              </div>
+            </Card>
 
             {/* Transparency Note */}
             <p className="text-xs text-muted-foreground text-center mt-4 px-4">
