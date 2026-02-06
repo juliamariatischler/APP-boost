@@ -1,4 +1,4 @@
-import { Crown, Activity, Zap, Settings } from "lucide-react";
+import { Crown, Home, Zap, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export const BottomNav = () => {
@@ -6,10 +6,10 @@ export const BottomNav = () => {
   const location = useLocation();
 
   const navItems = [
-    { icon: Crown, label: "Geschenke", path: "/rewards" },
-    { icon: Activity, label: "Aktivitäten", path: "/activity" },
-    { icon: Zap, label: "Blitz", path: "/boost" },
     { icon: Settings, label: "Einstellungen", path: "/settings" },
+    { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: Zap, label: "Blitz", path: "/boost" },
+    { icon: Crown, label: "Geschenke", path: "/rewards" },
   ];
 
   return (
