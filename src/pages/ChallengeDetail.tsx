@@ -13,6 +13,7 @@ import tryitImg from "@/assets/challenge-tryit.jpg";
 import boostLogo from "@/assets/boost-logo.png";
 import TrialSessionsList from "@/components/TrialSessionsList";
 import { PushUpIcon, SquatIcon, PlankIcon, SitUpIcon, JumpingJacksIcon } from "@/components/ExerciseIcons";
+import { StepCounter } from "@/components/StepCounter";
 
 type Exercise = {
   name: string;
@@ -255,8 +256,11 @@ const ChallengeDetail = () => {
             {challenge.description}
           </p>
 
-          {id === "daily" && (
+          {id === "daily" && userId && (
             <div className="space-y-6">
+              {/* Step Counter */}
+              <StepCounter userId={userId} />
+
               {/* Exercise Buttons */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {exercises.map((exercise) => {

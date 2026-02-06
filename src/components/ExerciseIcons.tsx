@@ -77,3 +77,25 @@ export const JumpingJacksIcon = ({ className }: IconProps) => (
     <line x1="12" y1="14" x2="17" y2="22" />
   </svg>
 );
+
+export const WalkingIcon = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    {/* Head - side view */}
+    <circle cx="12" cy="4" r="2" />
+    {/* Torso - slightly angled forward */}
+    <line x1="12" y1="6" x2="11" y2="12" />
+    {/* Back arm (behind) */}
+    <line x1="11" y1="8" x2="14" y2="11" />
+    {/* Front arm (forward swing) */}
+    <line x1="11" y1="8" x2="7" y2="10" />
+    {/* Back leg (extended behind) */}
+    <line x1="11" y1="12" x2="15" y2="16" />
+    <line x1="15" y1="16" x2="17" y2="20" />
+    {/* Front leg (bent forward) */}
+    <line x1="11" y1="12" x2="8" y2="16" />
+    <line x1="8" y1="16" x2="6" y2="20" />
+    {/* Feet */}
+    <line x1="5" y1="20" x2="8" y2="20" />
+    <line x1="16" y1="20" x2="19" y2="20" />
+  </svg>
+);
