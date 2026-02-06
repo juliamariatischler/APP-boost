@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BottomNav } from "@/components/BottomNav";
-import boostLogo from "@/assets/boost-logo.png";
+import { TopHeader } from "@/components/TopHeader";
 
 // Mock: User's current flashes (would come from profile)
 const MY_FLASHES = 12;
@@ -125,21 +125,7 @@ const Rewards = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-accent p-6 pb-8">
-        <div className="max-w-screen-xl mx-auto">
-          <div className="flex justify-between items-center mb-2">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Gift className="h-7 w-7" />
-              Geschenke
-            </h1>
-            <img src={boostLogo} alt="BOOST Logo" className="h-10 w-auto brightness-0 invert" />
-          </div>
-          <p className="text-white/80 text-sm">
-            Sammle Blitze und schalte echte Rewards frei
-          </p>
-        </div>
-      </div>
+      <TopHeader />
 
       <div className="max-w-screen-xl mx-auto px-4 -mt-4">
         {/* Current Status */}

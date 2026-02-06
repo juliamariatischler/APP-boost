@@ -1,16 +1,15 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
-import boostLogo from "@/assets/boost-logo.png";
 import TrialSessionsList from "@/components/TrialSessionsList";
 import { DailyChallengeContent } from "@/components/DailyChallengeContent";
+import { TopHeader } from "@/components/TopHeader";
+import { BottomNav } from "@/components/BottomNav";
 
 const challengeData: Record<string, { title: string; image: string; description: string }> = {
   daily: {
@@ -66,21 +65,8 @@ const ChallengeDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-card shadow-sm p-4 mb-6">
-        <div className="max-w-screen-xl mx-auto flex justify-between items-center">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Zurück
-          </Button>
-          <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-background pb-16">
+      <TopHeader />
 
       {/* Content */}
       <div className="max-w-screen-xl mx-auto px-4 pb-8">
@@ -108,6 +94,8 @@ const ChallengeDetail = () => {
           </Card>
         )}
       </div>
+
+      <BottomNav />
     </div>
   );
 };

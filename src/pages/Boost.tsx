@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, Users, Trophy, ArrowUp, CheckCircle, Clock, Calendar, Swords, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BottomNav } from "@/components/BottomNav";
-import boostLogo from "@/assets/boost-logo.png";
+import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -125,18 +124,7 @@ const Boost = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-accent p-6 pb-8">
-        <div className="max-w-screen-xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Zap className="h-7 w-7 fill-white" />
-              Blitze
-            </h1>
-            <img src={boostLogo} alt="BOOST Logo" className="h-10 w-auto brightness-0 invert" />
-          </div>
-        </div>
-      </div>
+      <TopHeader />
 
       <div className="max-w-screen-xl mx-auto px-4 -mt-4 space-y-4">
         {/* A) Meine Blitze */}

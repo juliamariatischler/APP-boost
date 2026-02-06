@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, Swords, Users, Ticket } from 'lucide-react';
+import { UserPlus, Swords, Users, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,7 +12,8 @@ import { ChallengeSelector } from '@/components/ChallengeSelector';
 import { InviteCodeDisplay } from '@/components/InviteCodeDisplay';
 import { ChallengeInvitationsList } from '@/components/ChallengeInvitationsList';
 import { LiveBattle } from '@/components/LiveBattle';
-import boostLogo from '@/assets/boost-logo.png';
+import { TopHeader } from '@/components/TopHeader';
+import { BottomNav } from '@/components/BottomNav';
 import friendImg from '@/assets/challenge-friend.jpg';
 
 interface Profile {
@@ -237,21 +238,8 @@ const FriendQuest = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header - matching ChallengeDetail style */}
-      <div className="bg-card shadow-sm p-4 mb-6">
-        <div className="max-w-screen-xl mx-auto flex justify-between items-center">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Zurück
-          </Button>
-          <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-background pb-16">
+      <TopHeader />
 
       {/* Content */}
       <div className="max-w-screen-xl mx-auto px-4 pb-8">
@@ -397,6 +385,8 @@ const FriendQuest = () => {
           </Tabs>
         </Card>
       </div>
+
+      <BottomNav />
     </div>
   );
 };
