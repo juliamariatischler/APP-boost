@@ -23,6 +23,12 @@ type Exercise = {
 
 const STEP_GOAL = 3000;
 
+const STEP_REWARDS = [
+  { steps: 3000, flashes: 1 },
+  { steps: 4000, flashes: 2 },
+  { steps: 5000, flashes: 3 },
+];
+
 const exercises: Exercise[] = [
   { name: "Push-ups", goal: 20, dbKey: "push_ups", icon: <PushUpIcon className="h-6 w-6" /> },
   { name: "Squats", goal: 30, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" /> },
@@ -241,7 +247,11 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const isDailyChallengeComplete = isStepsComplete && allExercisesComplete;
 
   const stepsProgress = Math.min((steps / STEP_GOAL) * 100, 100);
-
+  
+  // Calculate earned flashes based on steps
+  const earnedFlashes = STEP_REWARDS.reduce((acc, reward) => 
+    steps >= reward.steps ? reward.flashes : acc, 0
+  );
   if (loading) {
     return <div className="animate-pulse h-64 bg-muted rounded-lg" />;
   }
@@ -319,6 +329,44 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{steps.toLocaleString()}</span>
               <span>{STEP_GOAL.toLocaleString()}</span>
+            </div>
+
+            {/* Step Reward Tiers */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-foreground">Bonus-Flashes für Schritte</span>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3].map((flash) => (
+                    <Zap 
+                      key={flash}
+                      className={`h-5 w-5 transition-all ${
+                        flash <= earnedFlashes 
+                          ? "text-yellow-500 fill-yellow-500" 
+                          : "text-muted-foreground/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                {STEP_REWARDS.map((reward) => (
+                  <div 
+                    key={reward.steps}
+                    className={`p-2 rounded-lg ${
+                      steps >= reward.steps 
+                        ? "bg-yellow-500/20 text-yellow-700" 
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <div className="font-bold">{reward.steps.toLocaleString()}</div>
+                    <div className="flex items-center justify-center gap-0.5">
+                      {Array.from({ length: reward.flashes }).map((_, i) => (
+                        <Zap key={i} className="h-3 w-3" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
