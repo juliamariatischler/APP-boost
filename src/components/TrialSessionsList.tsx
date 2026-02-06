@@ -329,7 +329,7 @@ const TrialSessionsList = () => {
                   </p>
                 )}
 
-                {/* Club Contact */}
+                {/* Club Contact - Only show contact buttons, not raw data */}
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground pt-2 border-t">
                   {session.clubs.contact_email && (
                     <a 
@@ -337,7 +337,7 @@ const TrialSessionsList = () => {
                       className="flex items-center gap-1 hover:text-primary transition-colors"
                     >
                       <Mail className="h-3 w-3" />
-                      {session.clubs.contact_email}
+                      E-Mail senden
                     </a>
                   )}
                   {session.clubs.contact_phone && (
@@ -346,7 +346,7 @@ const TrialSessionsList = () => {
                       className="flex items-center gap-1 hover:text-primary transition-colors"
                     >
                       <Phone className="h-3 w-3" />
-                      {session.clubs.contact_phone}
+                      Anrufen
                     </a>
                   )}
                   {session.clubs.website && (
