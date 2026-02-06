@@ -16,59 +16,67 @@ const CLASS_FLASHES = 248;
 const PERSONAL_REWARDS = [
   { 
     id: 1, 
-    title: "dm Gutschein 5€", 
-    partner: "dm", 
-    threshold: 10, 
-    category: "gutscheine",
-    icon: "🧴"
-  },
-  { 
-    id: 2, 
-    title: "Sport-Trinkflasche", 
-    partner: "Intersport", 
-    threshold: 15, 
-    category: "sport",
-    icon: "🍶"
-  },
-  { 
-    id: 3, 
-    title: "Nike Socken", 
-    partner: "Nike", 
-    threshold: 20, 
-    category: "sport",
-    icon: "🧦"
-  },
-  { 
-    id: 4, 
-    title: "BIPA Gutschein 10€", 
+    title: "BIPA Gutschein 5€", 
     partner: "BIPA", 
-    threshold: 25, 
+    threshold: 50, 
     category: "gutscheine",
     icon: "🎀"
   },
   { 
+    id: 2, 
+    title: "dm Gutschein 5€", 
+    partner: "dm", 
+    threshold: 75, 
+    category: "gutscheine",
+    icon: "🧴"
+  },
+  { 
+    id: 3, 
+    title: "Sport-Trinkflasche", 
+    partner: "Intersport", 
+    threshold: 100, 
+    category: "sport",
+    icon: "🍶"
+  },
+  { 
+    id: 4, 
+    title: "Nike Socken", 
+    partner: "Nike", 
+    threshold: 150, 
+    category: "sport",
+    icon: "🧦"
+  },
+  { 
     id: 5, 
-    title: "Fitness-Armband", 
-    partner: "Gigasport", 
-    threshold: 35, 
-    category: "zubehoer",
-    icon: "⌚"
+    title: "SPAR Gutschein 10€", 
+    partner: "SPAR", 
+    threshold: 200, 
+    category: "gutscheine",
+    icon: "🛒"
   },
   { 
     id: 6, 
-    title: "SPAR Gutschein 15€", 
-    partner: "SPAR", 
-    threshold: 40, 
-    category: "gutscheine",
-    icon: "🛒"
+    title: "Fitness-Armband", 
+    partner: "Gigasport", 
+    threshold: 300, 
+    category: "zubehoer",
+    icon: "⌚"
   },
   { 
     id: 7, 
     title: "Sport-Rucksack", 
     partner: "Intersport", 
-    threshold: 50, 
+    threshold: 400, 
     category: "sport",
     icon: "🎒"
+  },
+  { 
+    id: 8, 
+    title: "dm Gutschein 20€", 
+    partner: "dm", 
+    threshold: 500, 
+    category: "gutscheine",
+    icon: "🧴"
   },
 ];
 
