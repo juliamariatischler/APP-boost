@@ -75,22 +75,19 @@ export function useGamification(userId: string | null, userClass?: string, userS
 
   const loadGamificationData = async (uid: string) => {
     try {
-      const queries: Promise<any>[] = [
+      const baseQueries = [
         supabase.from("profiles").select("points, rescue_days_used, last_rescue_reset").eq("id", uid).single(),
         supabase.from("daily_results").select("*").eq("user_id", uid).order("date", { ascending: false }),
         supabase.from("badges").select("*"),
         supabase.from("user_badges").select("badge_id, earned_at").eq("user_id", uid),
-      ];
+      ] as const;
 
-      // Add class participation & average if we have class info
-      if (userClass && userSchool) {
-        queries.push(
-          supabase.rpc("get_class_participation", { p_class: userClass, p_school: userSchool }),
-          supabase.rpc("get_class_average_points", { p_class: userClass, p_school: userSchool }),
-        );
-      }
+      const classQueries = userClass && userSchool ? [
+        supabase.rpc("get_class_participation", { p_class: userClass, p_school: userSchool }),
+        supabase.rpc("get_class_average_points", { p_class: userClass, p_school: userSchool }),
+      ] as const : [];
 
-      const results = await Promise.all(queries);
+      const results = await Promise.all([...baseQueries, ...classQueries]);
       const [profileRes, allResultsRes, badgesRes, userBadgesRes] = results;
 
       const points = profileRes.data?.points || 0;
