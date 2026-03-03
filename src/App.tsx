@@ -13,6 +13,7 @@ import Activity from "./pages/Activity";
 import Boost from "./pages/Boost";
 import Settings from "./pages/Settings";
 import FriendQuest from "./pages/FriendQuest";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
