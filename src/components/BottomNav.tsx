@@ -26,7 +26,7 @@ export const BottomNav = () => {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                isBoost
+                isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
