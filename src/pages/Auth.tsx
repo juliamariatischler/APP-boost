@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import ForgotPassword from "@/components/ForgotPassword";
 
 // Input validation schemas
 const loginSchema = z.object({
