@@ -13,6 +13,7 @@ import Activity from "./pages/Activity";
 import Boost from "./pages/Boost";
 import Settings from "./pages/Settings";
 import FriendQuest from "./pages/FriendQuest";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/boost" element={<Boost />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/challenge/friend" element={<FriendQuest />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
