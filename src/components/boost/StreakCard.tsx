@@ -1,7 +1,8 @@
-import { Flame, Award } from "lucide-react";
+import { Award } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { WEEKLY_GOAL_DAYS, getWeeklyGoalProgress, type StreakInfo } from "@/lib/gamification";
+import { WEEKLY_GOAL_DAYS, getWeeklyGoalProgress, getStreakIntensity, STREAK_VISUALS, type StreakInfo } from "@/lib/gamification";
+import { StreakFireVisual } from "./StreakFireVisual";
 
 interface Props {
   streak: StreakInfo;
@@ -11,24 +12,24 @@ interface Props {
 export const StreakCard = ({ streak, weeklyCompletedDays }: Props) => {
   const weeklyProgress = getWeeklyGoalProgress(weeklyCompletedDays);
   const weeklyGoalMet = weeklyCompletedDays >= WEEKLY_GOAL_DAYS;
+  const intensity = getStreakIntensity(streak.currentStreak);
+  const visual = STREAK_VISUALS[intensity];
 
   return (
     <Card className="p-4 bg-card shadow-lg">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-muted-foreground">Serie & Wochenziel</span>
-        <Flame className="h-5 w-5 text-orange-500" />
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+          {visual.label}
+        </span>
       </div>
 
-      {/* Streak */}
+      {/* Streak with visual fire */}
       <div className="flex items-center gap-4 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
-            <span className="text-2xl">🔥</span>
-          </div>
-          <div>
-            <span className="text-2xl font-black text-foreground">{streak.currentStreak}</span>
-            <p className="text-xs text-muted-foreground">Tage Serie</p>
-          </div>
+        <StreakFireVisual streak={streak.currentStreak} />
+        <div>
+          <span className="text-3xl font-black text-foreground">{streak.currentStreak}</span>
+          <p className="text-xs text-muted-foreground">Tage Serie</p>
         </div>
         <div className="h-10 w-px bg-border" />
         <div>
@@ -50,7 +51,7 @@ export const StreakCard = ({ streak, weeklyCompletedDays }: Props) => {
         </div>
         <Progress value={weeklyProgress} className="h-2" />
         {weeklyGoalMet ? (
-          <p className="text-xs text-center font-bold text-green-600">✅ Wochenziel erreicht!</p>
+          <p className="text-xs text-center font-bold text-primary">✅ Wochenziel erreicht!</p>
         ) : (
           <p className="text-xs text-center text-muted-foreground">
             Noch <span className="font-bold text-primary">{WEEKLY_GOAL_DAYS - weeklyCompletedDays}</span> Tage diese Woche

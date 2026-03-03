@@ -6,6 +6,8 @@ import { LevelCard } from "@/components/boost/LevelCard";
 import { StreakCard } from "@/components/boost/StreakCard";
 import { BadgesCard } from "@/components/boost/BadgesCard";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
+import { ClassParticipationCard } from "@/components/boost/ClassParticipationCard";
+import { EnergyRankCard } from "@/components/boost/EnergyRankCard";
 import { ChallengeButtons } from "@/components/boost/ChallengeButtons";
 import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +19,7 @@ const Boost = () => {
   const [userSchool, setUserSchool] = useState("");
   const [authLoading, setAuthLoading] = useState(true);
 
-  const gamification = useGamification(userId);
+  const gamification = useGamification(userId, userClass, userSchool);
 
   useEffect(() => {
     const init = async () => {
@@ -56,6 +58,23 @@ const Boost = () => {
       <div className="max-w-md mx-auto px-4 -mt-4 space-y-3">
         <LevelCard points={gamification.points} level={gamification.level} />
         <StreakCard streak={gamification.streak} weeklyCompletedDays={gamification.weeklyCompletedDays} />
+        
+        {/* Class participation - the game changer */}
+        {gamification.classParticipation && (
+          <ClassParticipationCard
+            participation={gamification.classParticipation}
+            userClass={userClass}
+            rescueDaysUsed={gamification.rescueDaysUsed}
+          />
+        )}
+        
+        {/* Energy rank vs class average */}
+        <EnergyRankCard
+          userPoints={gamification.points}
+          classAverage={gamification.classAverage}
+          energyRank={gamification.energyRank}
+        />
+        
         <BadgesCard allBadges={gamification.allBadges} earnedBadgeIds={gamification.earnedBadgeIds} />
         <ClassLeaderboard userClass={userClass} userSchool={userSchool} />
         <ChallengeButtons />

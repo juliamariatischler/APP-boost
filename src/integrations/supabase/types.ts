@@ -267,9 +267,11 @@ export type Database = {
           created_at: string
           current_streak: number
           id: string
+          last_rescue_reset: string
           level: number
           longest_streak: number
           points: number
+          rescue_days_used: number
           school: string
           updated_at: string
           username: string
@@ -279,9 +281,11 @@ export type Database = {
           created_at?: string
           current_streak?: number
           id: string
+          last_rescue_reset?: string
           level?: number
           longest_streak?: number
           points?: number
+          rescue_days_used?: number
           school: string
           updated_at?: string
           username: string
@@ -291,9 +295,11 @@ export type Database = {
           created_at?: string
           current_streak?: number
           id?: string
+          last_rescue_reset?: string
           level?: number
           longest_streak?: number
           points?: number
+          rescue_days_used?: number
           school?: string
           updated_at?: string
           username?: string
@@ -466,6 +472,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_class_average_points: {
+        Args: { p_class: string; p_school: string }
+        Returns: number
+      }
+      get_class_participation: {
+        Args: { p_class: string; p_date?: string; p_school: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

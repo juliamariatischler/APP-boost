@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getLevelForPoints, calculateStreak, type LevelInfo, type StreakInfo } from "@/lib/gamification";
+import { getLevelForPoints, calculateStreak, getEnergyRank, type LevelInfo, type StreakInfo, type EnergyRank } from "@/lib/gamification";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -19,6 +19,13 @@ interface UserBadge {
   earned_at: string;
 }
 
+interface ClassParticipation {
+  total_students: number;
+  active_students: number;
+  participation_pct: number;
+  streak_alive: boolean;
+}
+
 export interface GamificationData {
   points: number;
   level: LevelInfo;
@@ -27,10 +34,14 @@ export interface GamificationData {
   allBadges: Badge[];
   earnedBadgeIds: string[];
   totalCompletedDays: number;
+  rescueDaysUsed: number;
+  classParticipation: ClassParticipation | null;
+  classAverage: number;
+  energyRank: EnergyRank;
   loading: boolean;
 }
 
-export function useGamification(userId: string | null): GamificationData {
+export function useGamification(userId: string | null, userClass?: string, userSchool?: string): GamificationData {
   const [data, setData] = useState<GamificationData>({
     points: 0,
     level: getLevelForPoints(0),
@@ -39,13 +50,17 @@ export function useGamification(userId: string | null): GamificationData {
     allBadges: [],
     earnedBadgeIds: [],
     totalCompletedDays: 0,
+    rescueDaysUsed: 0,
+    classParticipation: null,
+    classAverage: 0,
+    energyRank: "gleich",
     loading: true,
   });
 
   useEffect(() => {
     if (!userId) return;
     loadGamificationData(userId);
-  }, [userId]);
+  }, [userId, userClass, userSchool]);
 
   const isCompletedDay = (day: any): boolean => {
     return (
@@ -60,27 +75,42 @@ export function useGamification(userId: string | null): GamificationData {
 
   const loadGamificationData = async (uid: string) => {
     try {
-      const [profileRes, allResultsRes, badgesRes, userBadgesRes] = await Promise.all([
-        supabase.from("profiles").select("points").eq("id", uid).single(),
+      const baseQueries = [
+        supabase.from("profiles").select("points, rescue_days_used, last_rescue_reset").eq("id", uid).single(),
         supabase.from("daily_results").select("*").eq("user_id", uid).order("date", { ascending: false }),
         supabase.from("badges").select("*"),
         supabase.from("user_badges").select("badge_id, earned_at").eq("user_id", uid),
-      ]);
+      ] as const;
+
+      const classQueries = userClass && userSchool ? [
+        supabase.rpc("get_class_participation", { p_class: userClass, p_school: userSchool }),
+        supabase.rpc("get_class_average_points", { p_class: userClass, p_school: userSchool }),
+      ] as const : [];
+
+      const results = await Promise.all([...baseQueries, ...classQueries]);
+      const [profileRes, allResultsRes, badgesRes, userBadgesRes] = results;
 
       const points = profileRes.data?.points || 0;
+      const rescueDaysUsed = profileRes.data?.rescue_days_used || 0;
       const allResults = allResultsRes.data || [];
       const allBadges = (badgesRes.data || []) as Badge[];
       const userBadges = (userBadgesRes.data || []) as UserBadge[];
 
-      // Completed days for streak
+      let classParticipation: ClassParticipation | null = null;
+      let classAverage = 0;
+
+      if (results.length > 4) {
+        classParticipation = results[4].data as ClassParticipation | null;
+        classAverage = Number(results[5].data) || 0;
+      }
+
       const completedDates = allResults
         .filter(isCompletedDay)
-        .map((r) => r.date);
+        .map((r: any) => r.date);
 
       const streak = calculateStreak(completedDates);
       const totalCompletedDays = completedDates.length;
 
-      // Weekly
       const today = new Date();
       const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
       const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
@@ -88,8 +118,10 @@ export function useGamification(userId: string | null): GamificationData {
       const weekEndStr = format(weekEnd, "yyyy-MM-dd");
 
       const weeklyCompletedDays = allResults
-        .filter((r) => r.date >= weekStartStr && r.date <= weekEndStr && isCompletedDay(r))
+        .filter((r: any) => r.date >= weekStartStr && r.date <= weekEndStr && isCompletedDay(r))
         .length;
+
+      const energyRank = getEnergyRank(points, classAverage);
 
       setData({
         points,
@@ -99,10 +131,13 @@ export function useGamification(userId: string | null): GamificationData {
         allBadges,
         earnedBadgeIds: userBadges.map((ub) => ub.badge_id),
         totalCompletedDays,
+        rescueDaysUsed,
+        classParticipation,
+        classAverage,
+        energyRank,
         loading: false,
       });
 
-      // Auto-award badges
       await checkAndAwardBadges(uid, allBadges, userBadges, points, streak, totalCompletedDays);
     } catch (err) {
       console.error("Gamification load error:", err);
@@ -135,7 +170,6 @@ export function useGamification(userId: string | null): GamificationData {
         case "total_days":
           qualifies = totalDays >= badge.requirement_value;
           break;
-        // challenges_won would need separate query, skip for now
       }
 
       if (qualifies) toAward.push(badge.id);
@@ -144,7 +178,6 @@ export function useGamification(userId: string | null): GamificationData {
     if (toAward.length > 0) {
       const inserts = toAward.map((badge_id) => ({ user_id: uid, badge_id }));
       await supabase.from("user_badges").insert(inserts);
-      // Reload to update UI
       setData((prev) => ({
         ...prev,
         earnedBadgeIds: [...prev.earnedBadgeIds, ...toAward],
