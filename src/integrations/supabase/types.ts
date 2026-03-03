@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          requirement_type: string
+          requirement_value: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          requirement_type: string
+          requirement_value: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          requirement_type?: string
+          requirement_value?: number
+        }
+        Relationships: []
+      }
       challenge_invitations: {
         Row: {
           battle_started_at: string | null
@@ -232,7 +265,10 @@ export type Database = {
         Row: {
           class: string
           created_at: string
+          current_streak: number
           id: string
+          level: number
+          longest_streak: number
           points: number
           school: string
           updated_at: string
@@ -241,7 +277,10 @@ export type Database = {
         Insert: {
           class: string
           created_at?: string
+          current_streak?: number
           id: string
+          level?: number
+          longest_streak?: number
           points?: number
           school: string
           updated_at?: string
@@ -250,7 +289,10 @@ export type Database = {
         Update: {
           class?: string
           created_at?: string
+          current_streak?: number
           id?: string
+          level?: number
+          longest_streak?: number
           points?: number
           school?: string
           updated_at?: string
@@ -361,6 +403,42 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
