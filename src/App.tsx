@@ -35,6 +35,7 @@ const App = () => (
           <Route path="/boost" element={<Boost />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/challenge/friend" element={<FriendQuest />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

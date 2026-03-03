@@ -211,46 +211,58 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="login-email">Email</Label>
-                <Input
-                  id="login-email"
-                  type="email"
-                  required
-                  value={loginData.email}
-                  onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                  placeholder="deine@email.de"
-                />
-              </div>
-              <div>
-                <Label htmlFor="login-password">Passwort</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  required
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  placeholder="••••••••"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1" disabled={loading || demoLoading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Anmelden
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={handleDemoLogin}
-                  disabled={loading || demoLoading}
+            {showForgotPassword ? (
+              <ForgotPassword onBack={() => setShowForgotPassword(false)} />
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    required
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    placeholder="deine@email.de"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="login-password">Passwort</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    required
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1" disabled={loading || demoLoading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Anmelden
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={handleDemoLogin}
+                    disabled={loading || demoLoading}
+                  >
+                    {demoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Demo
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-sm"
+                  onClick={() => setShowForgotPassword(true)}
                 >
-                  {demoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Demo
+                  Passwort vergessen?
                 </Button>
-              </div>
-            </form>
+              </form>
+            )}
           </TabsContent>
 
           <TabsContent value="signup">
