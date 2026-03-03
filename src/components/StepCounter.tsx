@@ -106,8 +106,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       setLastAwardedFlashes(newFlashes);
       
       // Award points
-      await supabase.rpc('increment_points', {
-        user_id_param: userId,
+      await (supabase.rpc as any)('increment_points', {
         points_to_add: pointsToAdd
       });
 
