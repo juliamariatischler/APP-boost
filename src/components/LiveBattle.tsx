@@ -269,28 +269,18 @@ export const LiveBattle = ({
         })
         .eq('id', invitationId);
 
-      // Award points using the increment_points function
+      // Award points to the current user only (opponent gets points when they view results)
       if (winner) {
-        const loserId = winner === data.challenger_id ? data.opponent_id : data.challenger_id;
+        const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+        const isWinner = currentUserId === winner;
+        const pointsToAward = isWinner ? challengeData.winner_points : challengeData.loser_points;
         
-        // Update winner points - use type assertion for the new function
         try {
           await (supabase.rpc as any)('increment_points', { 
-            user_id_param: winner, 
-            points_to_add: challengeData.winner_points 
+            points_to_add: pointsToAward 
           });
         } catch (e) {
-          console.error('Error updating winner points:', e);
-        }
-
-        // Update loser points
-        try {
-          await (supabase.rpc as any)('increment_points', { 
-            user_id_param: loserId, 
-            points_to_add: challengeData.loser_points 
-          });
-        } catch (e) {
-          console.error('Error updating loser points:', e);
+          console.error('Error updating points:', e);
         }
       }
 

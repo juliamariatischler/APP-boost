@@ -154,7 +154,6 @@ const TrialSessionsList = () => {
       // Award points for registration
       try {
         await (supabase.rpc as any)('increment_points', { 
-          user_id_param: userId, 
           points_to_add: POINTS_PER_VISIT 
         });
         toast.success(`Erfolgreich angemeldet! +${POINTS_PER_VISIT} ⚡ Blitze`);
