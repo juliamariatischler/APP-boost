@@ -1,4 +1,4 @@
-// === Level System (10 Stufen) ===
+// === Level System (50 Stufen) ===
 export interface LevelInfo {
   level: number;
   name: string;
@@ -6,20 +6,58 @@ export interface LevelInfo {
   minPoints: number;
   maxPoints: number; // -1 = infinite
   color: string; // tailwind class token
+  tier: string; // tier grouping for visual effects
 }
 
-export const LEVELS: LevelInfo[] = [
-  { level: 1, name: "Rookie", emoji: "🌱", minPoints: 0, maxPoints: 49, color: "text-muted-foreground" },
-  { level: 2, name: "Starter", emoji: "⭐", minPoints: 50, maxPoints: 149, color: "text-blue-500" },
-  { level: 3, name: "Bronze", emoji: "🥉", minPoints: 150, maxPoints: 299, color: "text-amber-700" },
-  { level: 4, name: "Silber", emoji: "🥈", minPoints: 300, maxPoints: 499, color: "text-gray-400" },
-  { level: 5, name: "Gold", emoji: "🥇", minPoints: 500, maxPoints: 799, color: "text-yellow-500" },
-  { level: 6, name: "Platin", emoji: "💎", minPoints: 800, maxPoints: 1199, color: "text-cyan-400" },
-  { level: 7, name: "Diamant", emoji: "👑", minPoints: 1200, maxPoints: 1799, color: "text-purple-500" },
-  { level: 8, name: "Champion", emoji: "🏆", minPoints: 1800, maxPoints: 2599, color: "text-orange-500" },
-  { level: 9, name: "Legende", emoji: "🔥", minPoints: 2600, maxPoints: 3999, color: "text-red-500" },
-  { level: 10, name: "GOAT", emoji: "🐐", minPoints: 4000, maxPoints: -1, color: "text-primary" },
+// Generate 50 levels across 10 tiers
+const TIERS = [
+  { name: "Rookie", emoji: "🌱", color: "text-muted-foreground", tier: "rookie" },
+  { name: "Starter", emoji: "⭐", color: "text-blue-500", tier: "starter" },
+  { name: "Bronze", emoji: "🥉", color: "text-amber-700", tier: "bronze" },
+  { name: "Silber", emoji: "🥈", color: "text-gray-400", tier: "silver" },
+  { name: "Gold", emoji: "🥇", color: "text-yellow-500", tier: "gold" },
+  { name: "Platin", emoji: "💎", color: "text-cyan-400", tier: "platinum" },
+  { name: "Diamant", emoji: "👑", color: "text-purple-500", tier: "diamond" },
+  { name: "Champion", emoji: "🏆", color: "text-orange-500", tier: "champion" },
+  { name: "Legende", emoji: "🔥", color: "text-red-500", tier: "legend" },
+  { name: "GOAT", emoji: "🐐", color: "text-primary", tier: "goat" },
 ];
+
+function generateLevels(): LevelInfo[] {
+  const levels: LevelInfo[] = [];
+  // Points thresholds per tier (5 levels each)
+  const tierThresholds = [
+    0, 50, 150, 300, 500, 800, 1200, 1800, 2600, 4000
+  ];
+  
+  for (let tierIdx = 0; tierIdx < 10; tierIdx++) {
+    const t = TIERS[tierIdx];
+    const tierStart = tierThresholds[tierIdx];
+    const tierEnd = tierIdx < 9 ? tierThresholds[tierIdx + 1] : -1;
+    const tierRange = tierEnd === -1 ? 2000 : tierEnd - tierStart;
+    const stepSize = Math.floor(tierRange / 5);
+
+    for (let sub = 0; sub < 5; sub++) {
+      const lvl = tierIdx * 5 + sub + 1;
+      const minPts = tierStart + sub * stepSize;
+      const maxPts = lvl === 50 ? -1 : tierStart + (sub + 1) * stepSize - 1;
+      const suffix = sub > 0 ? ` ${["I", "II", "III", "IV", "V"][sub]}` : "";
+      
+      levels.push({
+        level: lvl,
+        name: `${t.name}${suffix}`,
+        emoji: t.emoji,
+        minPoints: minPts,
+        maxPoints: maxPts,
+        color: t.color,
+        tier: t.tier,
+      });
+    }
+  }
+  return levels;
+}
+
+export const LEVELS: LevelInfo[] = generateLevels();
 
 export function getLevelForPoints(points: number): LevelInfo {
   for (let i = LEVELS.length - 1; i >= 0; i--) {
@@ -30,7 +68,7 @@ export function getLevelForPoints(points: number): LevelInfo {
 
 export function getLevelProgress(points: number): number {
   const level = getLevelForPoints(points);
-  if (level.maxPoints === -1) return 100; // Max level
+  if (level.maxPoints === -1) return 100;
   const range = level.maxPoints - level.minPoints + 1;
   const progress = points - level.minPoints;
   return Math.min(Math.round((progress / range) * 100), 100);
@@ -44,8 +82,36 @@ export function getPointsToNextLevel(points: number): number {
 
 export function getNextLevel(points: number): LevelInfo | null {
   const current = getLevelForPoints(points);
-  if (current.level >= 10) return null;
+  if (current.level >= 50) return null;
   return LEVELS[current.level]; // next index
+}
+
+// === Streak Visual Intensity ===
+export type StreakIntensity = "off" | "spark" | "flame" | "fire" | "inferno" | "supernova";
+
+export function getStreakIntensity(streak: number): StreakIntensity {
+  if (streak === 0) return "off";
+  if (streak <= 2) return "spark";
+  if (streak <= 6) return "flame";
+  if (streak <= 13) return "fire";
+  if (streak <= 29) return "inferno";
+  return "supernova";
+}
+
+export const STREAK_VISUALS: Record<StreakIntensity, { label: string; emoji: string; glowColor: string; scale: number }> = {
+  off: { label: "Aus", emoji: "💤", glowColor: "transparent", scale: 1 },
+  spark: { label: "Funke", emoji: "✨", glowColor: "hsla(38, 92%, 50%, 0.3)", scale: 1 },
+  flame: { label: "Flamme", emoji: "🔥", glowColor: "hsla(25, 95%, 53%, 0.4)", scale: 1.1 },
+  fire: { label: "Feuer", emoji: "🔥", glowColor: "hsla(15, 95%, 50%, 0.5)", scale: 1.2 },
+  inferno: { label: "Inferno", emoji: "🌋", glowColor: "hsla(0, 90%, 50%, 0.6)", scale: 1.3 },
+  supernova: { label: "Supernova", emoji: "💥", glowColor: "hsla(280, 90%, 60%, 0.7)", scale: 1.4 },
+};
+
+// === Rescue Day Logic ===
+export const RESCUE_DAYS_PER_WEEK = 1;
+
+export function canUseRescueDay(rescueDaysUsed: number): boolean {
+  return rescueDaysUsed < RESCUE_DAYS_PER_WEEK;
 }
 
 // === Streak Calculation ===
@@ -57,7 +123,6 @@ export interface StreakInfo {
 export function calculateStreak(dates: string[]): StreakInfo {
   if (dates.length === 0) return { currentStreak: 0, longestStreak: 0 };
 
-  // Sort dates descending
   const sorted = [...dates].sort((a, b) => b.localeCompare(a));
   
   const today = new Date();
@@ -68,7 +133,6 @@ export function calculateStreak(dates: string[]): StreakInfo {
   const todayStr = formatDateLocal(today);
   const yesterdayStr = formatDateLocal(yesterday);
 
-  // Current streak: must include today or yesterday
   let currentStreak = 0;
   if (sorted[0] === todayStr || sorted[0] === yesterdayStr) {
     currentStreak = 1;
@@ -84,7 +148,6 @@ export function calculateStreak(dates: string[]): StreakInfo {
     }
   }
 
-  // Longest streak
   let longestStreak = 1;
   let tempStreak = 1;
   const ascending = [...sorted].reverse();
@@ -108,8 +171,30 @@ function formatDateLocal(d: Date): string {
 }
 
 // === Weekly Goal ===
-export const WEEKLY_GOAL_DAYS = 5; // 5 out of 7 days
+export const WEEKLY_GOAL_DAYS = 5;
 
 export function getWeeklyGoalProgress(completedDays: number): number {
   return Math.min(Math.round((completedDays / WEEKLY_GOAL_DAYS) * 100), 100);
 }
+
+// === Class Participation ===
+export const CLASS_PARTICIPATION_THRESHOLD = 70; // percent needed to keep class streak alive
+
+// === Energy Rank ===
+export type EnergyRank = "unter" | "gleich" | "über" | "weit_über";
+
+export function getEnergyRank(userPoints: number, classAvg: number): EnergyRank {
+  if (classAvg === 0) return "gleich";
+  const ratio = userPoints / classAvg;
+  if (ratio < 0.8) return "unter";
+  if (ratio <= 1.2) return "gleich";
+  if (ratio <= 1.8) return "über";
+  return "weit_über";
+}
+
+export const ENERGY_RANK_INFO: Record<EnergyRank, { label: string; emoji: string; color: string }> = {
+  unter: { label: "Unter Durchschnitt", emoji: "😤", color: "text-destructive" },
+  gleich: { label: "Im Durchschnitt", emoji: "💪", color: "text-muted-foreground" },
+  über: { label: "Über Durchschnitt", emoji: "⚡", color: "text-primary" },
+  weit_über: { label: "Weit über Durchschnitt", emoji: "🚀", color: "text-yellow-500" },
+};

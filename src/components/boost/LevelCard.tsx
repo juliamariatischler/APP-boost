@@ -1,7 +1,8 @@
-import { Zap, Flame, Target, Award } from "lucide-react";
+import { Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getLevelProgress, getPointsToNextLevel, getNextLevel, type LevelInfo } from "@/lib/gamification";
+import { motion } from "framer-motion";
 
 interface Props {
   points: number;
@@ -17,12 +18,21 @@ export const LevelCard = ({ points, level }: Props) => {
     <Card className="p-4 bg-card shadow-lg">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-muted-foreground">Mein Level</span>
-        <span className="text-2xl">{level.emoji}</span>
+        <motion.span
+          className="text-2xl"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          {level.emoji}
+        </motion.span>
       </div>
 
       <div className="flex items-center gap-3 mb-1">
         <span className="text-3xl font-black text-foreground">Lv.{level.level}</span>
-        <span className={`text-lg font-bold ${level.color}`}>{level.name}</span>
+        <div>
+          <span className={`text-lg font-bold ${level.color}`}>{level.name}</span>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{level.tier}</p>
+        </div>
       </div>
 
       <div className="flex items-end gap-2 mb-3">
@@ -34,12 +44,12 @@ export const LevelCard = ({ points, level }: Props) => {
       {nextLevel && (
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{level.name}</span>
-            <span>{nextLevel.emoji} {nextLevel.name}</span>
+            <span>Lv.{level.level}</span>
+            <span>{nextLevel.emoji} Lv.{nextLevel.level} {nextLevel.name}</span>
           </div>
           <Progress value={progress} className="h-2.5" />
           <p className="text-xs text-center text-muted-foreground">
-            Noch <span className="font-bold text-primary">{toNext} ⚡</span> bis {nextLevel.name}
+            Noch <span className="font-bold text-primary">{toNext} ⚡</span> bis Lv.{nextLevel.level}
           </p>
         </div>
       )}
