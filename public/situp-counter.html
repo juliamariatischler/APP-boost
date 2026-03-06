@@ -244,8 +244,12 @@
     });
 
     document.getElementById("finish-button").addEventListener("click", () => {
-      localStorage.setItem("situps_result", counter);
-      window.location.href = "/challenge/daily";
+      if(counter === 0){
+        localStorage.setItem("situps_result", 0);
+        window.location.href = "/challenge/daily";
+        return;
+      }
+      createCelebration(counter, 'SIT-UPS!', 'situps_result', '/challenge/daily');
     });
 
     async function main(){

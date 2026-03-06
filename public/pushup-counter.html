@@ -382,8 +382,12 @@
     });
 
     finishButton.addEventListener('click', () => {
-      localStorage.setItem("pushups_result", counter);
-      window.location.href = "/challenge/daily";
+      if(counter === 0){
+        localStorage.setItem("pushups_result", 0);
+        window.location.href = "/challenge/daily";
+        return;
+      }
+      createCelebration(counter, 'PUSH-UPS!', 'pushups_result', '/challenge/daily');
     });
 
     // Responsives Canvas (hält 4:3)

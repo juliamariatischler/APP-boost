@@ -358,8 +358,12 @@
     });
 
     document.getElementById('finish-button').addEventListener('click',()=>{
-      localStorage.setItem('planks_result',time);
-      window.location.href='/challenge/daily';
+      if(time === 0){
+        localStorage.setItem('planks_result', 0);
+        window.location.href='/challenge/daily';
+        return;
+      }
+      createCelebration(time + 's', 'PLANK!', 'planks_result', '/challenge/daily');
     });
 
     async function main(){

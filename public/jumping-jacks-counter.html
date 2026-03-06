@@ -250,10 +250,12 @@
     });
 
     document.getElementById('finish-button').addEventListener('click', () => {
-      // Save result to localStorage
-      localStorage.setItem('jumpingjacks_result', counter);
-      // Navigate back to challenge page
-      window.location.href = '/challenge/daily';
+      if(counter === 0){
+        localStorage.setItem('jumpingjacks_result', 0);
+        window.location.href = '/challenge/daily';
+        return;
+      }
+      createCelebration(counter, 'JUMPING JACKS!', 'jumpingjacks_result', '/challenge/daily');
     });
 
     async function main(){
