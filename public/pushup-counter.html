@@ -359,12 +359,14 @@
 
     async function main() {
       try {
+        loadingMessageEl.textContent = 'GPU wird initialisiert…';
         await initBackend();
-        loadingMessageEl.textContent = 'Please allow camera access...';
+        loadingMessageEl.textContent = 'Kamera wird gestartet…';
         await setupCamera();
+        loadingMessageEl.textContent = 'KI-Modell wird geladen…';
         await loadModel();
       } catch (e) {
-        loadingMessageEl.textContent = `Error: ${e.message}`;
+        loadingMessageEl.textContent = `Fehler: ${e.message}`;
         loadingMessageEl.style.color = 'red';
         console.error(e);
         return;
