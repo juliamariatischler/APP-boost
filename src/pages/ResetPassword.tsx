@@ -14,7 +14,10 @@ const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRecovery, setIsRecovery] = useState(false);
+  // Check URL hash synchronously before first render
+  const hash = window.location.hash;
+  const isRecoveryFromHash = hash.includes("type=recovery");
+  const [isRecovery, setIsRecovery] = useState(isRecoveryFromHash);
 
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event
@@ -22,16 +25,20 @@ const ResetPassword = () => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
       }
+      // Prevent redirect to dashboard during recovery flow
+      if (isRecovery && event === "SIGNED_IN") {
+        // Stay on this page, don't navigate away
+      }
     });
 
-    // Check URL hash for recovery type
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
+    // Also re-check hash in case it changed
+    const currentHash = window.location.hash;
+    if (currentHash.includes("type=recovery")) {
       setIsRecovery(true);
     }
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isRecovery]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
