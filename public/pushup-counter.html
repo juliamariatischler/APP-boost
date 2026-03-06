@@ -294,45 +294,81 @@
 
     function processPushup(pose) {
       const kps = pose.keypoints;
-      const ls = kps.find(k => k.name === 'left_shoulder');
-      const le = kps.find(k => k.name === 'left_elbow');
-      const lw = kps.find(k => k.name === 'left_wrist');
-      const rs = kps.find(k => k.name === 'right_shoulder');
-      const re = kps.find(k => k.name === 'right_elbow');
-      const rw = kps.find(k => k.name === 'right_wrist');
+      const get = (name) => kps.find(k => k.name === name);
 
-      if (ls?.score > 0.5 && rs?.score > 0.5) {
-        feedbackEl.textContent = 'Please turn your body sideways to the camera.';
-        feedbackEl.style.color = '#b45309'; // gelblich
+      const ls = get('left_shoulder'), le = get('left_elbow'), lw = get('left_wrist');
+      const rs = get('right_shoulder'), re = get('right_elbow'), rw = get('right_wrist');
+      const lh = get('left_hip'), rh = get('right_hip');
+      const nose = get('nose');
+
+      // --- FRONTAL VIEW: both shoulders visible ---
+      const bothShouldersVisible = (ls?.score > 0.4) && (rs?.score > 0.4);
+      
+      if (bothShouldersVisible) {
+        // Frontal: use vertical movement of nose/shoulders relative to hips
+        const leftArm = (le?.score > 0.4 && lw?.score > 0.4) ? calculateAngle(ls, le, lw) : null;
+        const rightArm = (re?.score > 0.4 && rw?.score > 0.4) ? calculateAngle(rs, re, rw) : null;
+
+        // Average both arm angles if available
+        let angle = null;
+        if (leftArm !== null && rightArm !== null) angle = (leftArm + rightArm) / 2;
+        else if (leftArm !== null) angle = leftArm;
+        else if (rightArm !== null) angle = rightArm;
+
+        // Fallback: use shoulder-to-hip vertical ratio (body dips down)
+        if (angle === null && nose?.score > 0.4 && (lh?.score > 0.4 || rh?.score > 0.4)) {
+          const hipY = (lh?.score > 0.4 && rh?.score > 0.4) ? (lh.y + rh.y) / 2 : (lh?.score > 0.4 ? lh.y : rh.y);
+          const shoulderY = (ls.y + rs.y) / 2;
+          const ratio = (hipY - shoulderY) / Math.max(hipY, 1);
+          // When down, shoulders are closer to hip level
+          angle = ratio < 0.08 ? 70 : 170;
+        }
+
+        if (angle !== null) {
+          evaluateAngle(angle);
+        } else {
+          feedbackEl.textContent = 'Halte deine Arme sichtbar!';
+          feedbackEl.style.color = '#b45309';
+        }
         return;
       }
 
-      let shoulder, elbow, wrist;
-      if ((ls?.score || 0) > (rs?.score || 0)) { shoulder = ls; elbow = le; wrist = lw; }
-      else { shoulder = rs; elbow = re; wrist = rw; }
-
-      if (shoulder?.score > 0.5 && elbow?.score > 0.5 && wrist?.score > 0.5) {
-        const angle = calculateAngle(shoulder, elbow, wrist);
-        if (angle > 160) {
-          if (stage === 'down') {
-            counter++;
-            feedbackEl.textContent = 'Nice!';
-            feedbackEl.style.color = '#059669';
-          }
-          stage = 'up';
-        } else if (angle < 90) {
-          if (stage === 'up') {
-            feedbackEl.textContent = 'Go lower!';
-            feedbackEl.style.color = '#374151';
-          }
-          stage = 'down';
-        }
-        countEl.textContent = counter;
-        stageEl.textContent = stage;
+      // --- SIDE VIEW: pick the more visible side ---
+      let shoulder, elbow, wrist, hip;
+      if ((ls?.score || 0) > (rs?.score || 0)) {
+        shoulder = ls; elbow = le; wrist = lw; hip = lh;
       } else {
-        feedbackEl.textContent = 'Make sure your shoulder, elbow, and wrist are visible.';
+        shoulder = rs; elbow = re; wrist = rw; hip = rh;
+      }
+
+      if (shoulder?.score > 0.4 && elbow?.score > 0.4 && wrist?.score > 0.4) {
+        const angle = calculateAngle(shoulder, elbow, wrist);
+        evaluateAngle(angle);
+      } else {
+        feedbackEl.textContent = 'Schulter, Ellbogen und Handgelenk müssen sichtbar sein.';
         feedbackEl.style.color = '#b45309';
       }
+    }
+
+    // Shared logic for counting reps based on elbow angle
+    // Works for regular & knee push-ups (same arm movement)
+    function evaluateAngle(angle) {
+      if (angle > 150) {
+        if (stage === 'down') {
+          counter++;
+          feedbackEl.textContent = 'Sehr gut! 💪';
+          feedbackEl.style.color = '#059669';
+        }
+        stage = 'up';
+      } else if (angle < 100) {
+        if (stage === 'up') {
+          feedbackEl.textContent = 'Weiter runter!';
+          feedbackEl.style.color = '#374151';
+        }
+        stage = 'down';
+      }
+      countEl.textContent = counter;
+      stageEl.textContent = stage;
     }
 
     // Buttons
