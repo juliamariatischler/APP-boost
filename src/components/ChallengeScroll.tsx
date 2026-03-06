@@ -103,12 +103,12 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
   return (
     <div className="mb-6">
       <div 
-        className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
+        className="flex flex-col gap-6 md:flex-row md:gap-4 md:overflow-x-auto md:pb-4 md:scrollbar-hide md:snap-x md:snap-mandatory"
       >
         {challenges.map((challenge) => (
           <div
             key={challenge.id}
-            className="flex-shrink-0 w-[280px] snap-start"
+            className="w-full md:flex-shrink-0 md:w-[280px] md:snap-start"
           >
             <h3 className="text-lg font-bold text-foreground mb-1">
               {challenge.title}
