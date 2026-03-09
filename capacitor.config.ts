@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: 'lovable-school-stars',
   webDir: 'dist',
   server: {
-    url: 'https://bd7a35c3-bf0d-4b5a-a07c-0391956b3e90.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    url: 'https://www.boostschule.at',
+    cleartext: false
   },
   plugins: {
     HealthKit: {

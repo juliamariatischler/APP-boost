@@ -10,6 +10,8 @@
 	<string>lovable-school-stars</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleGetInfoString</key>
+	<string></string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -24,6 +26,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Die App benötigt Camera für die Kontrolle der Ausführung</string>
+	<key>NSHandsTrackingUsageDescription</key>
+	<string></string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Diese App liest deine Schrittzahl aus Apple Health, um deine Tageschallenge zu berechnen.</string>
 	<key>NSHealthUpdateUsageDescription</key>
