@@ -72,4 +72,22 @@ To connect a domain, navigate to Project > Settings > Domains and click Connect 
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
 
+## Apple Health integration (iOS)
+
+Apple Health is now wired into the app via the step tracking service and the `Settings` page (`Apple Health verbinden`).
+
+To test with real Health data on iPhone:
+
+```sh
+npm run build
+npx cap sync ios
+npx cap open ios
+```
+
+In Xcode, make sure:
+
+- `Signing & Capabilities` contains `HealthKit`.
+- `Info.plist` includes `NSHealthShareUsageDescription`.
+- iOS Health permissions are granted for steps after first app launch.
+
 TEST
