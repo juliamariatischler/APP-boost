@@ -35,8 +35,26 @@ export class HealthService {
     return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
   }
 
+  static isNativeAndroid(): boolean {
+    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  }
+
   static isAppleHealthSupported(): boolean {
     return this.isNativeIOS();
+  }
+
+  static isGoogleFitSupported(): boolean {
+    return this.isNativeAndroid();
+  }
+
+  static isHealthPlatformSupported(): boolean {
+    return this.isAppleHealthSupported() || this.isGoogleFitSupported();
+  }
+
+  static getHealthSourceLabel(): string {
+    if (this.isAppleHealthSupported()) return 'Apple Health';
+    if (this.isGoogleFitSupported()) return 'Google Fit';
+    return 'Health-Daten';
   }
 
   private static async requestAuthorizationWithHealthKit(): Promise<boolean> {
@@ -54,14 +72,16 @@ export class HealthService {
   }
 
   static async requestAuthorization(): Promise<boolean> {
-    if (!Capacitor.isNativePlatform()) {
-      console.log('Health Kit ist nur auf nativen Plattformen verfügbar');
-      return true; // Return true for web to test UI
+    if (!this.isHealthPlatformSupported()) {
+      console.log('Health-Daten sind nur auf nativen iOS/Android-Plattformen verfügbar');
+      return false;
     }
     
     try {
-      const healthKitAuthorized = await this.requestAuthorizationWithHealthKit();
-      if (healthKitAuthorized) return true;
+      if (this.isAppleHealthSupported()) {
+        const healthKitAuthorized = await this.requestAuthorizationWithHealthKit();
+        if (healthKitAuthorized) return true;
+      }
 
       await Health.requestAuthorization([
         {
@@ -78,6 +98,19 @@ export class HealthService {
 
   static async connectAppleHealth(): Promise<boolean> {
     if (!this.isAppleHealthSupported()) {
+      return false;
+    }
+
+    const available = await this.isAvailable();
+    if (!available) {
+      return false;
+    }
+
+    return this.requestAuthorization();
+  }
+
+  static async connectHealthData(): Promise<boolean> {
+    if (!this.isHealthPlatformSupported()) {
       return false;
     }
 
@@ -122,10 +155,8 @@ export class HealthService {
   }
 
   static async getTodaySteps(): Promise<number> {
-    if (!Capacitor.isNativePlatform()) {
-      // Consistent test data for web development
-      console.log('Web-Modus: Zeige Test-Daten. Für echte Daten auf iPhone testen.');
-      return 2456; // Consistent test value
+    if (!this.isHealthPlatformSupported()) {
+      return 0;
     }
 
     try {
@@ -160,8 +191,8 @@ export class HealthService {
   }
 
   static async isAvailable(): Promise<boolean> {
-    if (!Capacitor.isNativePlatform()) {
-      return true; // Return true for web to allow testing the UI
+    if (!this.isHealthPlatformSupported()) {
+      return false;
     }
     
     try {

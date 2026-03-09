@@ -7,7 +7,6 @@ import { Zap, Play, CheckCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
-import { Capacitor } from "@capacitor/core";
 
 interface StepCounterProps {
   userId: string;
@@ -27,10 +26,10 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const [lastAwardedFlashes, setLastAwardedFlashes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isNative, setIsNative] = useState(false);
+  const isHealthSupported = HealthService.isHealthPlatformSupported();
+  const healthSourceLabel = HealthService.getHealthSourceLabel();
 
   useEffect(() => {
-    setIsNative(Capacitor.isNativePlatform());
     loadTodaySteps();
   }, [userId]);
 
@@ -133,6 +132,13 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   };
 
   const activateTracking = async () => {
+    if (!isHealthSupported) {
+      toast.error("Schrittzähler nur in der mobilen App verfügbar", {
+        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Google Fit)."
+      });
+      return;
+    }
+
     // Request health authorization first
     const authorized = await HealthService.requestAuthorization();
     
@@ -179,9 +185,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     await fetchAndUpdateSteps();
 
     toast.success("Schrittzähler aktiviert! 🚶", {
-      description: isNative 
-        ? "Deine echten Schritte werden jetzt gezählt." 
-        : "Im Browser werden Testdaten angezeigt."
+      description: `Deine echten Schritte werden jetzt über ${healthSourceLabel} synchronisiert.`
     });
   };
 
@@ -231,7 +235,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
           <h3 className="font-bold text-foreground">Schrittzähler</h3>
           <p className="text-xs text-muted-foreground">
             {isActive 
-              ? (isNative ? "Aktiv – zählt deine echten Schritte" : "Aktiv – Testmodus im Browser")
+              ? `Aktiv – synchronisiert mit ${healthSourceLabel}`
               : "Tippe zum Starten"}
           </p>
         </div>
@@ -269,7 +273,6 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         </div>
         <div className="text-sm text-muted-foreground">
           Schritte heute
-          {!isNative && <span className="text-xs ml-1">(Testdaten)</span>}
         </div>
       </div>
 
@@ -342,10 +345,10 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       </div>
 
       {/* Native hint */}
-      {!isNative && (
+      {!isHealthSupported && (
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground text-center">
-            💡 Für echte Schrittzählung die App auf deinem Handy installieren.
+            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Google Fit).
           </p>
         </div>
       )}

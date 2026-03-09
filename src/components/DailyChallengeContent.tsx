@@ -7,7 +7,6 @@ import { CheckCircle2, Circle, Zap, Play, RefreshCw, Trophy } from "lucide-react
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
-import { Capacitor } from "@capacitor/core";
 import { WalkingIcon, PushUpIcon, SquatIcon, PlankIcon, SitUpIcon, JumpingJacksIcon } from "@/components/ExerciseIcons";
 
 interface DailyChallengeContentProps {
@@ -43,7 +42,8 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const [refreshing, setRefreshing] = useState(false);
   const [results, setResults] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const isNative = Capacitor.isNativePlatform();
+  const isHealthSupported = HealthService.isHealthPlatformSupported();
+  const healthSourceLabel = HealthService.getHealthSourceLabel();
 
   useEffect(() => {
     loadTodayData();
@@ -151,6 +151,13 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   };
 
   const activateStepTracking = async () => {
+    if (!isHealthSupported) {
+      toast.error("Schrittzähler nur in der mobilen App verfügbar", {
+        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Google Fit)."
+      });
+      return;
+    }
+
     const authorized = await HealthService.requestAuthorization();
     
     if (!authorized) {
@@ -194,9 +201,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
     await fetchSteps();
 
     toast.success("Schrittzähler aktiviert! 🚶", {
-      description: isNative 
-        ? "Deine echten Schritte werden jetzt gezählt." 
-        : "Im Browser werden Testdaten angezeigt."
+      description: `Deine echten Schritte werden jetzt über ${healthSourceLabel} synchronisiert.`
     });
   };
 
@@ -313,7 +318,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
                 </div>
                 <div className="text-sm text-muted-foreground">
                   von {STEP_GOAL.toLocaleString()} Schritten
-                  {!isNative && <span className="text-xs ml-1">(Testdaten)</span>}
                 </div>
               </div>
               <Button
@@ -430,10 +434,10 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       </Card>
 
       {/* Native hint */}
-      {!isNative && (
+      {!isHealthSupported && (
         <div className="p-3 bg-muted/50 rounded-lg text-center">
           <p className="text-xs text-muted-foreground">
-            💡 Für echte Schrittzählung die App auf deinem Handy installieren.
+            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Google Fit).
           </p>
         </div>
       )}

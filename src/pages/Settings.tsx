@@ -36,24 +36,27 @@ const Settings = () => {
     }
   };
 
-  const handleConnectAppleHealth = async () => {
-    if (!HealthService.isAppleHealthSupported()) {
-      toast.info("Apple Health ist nur auf iPhones verfügbar.");
+  const isHealthSupported = HealthService.isHealthPlatformSupported();
+  const healthSourceLabel = HealthService.getHealthSourceLabel();
+
+  const handleConnectHealthData = async () => {
+    if (!isHealthSupported) {
+      toast.info("Health-Sync ist nur auf iPhone oder Android verfügbar.");
       return;
     }
 
     setConnectingHealth(true);
-    const connected = await HealthService.connectAppleHealth();
+    const connected = await HealthService.connectHealthData();
     setConnectingHealth(false);
 
     if (connected) {
-      toast.success("Apple Health erfolgreich verbunden.");
+      toast.success(`${healthSourceLabel} erfolgreich verbunden.`);
       setHealthAvailable(true);
       return;
     }
 
-    toast.error("Apple Health konnte nicht verbunden werden.", {
-      description: "Bitte prüfe Health-Berechtigungen in den iOS-Einstellungen."
+    toast.error(`${healthSourceLabel} konnte nicht verbunden werden.`, {
+      description: "Bitte prüfe die Health-Berechtigungen auf deinem Gerät."
     });
   };
 
@@ -67,37 +70,37 @@ const Settings = () => {
         <Card className="p-6 bg-card shadow-card mb-4">
           <div className="flex items-center gap-3 mb-3">
             <HeartPulse className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-foreground">Apple Health</h2>
+            <h2 className="font-semibold text-foreground">Health-Daten</h2>
           </div>
 
           <p className="text-sm text-muted-foreground mb-4">
-            Verbinde Apple Health, um echte Schrittzahlen auf deinem iPhone zu synchronisieren.
+            Verbinde Apple Health (iOS) oder Google Fit (Android), um echte Schrittzahlen zu synchronisieren.
           </p>
 
           <div className="flex items-center justify-between gap-2 mb-4">
             <span className="text-sm text-muted-foreground">Status</span>
             {checkingHealth ? (
               <span className="text-sm text-muted-foreground">Wird geprüft...</span>
-            ) : healthAvailable && HealthService.isAppleHealthSupported() ? (
+            ) : healthAvailable && isHealthSupported ? (
               <span className="inline-flex items-center gap-1 text-sm text-green-600">
                 <CheckCircle2 className="h-4 w-4" />
                 Verfügbar
               </span>
             ) : (
               <span className="text-sm text-muted-foreground">
-                {HealthService.isAppleHealthSupported()
+                {isHealthSupported
                   ? "Nicht verfügbar"
-                  : "Nur auf iPhone verfügbar"}
+                  : "Nur auf iPhone/Android verfügbar"}
               </span>
             )}
           </div>
 
           <Button
-            onClick={handleConnectAppleHealth}
-            disabled={connectingHealth || !HealthService.isAppleHealthSupported()}
+            onClick={handleConnectHealthData}
+            disabled={connectingHealth || !isHealthSupported}
             className="w-full"
           >
-            {connectingHealth ? "Verbinde..." : "Apple Health verbinden"}
+            {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
           </Button>
         </Card>
 
