@@ -10,23 +10,47 @@ interface ClassRanking {
   totalFlashes: number;
 }
 
+interface StudentRanking {
+  id: string;
+  username: string;
+  points: number;
+}
+
 interface Props {
   userClass: string;
   userSchool: string;
 }
 
 const CLASS_MILESTONE = 300;
+const PUBLIC_STUDENT_LIMIT = 10;
 
 export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
   const [rankings, setRankings] = useState<ClassRanking[]>([]);
+  const [studentRankings, setStudentRankings] = useState<StudentRanking[]>([]);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [isTeacherView, setIsTeacherView] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRankings();
-  }, []);
+  }, [userClass, userSchool]);
 
   const loadRankings = async () => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUserId = sessionData.session?.user.id || null;
+      setMyUserId(currentUserId);
+
+      if (currentUserId) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", currentUserId)
+          .eq("role", "admin")
+          .maybeSingle();
+        setIsTeacherView(!!roleData);
+      }
+
       // Aggregate points by class+school from profiles
       const { data } = await supabase
         .from("profiles")
@@ -52,6 +76,20 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
         );
         setRankings(sorted);
       }
+
+      if (userClass && userSchool) {
+        const { data: students } = await supabase
+          .from("profiles")
+          .select("id, username, points")
+          .eq("class", userClass)
+          .eq("school", userSchool)
+          .order("points", { ascending: false })
+          .order("username", { ascending: true });
+
+        if (students) {
+          setStudentRankings(students);
+        }
+      }
     } catch (err) {
       console.error("Error loading rankings:", err);
     } finally {
@@ -75,6 +113,14 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
     myRank && myRank > 1
       ? rankings[myClassIndex - 1].totalFlashes - classFlashes + 1
       : 0;
+
+  const publicStudentRankings = isTeacherView
+    ? studentRankings
+    : studentRankings.slice(0, PUBLIC_STUDENT_LIMIT);
+  const myStudentIndex = studentRankings.findIndex((student) => student.id === myUserId);
+  const myStudentRank = myStudentIndex >= 0 ? myStudentIndex + 1 : null;
+  const isOutsidePublicTop = !isTeacherView && myStudentRank !== null && myStudentRank > PUBLIC_STUDENT_LIMIT;
+  const myStudent = myStudentRank ? studentRankings[myStudentRank - 1] : null;
 
   return (
     <>
@@ -186,6 +232,72 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
               Noch <span className="font-bold text-primary">{flashesToNextRank} ⚡</span> bis Platz {myRank! - 1}
             </span>
           </div>
+        )}
+      </Card>
+
+      <Card className="p-4 bg-card shadow-lg">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-muted-foreground">Klassen-Leaderboard</span>
+          <Trophy className="h-5 w-5 text-yellow-500" />
+        </div>
+
+        <div className="space-y-1.5">
+          {publicStudentRankings.map((student, i) => {
+            const rank = i + 1;
+            const isMe = student.id === myUserId;
+            return (
+              <div
+                key={student.id}
+                className={`flex items-center justify-between p-2.5 rounded-lg ${
+                  isMe ? "bg-primary/10 border border-primary" : "bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
+                      rank === 1 ? "bg-yellow-500 text-white" :
+                      rank === 2 ? "bg-gray-400 text-white" :
+                      rank === 3 ? "bg-amber-600 text-white" :
+                      "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {rank}
+                  </div>
+                  <span className={`font-bold text-sm ${isMe ? "text-primary" : "text-foreground"}`}>
+                    {student.username}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-sm">{student.points}</span>
+                  <Zap className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                </div>
+              </div>
+            );
+          })}
+
+          {isOutsidePublicTop && myStudent && (
+            <>
+              <div className="text-center text-muted-foreground text-xs py-0.5">···</div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-primary/10 border border-primary">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs bg-primary/20 text-primary">
+                    {myStudentRank}
+                  </div>
+                  <span className="font-bold text-sm text-primary">{myStudent.username}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-sm">{myStudent.points}</span>
+                  <Zap className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {!isTeacherView && studentRankings.length > PUBLIC_STUDENT_LIMIT && (
+          <p className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground text-center">
+            Öffentlich sichtbar sind nur die Top {PUBLIC_STUDENT_LIMIT}. Plätze darunter sehen nur Lehrkräfte.
+          </p>
         )}
       </Card>
     </>

@@ -74,6 +74,10 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
     setLoading(false);
   };
 
+  const countCompletedExercises = (exerciseResults: Record<string, number>) => {
+    return exercises.filter((exercise) => (exerciseResults[exercise.name] || 0) >= exercise.goal).length;
+  };
+
   const checkLocalStorageResults = () => {
     const newResults: Record<string, number> = {};
     
@@ -127,6 +131,21 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
 
   const saveTodayResults = async (currentResults: Record<string, number>) => {
     const today = new Date().toISOString().split('T')[0];
+
+    const { data: existingRow } = await supabase
+      .from("daily_results")
+      .select("push_ups, squats, planks, sit_ups, jumping_jacks")
+      .eq("user_id", userId)
+      .eq("date", today)
+      .maybeSingle();
+
+    const previousResults = {
+      "Push-ups": existingRow?.push_ups || 0,
+      "Squats": existingRow?.squats || 0,
+      "Planks": existingRow?.planks || 0,
+      "Sit-ups": existingRow?.sit_ups || 0,
+      "Jumping Jacks": existingRow?.jumping_jacks || 0,
+    };
     
     const { error } = await supabase
       .from("daily_results")
@@ -146,6 +165,23 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       console.error("Error saving results:", error);
       toast.error("Fehler beim Speichern der Ergebnisse");
     } else {
+      const previouslyCompleted = countCompletedExercises(previousResults);
+      const currentlyCompleted = countCompletedExercises(currentResults);
+      const flashesToAward = Math.max(0, currentlyCompleted - previouslyCompleted);
+
+      if (flashesToAward > 0) {
+        const { error: incrementError } = await supabase.rpc("increment_points", {
+          points_to_add: flashesToAward,
+        });
+
+        if (incrementError) {
+          console.error("Error awarding flashes:", incrementError);
+          toast.error("Ergebnis gespeichert, aber Blitze konnten nicht gutgeschrieben werden.");
+        } else {
+          toast.success(`+${flashesToAward} ⚡ gutgeschrieben!`);
+        }
+      }
+
       toast.success("Ergebnisse gespeichert!");
     }
   };
