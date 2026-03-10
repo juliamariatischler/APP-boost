@@ -1,127 +1,141 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Gift, Zap, Lock, CheckCircle, Users, User, Calendar, Swords, MapPin } from "lucide-react";
+import { Zap, Lock, CheckCircle, Users, User, Calendar, Swords, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BottomNav } from "@/components/BottomNav";
 import { TopHeader } from "@/components/TopHeader";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Mock: User's current flashes (would come from profile)
-const MY_FLASHES = 12;
-const CLASS_FLASHES = 248;
+type RewardItem = {
+  id: string;
+  title: string;
+  partner: string | null;
+  threshold: number;
+  category: string;
+  icon: string | null;
+};
 
-// Individual Rewards
-const PERSONAL_REWARDS = [
-  { 
-    id: 1, 
-    title: "BIPA Gutschein 5€", 
-    partner: "BIPA", 
-    threshold: 50, 
-    category: "gutscheine",
-    icon: "🎀"
-  },
-  { 
-    id: 2, 
-    title: "dm Gutschein 5€", 
-    partner: "dm", 
-    threshold: 75, 
-    category: "gutscheine",
-    icon: "🧴"
-  },
-  { 
-    id: 3, 
-    title: "Sport-Trinkflasche", 
-    partner: "Intersport", 
-    threshold: 100, 
-    category: "sport",
-    icon: "🍶"
-  },
-  { 
-    id: 4, 
-    title: "Nike Socken", 
-    partner: "Nike", 
-    threshold: 150, 
-    category: "sport",
-    icon: "🧦"
-  },
-  { 
-    id: 5, 
-    title: "SPAR Gutschein 10€", 
-    partner: "SPAR", 
-    threshold: 200, 
-    category: "gutscheine",
-    icon: "🛒"
-  },
-  { 
-    id: 6, 
-    title: "Fitness-Armband", 
-    partner: "Gigasport", 
-    threshold: 300, 
-    category: "zubehoer",
-    icon: "⌚"
-  },
-  { 
-    id: 7, 
-    title: "Sport-Rucksack", 
-    partner: "Intersport", 
-    threshold: 400, 
-    category: "sport",
-    icon: "🎒"
-  },
-  { 
-    id: 8, 
-    title: "dm Gutschein 20€", 
-    partner: "dm", 
-    threshold: 500, 
-    category: "gutscheine",
-    icon: "🧴"
-  },
-];
-
-// Class Milestones
-const CLASS_MILESTONES = [
-  { 
-    threshold: 2500, 
-    title: "Klassen-Equipment",
-    description: "Bälle, Seile und mehr für eure Klasse",
-    icon: "⚽"
-  },
-  { 
-    threshold: 4000, 
-    title: "Klassen-Event",
-    description: "Ein besonderes Sport-Event für eure Klasse",
-    icon: "🎉"
-  },
-  { 
-    threshold: 6000, 
-    title: "Partner-Paket",
-    description: "Großes Überraschungspaket von unseren Partnern",
-    icon: "🎁"
-  },
-  { 
-    threshold: 10000, 
-    title: "Klassen-Ausflug",
-    description: "Ein sportlicher Tagesausflug für die ganze Klasse",
-    icon: "🚌"
-  },
-];
-
-const CATEGORIES = [
-  { id: "alle", label: "Alle" },
-  { id: "sport", label: "Sport" },
-  { id: "gutscheine", label: "Gutscheine" },
-  { id: "zubehoer", label: "Zubehör" },
-];
+type ClassMilestone = {
+  id: string;
+  threshold: number;
+  title: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+};
 
 const Rewards = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("alle");
+  const [myFlashes, setMyFlashes] = useState(0);
+  const [classFlashes, setClassFlashes] = useState(0);
+  const [rewards, setRewards] = useState<RewardItem[]>([]);
+  const [milestones, setMilestones] = useState<ClassMilestone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadRewardsData();
+  }, []);
+
+  const loadRewardsData = async () => {
+    setLoading(true);
+    const { data: authData } = await supabase.auth.getSession();
+    const uid = authData.session?.user?.id;
+    if (!uid) {
+      navigate("/auth");
+      return;
+    }
+    setUserId(uid);
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("points, school, class")
+      .eq("id", uid)
+      .single();
+
+    if (profileError || !profile) {
+      toast.error("Profil konnte nicht geladen werden.");
+      setLoading(false);
+      return;
+    }
+
+    setMyFlashes(Number(profile.points || 0));
+
+    const [{ data: rewardRows, error: rewardsError }, { data: milestoneRows, error: milestonesError }, { data: classPoints, error: classPointsError }] =
+      await Promise.all([
+        (supabase as any)
+          .from("reward_items")
+          .select("id, title, partner, threshold, category, icon")
+          .eq("is_active", true)
+          .order("threshold", { ascending: true }),
+        (supabase as any)
+          .from("class_milestones")
+          .select("id, threshold, title, description, icon, sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("threshold", { ascending: true }),
+        (supabase.rpc as any)("get_class_total_points", { p_school: profile.school, p_class: profile.class }),
+      ]);
+
+    if (rewardsError) {
+      console.error(rewardsError);
+      toast.error("Belohnungen konnten nicht geladen werden.");
+    } else {
+      setRewards((rewardRows || []) as RewardItem[]);
+    }
+
+    if (milestonesError) {
+      console.error(milestonesError);
+      toast.error("Meilensteine konnten nicht geladen werden.");
+    } else {
+      setMilestones((milestoneRows || []) as ClassMilestone[]);
+    }
+
+    if (classPointsError) {
+      console.error(classPointsError);
+      setClassFlashes(0);
+    } else {
+      setClassFlashes(Number(classPoints || 0));
+    }
+
+    setLoading(false);
+  };
+
+  const handleRedeem = async (rewardId: string) => {
+    if (!userId) return;
+    setRedeemingId(rewardId);
+
+    const { error } = await (supabase as any).from("reward_redemptions").insert({
+      user_id: userId,
+      reward_id: rewardId,
+      status: "requested",
+    });
+
+    setRedeemingId(null);
+
+    if (error) {
+      console.error(error);
+      toast.error("Belohnung konnte nicht angefordert werden.");
+      return;
+    }
+
+    toast.success("Belohnung angefordert. Lehrkraft prüft die Freigabe.");
+  };
+
+  const categories = useMemo(() => {
+    const categorySet = new Set(rewards.map((r) => r.category).filter(Boolean));
+    return [{ id: "alle", label: "Alle" }, ...Array.from(categorySet).sort((a, b) => a.localeCompare(b, "de")).map((c) => ({ id: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))];
+  }, [rewards]);
 
   const filteredRewards = activeCategory === "alle" 
-    ? PERSONAL_REWARDS 
-    : PERSONAL_REWARDS.filter(r => r.category === activeCategory);
+    ? rewards
+    : rewards.filter(r => r.category === activeCategory);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -135,14 +149,14 @@ const Rewards = () => {
               <div className="flex items-center gap-1">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Du:</span>
-                <span className="font-bold text-foreground">{MY_FLASHES}</span>
+                <span className="font-bold text-foreground">{myFlashes}</span>
                 <Zap className="h-4 w-4 text-yellow-500 fill-yellow-500" />
               </div>
               <div className="h-4 w-px bg-border" />
               <div className="flex items-center gap-1">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Klasse:</span>
-                <span className="font-bold text-foreground">{CLASS_FLASHES}</span>
+                <span className="font-bold text-foreground">{classFlashes}</span>
                 <Zap className="h-4 w-4 text-yellow-500 fill-yellow-500" />
               </div>
             </div>
@@ -166,7 +180,7 @@ const Rewards = () => {
           <TabsContent value="personal" className="space-y-4">
             {/* Category Filter */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <Button
                   key={cat.id}
                   variant={activeCategory === cat.id ? "default" : "outline"}
@@ -180,10 +194,15 @@ const Rewards = () => {
             </div>
 
             {/* Rewards Grid */}
+            {loading ? (
+              <Card className="p-6 text-center text-muted-foreground">Belohnungen werden geladen...</Card>
+            ) : filteredRewards.length === 0 ? (
+              <Card className="p-6 text-center text-muted-foreground">Noch keine Belohnungen verfügbar.</Card>
+            ) : (
             <div className="grid gap-3">
               {filteredRewards.map((reward) => {
-                const isUnlocked = MY_FLASHES >= reward.threshold;
-                const flashesNeeded = reward.threshold - MY_FLASHES;
+                const isUnlocked = myFlashes >= reward.threshold;
+                const flashesNeeded = reward.threshold - myFlashes;
                 
                 return (
                   <Card 
@@ -191,7 +210,7 @@ const Rewards = () => {
                     className={`p-4 ${isUnlocked ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-card"}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="text-3xl">{reward.icon}</div>
+                      <div className="text-3xl">{reward.icon || "🎁"}</div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-bold text-foreground">{reward.title}</span>
@@ -202,7 +221,7 @@ const Rewards = () => {
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mb-2">
-                          Partner: {reward.partner}
+                          Partner: {reward.partner || "BOOST"}
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1 text-sm">
@@ -219,8 +238,13 @@ const Rewards = () => {
                       </div>
                       <div>
                         {isUnlocked ? (
-                          <Button size="sm" className="bg-green-500 hover:bg-green-600">
-                            Anfordern
+                          <Button
+                            size="sm"
+                            className="bg-green-500 hover:bg-green-600"
+                            onClick={() => handleRedeem(reward.id)}
+                            disabled={redeemingId === reward.id}
+                          >
+                            {redeemingId === reward.id ? "..." : "Anfordern"}
                           </Button>
                         ) : (
                           <Button 
@@ -237,6 +261,7 @@ const Rewards = () => {
                 );
               })}
             </div>
+            )}
 
             {/* Challenges Grid */}
             <Card className="p-5 bg-card shadow-lg mt-4">
@@ -313,11 +338,11 @@ const Rewards = () => {
 
             {/* Milestone Roadmap */}
             <div className="relative">
-              {CLASS_MILESTONES.map((milestone, index) => {
-                const isUnlocked = CLASS_FLASHES >= milestone.threshold;
-                const progress = Math.min((CLASS_FLASHES / milestone.threshold) * 100, 100);
-                const flashesNeeded = milestone.threshold - CLASS_FLASHES;
-                const isNext = !isUnlocked && (index === 0 || CLASS_FLASHES >= CLASS_MILESTONES[index - 1].threshold);
+              {milestones.map((milestone, index) => {
+                const isUnlocked = classFlashes >= milestone.threshold;
+                const progress = Math.min((classFlashes / milestone.threshold) * 100, 100);
+                const flashesNeeded = milestone.threshold - classFlashes;
+                const isNext = !isUnlocked && (index === 0 || classFlashes >= milestones[index - 1].threshold);
 
                 return (
                   <div key={milestone.threshold} className="relative">
@@ -341,7 +366,7 @@ const Rewards = () => {
                             ? "bg-green-100 dark:bg-green-900/30" 
                             : "bg-muted"
                         }`}>
-                          {isUnlocked ? "✅" : milestone.icon}
+                          {isUnlocked ? "✅" : milestone.icon || "🎯"}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
@@ -352,14 +377,14 @@ const Rewards = () => {
                             </div>
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">
-                            {milestone.description}
+                            {milestone.description || "Gemeinsam als Klasse dieses Ziel erreichen."}
                           </p>
                           
                           {!isUnlocked && (
                             <div className="space-y-1">
                               <Progress value={progress} className="h-2" />
                               <div className="flex justify-between text-xs">
-                                <span className="text-muted-foreground">{CLASS_FLASHES} / {milestone.threshold}</span>
+                                <span className="text-muted-foreground">{classFlashes} / {milestone.threshold}</span>
                                 <span className="text-primary font-medium">
                                   Noch {flashesNeeded} ⚡
                                 </span>

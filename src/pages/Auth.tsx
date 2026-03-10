@@ -125,49 +125,6 @@ const Auth = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setDemoLoading(true);
-    try {
-      // First try to sign in with demo account
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: "demo@boost-challenge.de",
-        password: "demo123456",
-      });
-
-      if (error) {
-        // If login fails, create the demo account first
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: "demo@boost-challenge.de",
-          password: "demo123456",
-          options: {
-            data: {
-              username: "DemoUser",
-              school: "Demo Schule",
-              class: "5a",
-            },
-          },
-        });
-
-        if (signUpError) {
-          toast.error("Demo-Login fehlgeschlagen: " + signUpError.message);
-          return;
-        }
-
-        if (signUpData.session) {
-          toast.success("Demo-Konto erstellt! Willkommen!");
-          navigate("/");
-        }
-      } else if (data.session) {
-        toast.success("Demo-Login erfolgreich!");
-        navigate("/");
-      }
-    } catch (error: any) {
-      toast.error("Demo-Login fehlgeschlagen. Bitte versuche es später erneut.");
-    } finally {
-      setDemoLoading(false);
-    }
-  };
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -225,6 +182,49 @@ const Auth = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    try {
+      // First try to sign in with demo account
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: "demo@boost-challenge.de",
+        password: "demo123456",
+      });
+
+      if (error) {
+        // If login fails, create the demo account first
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: "demo@boost-challenge.de",
+          password: "demo123456",
+          options: {
+            data: {
+              username: "DemoUser",
+              school: "Demo Schule",
+              class: "5a",
+            },
+          },
+        });
+
+        if (signUpError) {
+          toast.error("Demo-Login fehlgeschlagen: " + signUpError.message);
+          return;
+        }
+
+        if (signUpData.session) {
+          toast.success("Demo-Konto erstellt! Willkommen!");
+          navigate("/");
+        }
+      } else if (data.session) {
+        toast.success("Demo-Login erfolgreich!");
+        navigate("/");
+      }
+    } catch (error: any) {
+      toast.error("Demo-Login fehlgeschlagen. Bitte versuche es später erneut.");
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -312,9 +312,9 @@ const Auth = () => {
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Anmelden
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     className="flex-1"
                     onClick={handleDemoLogin}
                     disabled={loading || demoLoading}
