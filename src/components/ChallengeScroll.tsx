@@ -7,6 +7,7 @@ import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
+import { format, subDays } from "date-fns";
 
 interface Challenge {
   id: string;
@@ -18,11 +19,11 @@ interface Challenge {
 }
 
 const EXERCISE_GOALS = {
-  jumping_jacks: 20,
-  push_ups: 10,
-  squats: 15,
+  jumping_jacks: 40,
+  push_ups: 20,
+  squats: 30,
   planks: 60,
-  sit_ups: 15,
+  sit_ups: 25,
 };
 
 interface ChallengeScrollProps {
@@ -32,37 +33,90 @@ interface ChallengeScrollProps {
 export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
   const navigate = useNavigate();
   const [dailyProgress, setDailyProgress] = useState(0);
+  const [weeklyProgress, setWeeklyProgress] = useState(0);
+  const [friendProgress, setFriendProgress] = useState(0);
+  const [tryItProgress, setTryItProgress] = useState(0);
 
   useEffect(() => {
-    loadDailyProgress();
+    loadChallengeProgress();
   }, [userId]);
 
-  const loadDailyProgress = async () => {
+  const loadChallengeProgress = async () => {
     const today = new Date().toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from("daily_results")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("date", today)
-      .maybeSingle();
+    const fourteenDaysAgo = format(subDays(new Date(), 13), "yyyy-MM-dd");
 
-    if (error || !data) {
+    const [
+      todayResultRes,
+      twoWeekResultsRes,
+      friendInvitationsRes,
+      tryItRegistrationsRes,
+    ] = await Promise.all([
+      supabase
+        .from("daily_results")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", today)
+        .maybeSingle(),
+      supabase
+        .from("daily_results")
+        .select("jumping_jacks, push_ups, squats, planks, sit_ups")
+        .eq("user_id", userId)
+        .gte("date", fourteenDaysAgo)
+        .lte("date", today),
+      supabase
+        .from("challenge_invitations")
+        .select("status")
+        .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`),
+      supabase
+        .from("trial_registrations")
+        .select("id", { count: "exact" })
+        .eq("user_id", userId)
+        .eq("status", "registered"),
+    ]);
+
+    const todayData = todayResultRes.data;
+    if (!todayResultRes.error && todayData) {
+      const completedExercises = [
+        (todayData.jumping_jacks || 0) >= EXERCISE_GOALS.jumping_jacks,
+        (todayData.push_ups || 0) >= EXERCISE_GOALS.push_ups,
+        (todayData.squats || 0) >= EXERCISE_GOALS.squats,
+        (todayData.planks || 0) >= EXERCISE_GOALS.planks,
+        (todayData.sit_ups || 0) >= EXERCISE_GOALS.sit_ups,
+      ].filter(Boolean).length;
+      setDailyProgress(Math.round((completedExercises / 5) * 100));
+    } else {
       setDailyProgress(0);
-      return;
     }
 
-    // Calculate progress: count how many exercises reached their goal
-    const completedExercises = [
-      data.jumping_jacks >= EXERCISE_GOALS.jumping_jacks,
-      data.push_ups >= EXERCISE_GOALS.push_ups,
-      data.squats >= EXERCISE_GOALS.squats,
-      data.planks >= EXERCISE_GOALS.planks,
-      data.sit_ups >= EXERCISE_GOALS.sit_ups,
-    ].filter(Boolean).length;
+    const twoWeekData = twoWeekResultsRes.data || [];
+    if (!twoWeekResultsRes.error && twoWeekData.length > 0) {
+      const activeDays = twoWeekData.filter((day) =>
+        (day.jumping_jacks || 0) > 0 ||
+        (day.push_ups || 0) > 0 ||
+        (day.squats || 0) > 0 ||
+        (day.planks || 0) > 0 ||
+        (day.sit_ups || 0) > 0
+      ).length;
+      setWeeklyProgress(Math.round((activeDays / 14) * 100));
+    } else {
+      setWeeklyProgress(0);
+    }
 
-    const progress = Math.round((completedExercises / 5) * 100);
-    setDailyProgress(progress);
+    const invitationData = friendInvitationsRes.data || [];
+    if (!friendInvitationsRes.error && invitationData.length > 0) {
+      const completedCount = invitationData.filter((inv) => inv.status === "completed").length;
+      setFriendProgress(Math.round((completedCount / invitationData.length) * 100));
+    } else {
+      setFriendProgress(0);
+    }
+
+    if (!tryItRegistrationsRes.error) {
+      // 3 Anmeldungen entsprechen 100% der Try-It-Challenge.
+      const registeredCount = tryItRegistrationsRes.count || 0;
+      setTryItProgress(Math.min(Math.round((registeredCount / 3) * 100), 100));
+    } else {
+      setTryItProgress(0);
+    }
   };
 
   const challenges: Challenge[] = [
@@ -80,7 +134,7 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: "Hol dir die Challenge eines Spitzensportlers – und wachse über dich hinaus.",
       subInfo: "🏆 14 Tage",
       image: weeklyImg, 
-      progress: 40 
+      progress: weeklyProgress 
     },
     { 
       id: "friend", 
@@ -88,7 +142,7 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: "Gemeinsam stärker: Erfülle Challenges mit Freund:innen.",
       subInfo: "👥 Gemeinsam spielen",
       image: friendImg, 
-      progress: 100 
+      progress: friendProgress 
     },
     { 
       id: "tryit", 
@@ -96,7 +150,7 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: "Probiere neue Sportarten & Aktivitäten aus – ganz unverbindlich.",
       subInfo: "📍 In deiner Nähe",
       image: tryitImg, 
-      progress: 0 
+      progress: tryItProgress 
     },
   ];
 

@@ -27,7 +27,17 @@ const signupSchema = z.object({
   password: z.string()
     .min(1, "Passwort erforderlich"),
   school: z.string().trim().min(1, "Schule erforderlich").max(100, "Schulname zu lang"),
-  class: z.string().trim().min(1, "Klasse erforderlich").max(20, "Klassenname zu lang")
+  class: z.string().trim().min(1, "Klasse erforderlich").max(20, "Klassenname zu lang"),
+  accountType: z.enum(["student", "teacher"]),
+  teacherCode: z.string().trim().optional(),
+}).superRefine((data, ctx) => {
+  if (data.accountType === "teacher" && !data.teacherCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["teacherCode"],
+      message: "Lehrercode erforderlich",
+    });
+  }
 });
 
 const Auth = () => {
@@ -42,6 +52,8 @@ const Auth = () => {
     password: "",
     school: "",
     class: "",
+    accountType: "student" as "student" | "teacher",
+    teacherCode: "",
   });
 
   useEffect(() => {
@@ -154,6 +166,8 @@ const Auth = () => {
             username: validatedData.username,
             school: validatedData.school,
             class: validatedData.class,
+            account_type: validatedData.accountType,
+            teacher_code: validatedData.teacherCode || null,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -268,6 +282,23 @@ const Auth = () => {
           <TabsContent value="signup">
             <form onSubmit={handleSignup} className="space-y-4">
               <div>
+                <Label htmlFor="signup-account-type">Konto-Typ</Label>
+                <select
+                  id="signup-account-type"
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={signupData.accountType}
+                  onChange={(e) =>
+                    setSignupData({
+                      ...signupData,
+                      accountType: e.target.value as "student" | "teacher",
+                    })
+                  }
+                >
+                  <option value="student">Schüler:in</option>
+                  <option value="teacher">Lehrkraft</option>
+                </select>
+              </div>
+              <div>
                 <Label htmlFor="signup-username">Benutzername</Label>
                 <Input
                   id="signup-username"
@@ -313,16 +344,31 @@ const Auth = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="signup-class">Klasse</Label>
+                <Label htmlFor="signup-class">
+                  {signupData.accountType === "teacher" ? "Klasse/Fach" : "Klasse"}
+                </Label>
                 <Input
                   id="signup-class"
                   type="text"
                   required
                   value={signupData.class}
                   onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
-                  placeholder="5a"
+                  placeholder={signupData.accountType === "teacher" ? "z. B. Sport" : "5a"}
                 />
               </div>
+              {signupData.accountType === "teacher" && (
+                <div>
+                  <Label htmlFor="signup-teacher-code">Lehrercode</Label>
+                  <Input
+                    id="signup-teacher-code"
+                    type="text"
+                    required
+                    value={signupData.teacherCode}
+                    onChange={(e) => setSignupData({ ...signupData, teacherCode: e.target.value })}
+                    placeholder="Code vom Admin"
+                  />
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Registrieren
