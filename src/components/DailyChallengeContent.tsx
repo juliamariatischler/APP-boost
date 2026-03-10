@@ -189,7 +189,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const activateStepTracking = async () => {
     if (!isHealthSupported) {
       toast.error("Schrittzähler nur in der mobilen App verfügbar", {
-        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Google Fit)."
+        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Health Connect)."
       });
       return;
     }
@@ -473,7 +473,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       {!isHealthSupported && (
         <div className="p-3 bg-muted/50 rounded-lg text-center">
           <p className="text-xs text-muted-foreground">
-            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Google Fit).
+            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Health Connect).
           </p>
         </div>
       )}

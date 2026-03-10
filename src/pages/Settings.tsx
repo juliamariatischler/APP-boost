@@ -74,7 +74,7 @@ const Settings = () => {
           </div>
 
           <p className="text-sm text-muted-foreground mb-4">
-            Verbinde Apple Health (iOS) oder Google Fit (Android), um echte Schrittzahlen zu synchronisieren.
+            Verbinde Apple Health (iOS) oder Health Connect (Android), um echte Schrittzahlen zu synchronisieren.
           </p>
 
           <div className="flex items-center justify-between gap-2 mb-4">

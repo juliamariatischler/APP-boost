@@ -131,6 +131,9 @@
     let detector;
     let counter = 0;
     let stage = "down"; // down = unten, up = oben
+    const KEYPOINT_CONFIDENCE = 0.35;
+    const DOWN_ANGLE_THRESHOLD = 140;
+    const UP_ANGLE_THRESHOLD = 75;
 
     function angle(a,b,c){
       const r=Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x);
@@ -160,7 +163,7 @@
 
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
-        if(kp.score>0.5){
+        if(kp.score>KEYPOINT_CONFIDENCE){
           ctx.beginPath();
           ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
           ctx.fillStyle = "#6b7280";
@@ -174,7 +177,7 @@
       ctx.lineWidth = 2;
       pairs.forEach(([a,b])=>{
         const k1=pose.keypoints[a], k2=pose.keypoints[b];
-        if(k1.score>0.5 && k2.score>0.5){
+        if(k1.score>KEYPOINT_CONFIDENCE && k2.score>KEYPOINT_CONFIDENCE){
           ctx.beginPath(); ctx.moveTo(k1.x,k1.y); ctx.lineTo(k2.x,k2.y); ctx.stroke();
         }
       });
@@ -192,7 +195,7 @@
       const shoulder = pickSide(k,'shoulder');
       const ear = pickSide(k,'ear');
 
-      if(!(hip?.score>0.5 && shoulder?.score>0.5 && ear?.score>0.5)){
+      if(!(hip?.score>KEYPOINT_CONFIDENCE && shoulder?.score>KEYPOINT_CONFIDENCE && ear?.score>KEYPOINT_CONFIDENCE)){
         feedbackEl.textContent = "Kamera sieht dich nicht richtig.";
         stageEl.textContent = "-";
         return;
@@ -201,11 +204,11 @@
       // Schulter – Hüfte – Ohr (Annäherung an Rumpfbeuge)
       const trunkAngle = angle(shoulder, hip, ear);
 
-      if(trunkAngle > 150){
+      if(trunkAngle > DOWN_ANGLE_THRESHOLD){
         stage = "down";
         stageEl.textContent = "DOWN";
         feedbackEl.textContent = "Hochkommen!";
-      } else if(trunkAngle < 60){
+      } else if(trunkAngle < UP_ANGLE_THRESHOLD){
         if(stage === "down"){
           counter++;
           feedbackEl.textContent = "Nice!";

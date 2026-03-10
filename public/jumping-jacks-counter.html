@@ -131,13 +131,14 @@
     let detector;
     let counter = 0;
     let phase = "closed"; // "closed" = Füße zusammen, Arme unten; "open" = Arme oben, Beine breit
+    const KEYPOINT_CONFIDENCE = 0.35;
 
     // Hilfsfunktionen
     function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 
     function get(kps,name){ return kps.find(k => k.name === name); }
 
-    function ready(k,th=0.5){ return k && k.score > th; }
+    function ready(k,th=KEYPOINT_CONFIDENCE){ return k && k.score > th; }
 
     // Backend robust initialisieren
     async function initBackend(){
@@ -161,7 +162,7 @@
 
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
-        if(kp.score > 0.5){
+        if(kp.score > KEYPOINT_CONFIDENCE){
           ctx.beginPath(); ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
           ctx.fillStyle = "#10b981"; ctx.fill();
         }
@@ -172,7 +173,7 @@
       ctx.strokeStyle = "#10b981"; ctx.lineWidth = 2;
       pairs.forEach(([a,b])=>{
         const k1 = pose.keypoints[a], k2 = pose.keypoints[b];
-        if(k1.score>0.5 && k2.score>0.5){
+        if(k1.score>KEYPOINT_CONFIDENCE && k2.score>KEYPOINT_CONFIDENCE){
           ctx.beginPath(); ctx.moveTo(k1.x,k1.y); ctx.lineTo(k2.x,k2.y); ctx.stroke();
         }
       });
@@ -194,12 +195,13 @@
 
       const shoulderWidth = Math.max(1, dist(ls, rs));
       const ankleDistNorm = dist(la, ra) / shoulderWidth;
+      const headTolerance = shoulderWidth * 0.12;
+      const shoulderTolerance = shoulderWidth * 0.1;
+      const wristsAboveHead = (lw.y < nose.y + headTolerance) && (rw.y < nose.y + headTolerance);
+      const wristsLow = (lw.y > ls.y - shoulderTolerance) && (rw.y > rs.y - shoulderTolerance);
 
-      const wristsAboveHead = (lw.y < nose.y) && (rw.y < nose.y);
-      const wristsLow       = (lw.y > ls.y)   && (rw.y > rs.y);
-
-      const OPEN_LEGS  = 1.2;
-      const CLOSE_LEGS = 0.6;
+      const OPEN_LEGS  = 1.0;
+      const CLOSE_LEGS = 0.75;
 
       if(phase === 'closed'){
         if(ankleDistNorm > OPEN_LEGS && wristsAboveHead){

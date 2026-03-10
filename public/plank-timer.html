@@ -258,6 +258,10 @@
     const debugLog=document.getElementById('debug-log');
 
     let detector,isPlanking=false,time=0,timerInterval=null;
+    let unstableFrames=0;
+    const KEYPOINT_CONFIDENCE = 0.35;
+    const BACK_ANGLE_THRESHOLD = 145;
+    const MAX_UNSTABLE_FRAMES = 12;
 
     function angle(a,b,c){
       const r=Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x);
@@ -289,7 +293,7 @@
       ctx.strokeStyle="#6b7280"; ctx.lineWidth=2;
       pairs.forEach(([a,b])=>{
         const k1=pose.keypoints[a],k2=pose.keypoints[b];
-        if(k1.score>0.5&&k2.score>0.5){
+        if(k1.score>KEYPOINT_CONFIDENCE&&k2.score>KEYPOINT_CONFIDENCE){
           ctx.beginPath();ctx.moveTo(k1.x,k1.y);ctx.lineTo(k2.x,k2.y);ctx.stroke();
         }
       });
@@ -297,7 +301,7 @@
 
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
-        if(kp.score>0.5){
+        if(kp.score>KEYPOINT_CONFIDENCE){
           ctx.beginPath();
           ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
           ctx.fillStyle="#6b7280";
@@ -323,13 +327,19 @@
       const shoulder=pickSide(k,'shoulder');
       const hip=pickSide(k,'hip');
       const knee=pickSide(k,'knee');
-      if(!(shoulder?.score>0.5&&hip?.score>0.5&&knee?.score>0.5)){
-        feedbackEl.textContent="Kamera sieht dich nicht gut.";
+      if(!(shoulder?.score>KEYPOINT_CONFIDENCE&&hip?.score>KEYPOINT_CONFIDENCE&&knee?.score>KEYPOINT_CONFIDENCE)){
+        unstableFrames++;
+        feedbackEl.textContent="Bleib im Bild – ich halte kurz weiter.";
         stageEl.textContent="-";
-        stopTimer();isPlanking=false;return;
+        if(unstableFrames > MAX_UNSTABLE_FRAMES){
+          stopTimer();
+          isPlanking=false;
+        }
+        return;
       }
+      unstableFrames = 0;
       const back=angle(shoulder,hip,knee);
-      if(back>150){
+      if(back>BACK_ANGLE_THRESHOLD){
         stageEl.textContent="HOLD";
         feedbackEl.textContent="Halten!";
         if(!isPlanking){isPlanking=true;startTimer();}

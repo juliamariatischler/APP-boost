@@ -203,6 +203,11 @@
     let detector;
     let counter = 0;
     let stage = 'up';
+    const KEYPOINT_CONFIDENCE = 0.35;
+    const SHOULDER_VISIBILITY = 0.3;
+    const ARM_VISIBILITY = 0.3;
+    const UP_ANGLE_THRESHOLD = 145;
+    const DOWN_ANGLE_THRESHOLD = 110;
 
     function calculateAngle(a, b, c) {
       const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -269,7 +274,7 @@
 
     function drawKeypoints(pose) {
       for (const k of pose.keypoints) {
-        if (k.score > 0.5) {
+        if (k.score > KEYPOINT_CONFIDENCE) {
           ctx.beginPath();
           ctx.arc(k.x, k.y, 4, 0, 2 * Math.PI);
           ctx.fillStyle = '#6b7280';
@@ -284,7 +289,7 @@
       ctx.strokeStyle = '#6b7280';
       adjacent.forEach(([i, j]) => {
         const a = pose.keypoints[i], b = pose.keypoints[j];
-        if (a.score > 0.5 && b.score > 0.5) {
+        if (a.score > KEYPOINT_CONFIDENCE && b.score > KEYPOINT_CONFIDENCE) {
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
@@ -303,12 +308,12 @@
       const nose = get('nose');
 
       // --- FRONTAL VIEW: both shoulders visible ---
-      const bothShouldersVisible = (ls?.score > 0.4) && (rs?.score > 0.4);
+      const bothShouldersVisible = (ls?.score > SHOULDER_VISIBILITY) && (rs?.score > SHOULDER_VISIBILITY);
       
       if (bothShouldersVisible) {
         // Frontal: use vertical movement of nose/shoulders relative to hips
-        const leftArm = (le?.score > 0.4 && lw?.score > 0.4) ? calculateAngle(ls, le, lw) : null;
-        const rightArm = (re?.score > 0.4 && rw?.score > 0.4) ? calculateAngle(rs, re, rw) : null;
+        const leftArm = (le?.score > ARM_VISIBILITY && lw?.score > ARM_VISIBILITY) ? calculateAngle(ls, le, lw) : null;
+        const rightArm = (re?.score > ARM_VISIBILITY && rw?.score > ARM_VISIBILITY) ? calculateAngle(rs, re, rw) : null;
 
         // Average both arm angles if available
         let angle = null;
@@ -317,8 +322,8 @@
         else if (rightArm !== null) angle = rightArm;
 
         // Fallback: use shoulder-to-hip vertical ratio (body dips down)
-        if (angle === null && nose?.score > 0.4 && (lh?.score > 0.4 || rh?.score > 0.4)) {
-          const hipY = (lh?.score > 0.4 && rh?.score > 0.4) ? (lh.y + rh.y) / 2 : (lh?.score > 0.4 ? lh.y : rh.y);
+        if (angle === null && nose?.score > SHOULDER_VISIBILITY && (lh?.score > SHOULDER_VISIBILITY || rh?.score > SHOULDER_VISIBILITY)) {
+          const hipY = (lh?.score > SHOULDER_VISIBILITY && rh?.score > SHOULDER_VISIBILITY) ? (lh.y + rh.y) / 2 : (lh?.score > SHOULDER_VISIBILITY ? lh.y : rh.y);
           const shoulderY = (ls.y + rs.y) / 2;
           const ratio = (hipY - shoulderY) / Math.max(hipY, 1);
           // When down, shoulders are closer to hip level
@@ -342,7 +347,7 @@
         shoulder = rs; elbow = re; wrist = rw; hip = rh;
       }
 
-      if (shoulder?.score > 0.4 && elbow?.score > 0.4 && wrist?.score > 0.4) {
+      if (shoulder?.score > ARM_VISIBILITY && elbow?.score > ARM_VISIBILITY && wrist?.score > ARM_VISIBILITY) {
         const angle = calculateAngle(shoulder, elbow, wrist);
         evaluateAngle(angle);
       } else {
@@ -354,14 +359,14 @@
     // Shared logic for counting reps based on elbow angle
     // Works for regular & knee push-ups (same arm movement)
     function evaluateAngle(angle) {
-      if (angle > 150) {
+      if (angle > UP_ANGLE_THRESHOLD) {
         if (stage === 'down') {
           counter++;
           feedbackEl.textContent = 'Sehr gut! 💪';
           feedbackEl.style.color = '#059669';
         }
         stage = 'up';
-      } else if (angle < 100) {
+      } else if (angle < DOWN_ANGLE_THRESHOLD) {
         if (stage === 'up') {
           feedbackEl.textContent = 'Weiter runter!';
           feedbackEl.style.color = '#374151';

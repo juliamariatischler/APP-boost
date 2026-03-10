@@ -1,36 +1,16 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
-import { Health } from '@awesome-cordova-plugins/health';
+import { Capacitor } from '@capacitor/core';
+import { createHealthProvider } from './health/providerFactory';
 
 export interface StepData {
   steps: number;
   date: Date;
 }
 
-type HealthKitAvailabilityResponse = {
-  available?: boolean;
-  isAvailable?: boolean;
-};
-
-type HealthKitAuthorizationPayload = {
-  read?: string[];
-  write?: string[];
-};
-
-type HealthKitQueryPayload = {
-  startDate: string;
-  endDate: string;
-  dataType: 'steps';
-};
-
-type HealthKitPlugin = {
-  isAvailable?: () => Promise<HealthKitAvailabilityResponse | boolean>;
-  requestAuthorization?: (payload: HealthKitAuthorizationPayload) => Promise<unknown>;
-  query?: (payload: HealthKitQueryPayload) => Promise<Array<{ value?: number }> | { value?: number }>;
-};
-
-const HealthKit = registerPlugin<HealthKitPlugin>('HealthKit');
-
 export class HealthService {
+  private static get provider() {
+    return createHealthProvider();
+  }
+
   static isNativeIOS(): boolean {
     return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
   }
@@ -40,60 +20,27 @@ export class HealthService {
   }
 
   static isAppleHealthSupported(): boolean {
-    return this.isNativeIOS();
+    return this.provider.source === 'apple_health';
   }
 
   static isGoogleFitSupported(): boolean {
-    return this.isNativeAndroid();
+    return this.provider.source === 'health_connect';
   }
 
   static isHealthPlatformSupported(): boolean {
-    return this.isAppleHealthSupported() || this.isGoogleFitSupported();
+    return this.provider.source !== 'none';
   }
 
   static getHealthSourceLabel(): string {
-    if (this.isAppleHealthSupported()) return 'Apple Health';
-    if (this.isGoogleFitSupported()) return 'Google Fit';
-    return 'Health-Daten';
-  }
-
-  private static async requestAuthorizationWithHealthKit(): Promise<boolean> {
-    try {
-      if (typeof HealthKit.requestAuthorization !== 'function') return false;
-      await HealthKit.requestAuthorization({
-        read: ['steps'],
-        write: []
-      });
-      return true;
-    } catch (error) {
-      console.warn('HealthKit authorization fallback to Cordova plugin:', error);
-      return false;
-    }
+    return this.provider.label;
   }
 
   static async requestAuthorization(): Promise<boolean> {
     if (!this.isHealthPlatformSupported()) {
-      console.log('Health-Daten sind nur auf nativen iOS/Android-Plattformen verfügbar');
       return false;
     }
-    
-    try {
-      if (this.isAppleHealthSupported()) {
-        const healthKitAuthorized = await this.requestAuthorizationWithHealthKit();
-        if (healthKitAuthorized) return true;
-      }
 
-      await Health.requestAuthorization([
-        {
-          read: ['steps'],
-          write: []
-        }
-      ]);
-      return true;
-    } catch (error) {
-      console.error('Health authorization error:', error);
-      return false;
-    }
+    return this.provider.requestAuthorization();
   }
 
   static async connectAppleHealth(): Promise<boolean> {
@@ -101,12 +48,7 @@ export class HealthService {
       return false;
     }
 
-    const available = await this.isAvailable();
-    if (!available) {
-      return false;
-    }
-
-    return this.requestAuthorization();
+    return this.connectHealthData();
   }
 
   static async connectHealthData(): Promise<boolean> {
@@ -114,44 +56,12 @@ export class HealthService {
       return false;
     }
 
-    const available = await this.isAvailable();
+    const available = await this.provider.isAvailable();
     if (!available) {
       return false;
     }
 
-    return this.requestAuthorization();
-  }
-
-  private static normalizeStepQueryResult(result: unknown): number {
-    if (!result) return 0;
-    if (Array.isArray(result)) {
-      return Math.floor(
-        result.reduce((sum: number, item: any) => sum + (Number(item?.value) || 0), 0)
-      );
-    }
-
-    if (typeof result === 'object' && result !== null && 'value' in result) {
-      return Math.floor(Number((result as { value?: number }).value) || 0);
-    }
-
-    return 0;
-  }
-
-  private static async getTodayStepsWithHealthKit(today: Date, now: Date): Promise<number | null> {
-    try {
-      if (typeof HealthKit.query !== 'function') return null;
-
-      const result = await HealthKit.query({
-        startDate: today.toISOString(),
-        endDate: now.toISOString(),
-        dataType: 'steps'
-      });
-
-      return this.normalizeStepQueryResult(result);
-    } catch (error) {
-      console.warn('HealthKit query fallback to Cordova plugin:', error);
-      return null;
-    }
+    return this.provider.requestAuthorization();
   }
 
   static async getTodaySteps(): Promise<number> {
@@ -159,63 +69,14 @@ export class HealthService {
       return 0;
     }
 
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const now = new Date();
-
-      const healthKitSteps = await this.getTodayStepsWithHealthKit(today, now);
-      if (healthKitSteps !== null) {
-        return healthKitSteps;
-      }
-      
-      const result = await Health.query({
-        startDate: today,
-        endDate: now,
-        dataType: 'steps',
-        limit: 1000
-      });
-
-      if (result && Array.isArray(result)) {
-        const totalSteps = result.reduce((sum: number, item: any) => {
-          return sum + (item.value || 0);
-        }, 0);
-        return Math.floor(totalSteps);
-      }
-      
-      return 0;
-    } catch (error) {
-      console.error('Error fetching steps:', error);
-      return 0;
-    }
+    return this.provider.getTodaySteps();
   }
 
   static async isAvailable(): Promise<boolean> {
     if (!this.isHealthPlatformSupported()) {
       return false;
     }
-    
-    try {
-      if (typeof HealthKit.isAvailable === 'function') {
-        const healthKitAvailable = await HealthKit.isAvailable();
-        if (typeof healthKitAvailable === 'boolean') {
-          return healthKitAvailable;
-        }
-        if (typeof healthKitAvailable === 'object' && healthKitAvailable !== null) {
-          if (typeof healthKitAvailable.available === 'boolean') {
-            return healthKitAvailable.available;
-          }
-          if (typeof healthKitAvailable.isAvailable === 'boolean') {
-            return healthKitAvailable.isAvailable;
-          }
-        }
-      }
 
-      const available = await Health.isAvailable();
-      return available;
-    } catch (error) {
-      console.error('Health availability check error:', error);
-      return false;
-    }
+    return this.provider.isAvailable();
   }
 }

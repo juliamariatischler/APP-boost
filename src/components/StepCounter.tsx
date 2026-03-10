@@ -134,7 +134,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const activateTracking = async () => {
     if (!isHealthSupported) {
       toast.error("Schrittzähler nur in der mobilen App verfügbar", {
-        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Google Fit)."
+        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Health Connect)."
       });
       return;
     }
@@ -348,7 +348,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       {!isHealthSupported && (
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground text-center">
-            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Google Fit).
+            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Health Connect).
           </p>
         </div>
       )}

@@ -58,22 +58,43 @@ This project is built with:
 
 Deployment is handled by GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages with custom domain `www.boostschule.at`.
 
-## Apple Health integration (iOS)
+## Health integration (iOS + Android)
 
-Apple Health is now wired into the app via the step tracking service and the `Settings` page (`Apple Health verbinden`).
+The app uses a shared health provider architecture:
 
-To test with real Health data on iPhone:
+- iOS: Apple Health (HealthKit)
+- Android: Health Connect
+
+To test as native app on phone:
 
 ```sh
 npm run build
+npx cap sync android
 npx cap sync ios
+npx cap open android
 npx cap open ios
 ```
 
-In Xcode, make sure:
+### iPhone testing
 
-- `Signing & Capabilities` contains `HealthKit`.
-- `Info.plist` includes `NSHealthShareUsageDescription`.
-- iOS Health permissions are granted for steps after first app launch.
+- Open `ios/App/App.xcworkspace`.
+- In Xcode, `Signing & Capabilities`:
+  - `Team` must be configured.
+  - For real HealthKit access you need a paid Apple Developer account (Personal Team cannot sign HealthKit).
+  - `HealthKit` capability enabled.
+- `Info.plist` includes:
+  - `NSHealthShareUsageDescription`
+  - `NSHealthUpdateUsageDescription`
+- Run on a real iPhone and allow Health permissions.
 
-TEST
+### Android testing
+
+- Open Android Studio from `npx cap open android`.
+- Run on a real Android device (USB debugging enabled).
+- Ensure Health Connect is installed and permission prompts are accepted on first sync.
+
+## Backend sync foundation
+
+For scalable multi-device sync (idempotent ingest + sync cursors), a migration was added:
+
+- `supabase/migrations/20260310170000_health_sync_foundation.sql`
