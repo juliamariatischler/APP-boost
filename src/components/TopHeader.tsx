@@ -96,10 +96,6 @@ export const TopHeader = () => {
             </Button>
           )}
 
-          <div className="min-w-0">
-            <p className="text-sm text-muted-foreground truncate">{profile.school} - {profile.class}</p>
-          </div>
-
           <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-lg shrink-0">
             <Zap className="h-5 w-5 text-primary fill-primary" />
             <span className="font-bold text-primary">{profile.points}</span>

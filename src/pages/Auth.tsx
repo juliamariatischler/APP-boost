@@ -29,15 +29,6 @@ const signupSchema = z.object({
   school: z.string().trim().min(1, "Schule erforderlich").max(100, "Schulname zu lang"),
   class: z.string().trim().min(1, "Klasse erforderlich").max(20, "Klassenname zu lang"),
   accountType: z.enum(["student", "teacher"]),
-  teacherCode: z.string().trim().optional(),
-}).superRefine((data, ctx) => {
-  if (data.accountType === "teacher" && !data.teacherCode) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["teacherCode"],
-      message: "Lehrercode erforderlich",
-    });
-  }
 });
 
 const Auth = () => {
@@ -58,7 +49,6 @@ const Auth = () => {
     school: "",
     class: "",
     accountType: "student" as "student" | "teacher",
-    teacherCode: "",
   });
 
   useEffect(() => {
@@ -195,7 +185,6 @@ const Auth = () => {
             school: validatedData.school,
             class: validatedData.class,
             account_type: validatedData.accountType,
-            teacher_code: validatedData.teacherCode || null,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -265,7 +254,11 @@ const Auth = () => {
       return;
     }
 
-    toast.success("Schulanfrage gesendet. Die Lehrkraft kann die Schule freischalten.");
+    if (!registeredSchools.includes(schoolName)) {
+      setRegisteredSchools((prev) => [...prev, schoolName].sort((a, b) => a.localeCompare(b)));
+    }
+    setSignupData((prev) => ({ ...prev, school: schoolName }));
+    toast.success("Schule hinzugefügt und ausgewählt.");
     setRequestedSchool("");
     setShowSchoolRequest(false);
   };
@@ -397,68 +390,57 @@ const Auth = () => {
               </div>
               <div>
                 <Label htmlFor="signup-school">Schule</Label>
-                {signupData.accountType === "student" ? (
-                  <div className="space-y-2">
-                    <select
-                      id="signup-school"
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      required
-                      value={signupData.school}
-                      onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
-                      disabled={schoolsLoading}
-                    >
-                      <option value="">
-                        {schoolsLoading
-                          ? "Schulen werden geladen..."
-                          : registeredSchools.length > 0
-                          ? "Schule auswählen"
-                          : "Noch keine Schule registriert"}
-                      </option>
-                      {registeredSchools.map((school) => (
-                        <option key={school} value={school}>
-                          {school}
-                        </option>
-                      ))}
-                    </select>
-
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto p-0 text-sm"
-                      onClick={() => setShowSchoolRequest((prev) => !prev)}
-                    >
-                      Keine Schule dabei? Schule anfragen
-                    </Button>
-
-                    {showSchoolRequest && (
-                      <div className="space-y-2 rounded-md border border-border p-3">
-                        <Input
-                          value={requestedSchool}
-                          onChange={(e) => setRequestedSchool(e.target.value)}
-                          placeholder="Name deiner Schule"
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleSchoolRequest}
-                          disabled={schoolRequestLoading}
-                          className="w-full"
-                        >
-                          {schoolRequestLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Anfrage senden
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Input
+                <div className="space-y-2">
+                  <select
                     id="signup-school"
-                    type="text"
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                     required
                     value={signupData.school}
                     onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
-                    placeholder="Schule der Lehrkraft"
-                  />
-                )}
+                    disabled={schoolsLoading}
+                  >
+                    <option value="">
+                      {schoolsLoading
+                        ? "Schulen werden geladen..."
+                        : registeredSchools.length > 0
+                        ? "Schule auswählen"
+                        : "Noch keine Schule registriert"}
+                    </option>
+                    {registeredSchools.map((school) => (
+                      <option key={school} value={school}>
+                        {school}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-sm"
+                    onClick={() => setShowSchoolRequest((prev) => !prev)}
+                  >
+                    Schule nicht dabei? Neu hinzufügen
+                  </Button>
+
+                  {showSchoolRequest && (
+                    <div className="space-y-2 rounded-md border border-border p-3">
+                      <Input
+                        value={requestedSchool}
+                        onChange={(e) => setRequestedSchool(e.target.value)}
+                        placeholder="Name deiner Schule"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleSchoolRequest}
+                        disabled={schoolRequestLoading}
+                        className="w-full"
+                      >
+                        {schoolRequestLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Schule hinzufügen
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <Label htmlFor="signup-class">
@@ -473,19 +455,6 @@ const Auth = () => {
                   placeholder={signupData.accountType === "teacher" ? "z. B. Sport" : "5a"}
                 />
               </div>
-              {signupData.accountType === "teacher" && (
-                <div>
-                  <Label htmlFor="signup-teacher-code">Lehrercode</Label>
-                  <Input
-                    id="signup-teacher-code"
-                    type="text"
-                    required
-                    value={signupData.teacherCode}
-                    onChange={(e) => setSignupData({ ...signupData, teacherCode: e.target.value })}
-                    placeholder="Code vom Admin"
-                  />
-                </div>
-              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Registrieren
