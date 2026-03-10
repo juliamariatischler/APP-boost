@@ -82,29 +82,30 @@ export const TopHeader = () => {
   if (!profile) return null;
 
   return (
-    <div className="bg-card shadow-sm p-4 mb-6">
-      <div className="max-w-screen-xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">{profile.school} - {profile.class}</p>
-            <p className="font-bold text-foreground text-lg">{profile.username}</p>
+    <div className="bg-card shadow-sm px-4 py-3 mb-6">
+      <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {!isDashboard && (
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="h-10 px-3 shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5 mr-1" />
+              Zurück
+            </Button>
+          )}
+
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground truncate">{profile.school} - {profile.class}</p>
           </div>
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-lg shrink-0">
             <Zap className="h-5 w-5 text-primary fill-primary" />
             <span className="font-bold text-primary">{profile.points}</span>
           </div>
-          {!isDashboard && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {isAdmin && (
             <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
               <Settings className="h-4 w-4 mr-2" />
