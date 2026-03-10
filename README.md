@@ -98,3 +98,13 @@ npx cap open ios
 For scalable multi-device sync (idempotent ingest + sync cursors), a migration was added:
 
 - `supabase/migrations/20260310170000_health_sync_foundation.sql`
+
+## Lightning decay
+
+- Home (`/dashboard`) now shows the level card (`Mein Level`) from Boost.
+- Daily point decay is applied server-side via:
+  - `supabase/migrations/20260310200000_daily_points_decay.sql`
+- Refined 24h rule + warning via:
+  - `supabase/migrations/20260310203000_points_decay_24h_warning.sql`
+- Rule: if no activity for `24h`, `1` Blitz decays (never below `0`).
+- Warning: one in-app notification is shown in the `2h` window before decay.

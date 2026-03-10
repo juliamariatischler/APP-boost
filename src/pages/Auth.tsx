@@ -44,6 +44,11 @@ const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
+  const [registeredSchools, setRegisteredSchools] = useState<string[]>([]);
+  const [showSchoolRequest, setShowSchoolRequest] = useState(false);
+  const [schoolRequestLoading, setSchoolRequestLoading] = useState(false);
+  const [requestedSchool, setRequestedSchool] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({
@@ -64,6 +69,29 @@ const Auth = () => {
       }
     });
   }, [navigate]);
+
+  useEffect(() => {
+    const loadRegisteredSchools = async () => {
+      setSchoolsLoading(true);
+      const { data, error } = await (supabase.rpc as any)("get_registered_schools");
+
+      if (error) {
+        console.error("Error loading registered schools:", error);
+        setRegisteredSchools([]);
+      } else {
+        const schools = Array.isArray(data)
+          ? data
+              .map((row: { school?: string }) => row.school?.trim() || "")
+              .filter((school: string) => school.length > 0)
+          : [];
+        setRegisteredSchools([...new Set(schools)]);
+      }
+
+      setSchoolsLoading(false);
+    };
+
+    loadRegisteredSchools();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +205,10 @@ const Auth = () => {
         // Handle specific auth errors
         if (error.message.includes("User already registered")) {
           toast.error("Ein Konto mit dieser E-Mail existiert bereits. Bitte melde dich an.");
+        } else if (error.message.includes("Database error saving new user")) {
+          toast.error("Registrierung fehlgeschlagen: Benutzername oder Profildaten sind ungültig.", {
+            description: "Bitte versuche einen anderen Benutzernamen (z. B. mit Zahl)."
+          });
         } else if (error.message.includes("Password should be at least")) {
           toast.error("Das Passwort muss mindestens 6 Zeichen haben");
         } else {
@@ -205,6 +237,37 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSchoolRequest = async () => {
+    const schoolName = requestedSchool.trim();
+    if (schoolName.length < 2) {
+      toast.error("Bitte gib einen gültigen Schulnamen ein.");
+      return;
+    }
+
+    setSchoolRequestLoading(true);
+
+    const { error } = await (supabase as any)
+      .from("school_registration_requests")
+      .insert({
+        requested_school: schoolName,
+        requester_email: signupData.email?.trim() || null,
+        requester_name: signupData.username?.trim() || null,
+        request_note: `Anfrage aus Registrierung (${signupData.accountType})`,
+      });
+
+    setSchoolRequestLoading(false);
+
+    if (error) {
+      console.error("School request failed:", error);
+      toast.error("Schulanfrage konnte nicht gesendet werden.");
+      return;
+    }
+
+    toast.success("Schulanfrage gesendet. Die Lehrkraft kann die Schule freischalten.");
+    setRequestedSchool("");
+    setShowSchoolRequest(false);
   };
 
   return (
@@ -334,14 +397,68 @@ const Auth = () => {
               </div>
               <div>
                 <Label htmlFor="signup-school">Schule</Label>
-                <Input
-                  id="signup-school"
-                  type="text"
-                  required
-                  value={signupData.school}
-                  onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
-                  placeholder="Meine Schule"
-                />
+                {signupData.accountType === "student" ? (
+                  <div className="space-y-2">
+                    <select
+                      id="signup-school"
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      required
+                      value={signupData.school}
+                      onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
+                      disabled={schoolsLoading}
+                    >
+                      <option value="">
+                        {schoolsLoading
+                          ? "Schulen werden geladen..."
+                          : registeredSchools.length > 0
+                          ? "Schule auswählen"
+                          : "Noch keine Schule registriert"}
+                      </option>
+                      {registeredSchools.map((school) => (
+                        <option key={school} value={school}>
+                          {school}
+                        </option>
+                      ))}
+                    </select>
+
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-sm"
+                      onClick={() => setShowSchoolRequest((prev) => !prev)}
+                    >
+                      Keine Schule dabei? Schule anfragen
+                    </Button>
+
+                    {showSchoolRequest && (
+                      <div className="space-y-2 rounded-md border border-border p-3">
+                        <Input
+                          value={requestedSchool}
+                          onChange={(e) => setRequestedSchool(e.target.value)}
+                          placeholder="Name deiner Schule"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleSchoolRequest}
+                          disabled={schoolRequestLoading}
+                          className="w-full"
+                        >
+                          {schoolRequestLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Anfrage senden
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Input
+                    id="signup-school"
+                    type="text"
+                    required
+                    value={signupData.school}
+                    onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
+                    placeholder="Schule der Lehrkraft"
+                  />
+                )}
               </div>
               <div>
                 <Label htmlFor="signup-class">

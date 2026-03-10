@@ -8,11 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { de } from "date-fns/locale";
+import { LevelCard } from "@/components/boost/LevelCard";
+import { getLevelForPoints } from "@/lib/gamification";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
+  const [points, setPoints] = useState(0);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
   const [weeklyTotal] = useState(28); // 4 challenges * 7 days
 
@@ -33,7 +36,7 @@ const Dashboard = () => {
     // Load profile
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("username")
+      .select("username, points")
       .eq("id", session.user.id)
       .single();
 
@@ -45,6 +48,7 @@ const Dashboard = () => {
 
     if (profileData) {
       setUsername(profileData.username);
+      setPoints(profileData.points || 0);
     } else {
       console.error("No profile found for user:", session.user.id);
       navigate("/");
@@ -92,6 +96,11 @@ const Dashboard = () => {
           <p className="text-sm text-muted-foreground">
             Bereit für deine nächste Challenge?
           </p>
+        </div>
+
+        {/* Level + Blitze */}
+        <div className="mb-6">
+          <LevelCard points={points} level={getLevelForPoints(points)} />
         </div>
 
         {/* Weekly Progress */}

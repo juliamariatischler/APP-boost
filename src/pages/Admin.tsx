@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
-import { ArrowLeft, Loader2, UserPlus, UserMinus, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, UserMinus, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -28,6 +28,16 @@ type DailyResult = {
   profiles: Profile | null;
 };
 
+type SchoolRegistrationRequest = {
+  id: string;
+  requested_school: string;
+  requester_email: string | null;
+  requester_name: string | null;
+  request_note: string | null;
+  status: string;
+  created_at: string;
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -41,6 +51,8 @@ const Admin = () => {
   const [selectedClass, setSelectedClass] = useState("");
   const [assigningStudentId, setAssigningStudentId] = useState<string | null>(null);
   const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [schoolRequests, setSchoolRequests] = useState<SchoolRegistrationRequest[]>([]);
+  const [handlingRequestId, setHandlingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -139,6 +151,8 @@ const Admin = () => {
       setSelectedClass("");
     }
 
+    await loadSchoolRequests();
+
     // Load results only for assigned students
     if (assignedIds.length === 0) {
       setResults([]);
@@ -168,6 +182,22 @@ const Admin = () => {
     }
 
     setLoading(false);
+  };
+
+  const loadSchoolRequests = async () => {
+    const { data, error } = await (supabase as any)
+      .from("school_registration_requests")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      toast.error("Schulanfragen konnten nicht geladen werden");
+      return;
+    }
+
+    setSchoolRequests((data || []) as SchoolRegistrationRequest[]);
   };
 
   const assignStudent = async (studentId: string) => {
@@ -240,6 +270,32 @@ const Admin = () => {
     }
 
     setBulkAssigning(false);
+  };
+
+  const handleSchoolRequestDecision = async (requestId: string, status: "approved" | "rejected") => {
+    if (!adminUserId) return;
+
+    setHandlingRequestId(requestId);
+
+    const { error } = await (supabase as any)
+      .from("school_registration_requests")
+      .update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: adminUserId,
+      })
+      .eq("id", requestId);
+
+    setHandlingRequestId(null);
+
+    if (error) {
+      console.error(error);
+      toast.error("Anfrage konnte nicht aktualisiert werden");
+      return;
+    }
+
+    toast.success(status === "approved" ? "Schule freigegeben" : "Anfrage abgelehnt");
+    await loadSchoolRequests();
   };
 
   const handleLogout = async () => {
@@ -398,6 +454,66 @@ const Admin = () => {
               </TableBody>
             </Table>
           </div>
+        </Card>
+
+        {/* School Requests */}
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Schulanfragen ({schoolRequests.length})</h2>
+          {schoolRequests.length === 0 ? (
+            <p className="text-muted-foreground">Keine offenen Schulanfragen.</p>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Schule</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>E-Mail</TableHead>
+                    <TableHead>Notiz</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schoolRequests.map((request) => {
+                    const isBusy = handlingRequestId === request.id;
+                    return (
+                      <TableRow key={request.id}>
+                        <TableCell>{new Date(request.created_at).toLocaleDateString("de-DE")}</TableCell>
+                        <TableCell className="font-medium">{request.requested_school}</TableCell>
+                        <TableCell>{request.requester_name || "-"}</TableCell>
+                        <TableCell>{request.requester_email || "-"}</TableCell>
+                        <TableCell>{request.request_note || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              disabled={isBusy}
+                              onClick={() => handleSchoolRequestDecision(request.id, "approved")}
+                              className="gap-2"
+                            >
+                              {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                              Freigeben
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isBusy}
+                              onClick={() => handleSchoolRequestDecision(request.id, "rejected")}
+                              className="gap-2"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              Ablehnen
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </Card>
 
         {/* Students Overview */}

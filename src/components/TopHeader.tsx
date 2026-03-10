@@ -32,6 +32,26 @@ export const TopHeader = () => {
       return;
     }
 
+    const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");
+    if (decayError) {
+      console.error("Points decay error:", decayError);
+    } else {
+      const decayedPoints = Number(decayState?.decayed_points || 0);
+      const shouldWarn = Boolean(decayState?.should_warn);
+      const minutesUntilDecay = Number(decayState?.minutes_until_decay || 0);
+
+      if (decayedPoints > 0) {
+        toast.info(`${decayedPoints} ⚡ verfallen (24h Inaktivität).`);
+      }
+
+      if (shouldWarn) {
+        const hoursUntilDecay = Math.max(1, Math.ceil(minutesUntilDecay / 60));
+        toast.warning(`Achtung: Blitz-Verfall in ca. ${hoursUntilDecay}h`, {
+          description: "Sei aktiv, damit in den nächsten 2 Stunden kein Blitz verfällt."
+        });
+      }
+    }
+
     const { data: profileData } = await supabase
       .from("profiles")
       .select("username, school, class, points")
