@@ -38,6 +38,20 @@ type SchoolRegistrationRequest = {
   created_at: string;
 };
 
+type RewardRedemptionRequest = {
+  id: string;
+  user_id: string;
+  reward_id: string;
+  status: string;
+  requested_at: string;
+  profiles: Profile | null;
+  reward_items: {
+    id: string;
+    title: string;
+    threshold: number;
+  } | null;
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -53,6 +67,8 @@ const Admin = () => {
   const [bulkAssigning, setBulkAssigning] = useState(false);
   const [schoolRequests, setSchoolRequests] = useState<SchoolRegistrationRequest[]>([]);
   const [handlingRequestId, setHandlingRequestId] = useState<string | null>(null);
+  const [rewardRequests, setRewardRequests] = useState<RewardRedemptionRequest[]>([]);
+  const [handlingRewardRequestId, setHandlingRewardRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -152,6 +168,7 @@ const Admin = () => {
     }
 
     await loadSchoolRequests();
+    await loadRewardRequests(assignedIds);
 
     // Load results only for assigned students
     if (assignedIds.length === 0) {
@@ -198,6 +215,45 @@ const Admin = () => {
     }
 
     setSchoolRequests((data || []) as SchoolRegistrationRequest[]);
+  };
+
+  const loadRewardRequests = async (assignedIds: string[]) => {
+    if (assignedIds.length === 0) {
+      setRewardRequests([]);
+      return;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("reward_redemptions")
+      .select(`
+        id,
+        user_id,
+        reward_id,
+        status,
+        requested_at,
+        profiles:user_id (
+          id,
+          username,
+          school,
+          class
+        ),
+        reward_items:reward_id (
+          id,
+          title,
+          threshold
+        )
+      `)
+      .eq("status", "requested")
+      .in("user_id", assignedIds)
+      .order("requested_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      toast.error("Belohnungsanfragen konnten nicht geladen werden");
+      return;
+    }
+
+    setRewardRequests((data || []) as RewardRedemptionRequest[]);
   };
 
   const assignStudent = async (studentId: string) => {
@@ -296,6 +352,32 @@ const Admin = () => {
 
     toast.success(status === "approved" ? "Schule freigegeben" : "Anfrage abgelehnt");
     await loadSchoolRequests();
+  };
+
+  const handleRewardRequestDecision = async (requestId: string, status: "approved" | "rejected") => {
+    if (!adminUserId) return;
+
+    setHandlingRewardRequestId(requestId);
+
+    const { error } = await (supabase as any)
+      .from("reward_redemptions")
+      .update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: adminUserId,
+      })
+      .eq("id", requestId);
+
+    setHandlingRewardRequestId(null);
+
+    if (error) {
+      console.error(error);
+      toast.error("Belohnungsanfrage konnte nicht aktualisiert werden");
+      return;
+    }
+
+    toast.success(status === "approved" ? "Belohnung freigegeben" : "Belohnung abgelehnt");
+    await loadData(adminUserId);
   };
 
   const handleLogout = async () => {
@@ -500,6 +582,66 @@ const Admin = () => {
                               variant="outline"
                               disabled={isBusy}
                               onClick={() => handleSchoolRequestDecision(request.id, "rejected")}
+                              className="gap-2"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              Ablehnen
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </Card>
+
+        {/* Reward Redemption Requests */}
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Belohnungsanfragen ({rewardRequests.length})</h2>
+          {rewardRequests.length === 0 ? (
+            <p className="text-muted-foreground">Keine offenen Belohnungsanfragen.</p>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Schüler</TableHead>
+                    <TableHead>Schule/Klasse</TableHead>
+                    <TableHead>Belohnung</TableHead>
+                    <TableHead className="text-right">Schwelle</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rewardRequests.map((request) => {
+                    const isBusy = handlingRewardRequestId === request.id;
+                    return (
+                      <TableRow key={request.id}>
+                        <TableCell>{new Date(request.requested_at).toLocaleDateString("de-DE")}</TableCell>
+                        <TableCell className="font-medium">{request.profiles?.username || "Unbekannt"}</TableCell>
+                        <TableCell>{request.profiles ? `${request.profiles.school} / ${request.profiles.class}` : "-"}</TableCell>
+                        <TableCell>{request.reward_items?.title || "Belohnung"}</TableCell>
+                        <TableCell className="text-right">{request.reward_items?.threshold || 0} ⚡</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              disabled={isBusy}
+                              onClick={() => handleRewardRequestDecision(request.id, "approved")}
+                              className="gap-2"
+                            >
+                              {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                              Freigeben
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isBusy}
+                              onClick={() => handleRewardRequestDecision(request.id, "rejected")}
                               className="gap-2"
                             >
                               <XCircle className="h-4 w-4" />
