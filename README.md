@@ -2,7 +2,7 @@
 
 ## Project info
 
-**Website**: https://www.boostschule.at
+**Website**: https://boostschule.at
 
 ## How can I edit this code?
 
@@ -56,7 +56,7 @@ This project is built with:
 
 ## Deployment
 
-Deployment is handled by GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages with custom domain `www.boostschule.at`.
+Deployment is handled by GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages with custom domain `boostschule.at`.
 
 ## Health integration (iOS + Android)
 
