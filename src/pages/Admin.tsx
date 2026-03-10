@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -52,6 +54,26 @@ type RewardRedemptionRequest = {
   } | null;
 };
 
+type RewardItemAdmin = {
+  id: string;
+  title: string;
+  partner: string | null;
+  threshold: number;
+  category: string;
+  icon: string | null;
+  is_active: boolean;
+};
+
+type MilestoneAdmin = {
+  id: string;
+  threshold: number;
+  title: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -69,6 +91,24 @@ const Admin = () => {
   const [handlingRequestId, setHandlingRequestId] = useState<string | null>(null);
   const [rewardRequests, setRewardRequests] = useState<RewardRedemptionRequest[]>([]);
   const [handlingRewardRequestId, setHandlingRewardRequestId] = useState<string | null>(null);
+  const [rewardItems, setRewardItems] = useState<RewardItemAdmin[]>([]);
+  const [milestones, setMilestones] = useState<MilestoneAdmin[]>([]);
+  const [savingReward, setSavingReward] = useState(false);
+  const [savingMilestone, setSavingMilestone] = useState(false);
+  const [newReward, setNewReward] = useState({
+    title: "",
+    partner: "",
+    threshold: 50,
+    category: "gutscheine",
+    icon: "🎁",
+  });
+  const [newMilestone, setNewMilestone] = useState({
+    threshold: 2500,
+    title: "",
+    description: "",
+    icon: "🏆",
+    sort_order: 1,
+  });
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -167,8 +207,11 @@ const Admin = () => {
       setSelectedClass("");
     }
 
-    await loadSchoolRequests();
-    await loadRewardRequests(assignedIds);
+    await Promise.all([
+      loadSchoolRequests(),
+      loadRewardRequests(assignedIds),
+      loadRewardsAdminData(),
+    ]);
 
     // Load results only for assigned students
     if (assignedIds.length === 0) {
@@ -254,6 +297,34 @@ const Admin = () => {
     }
 
     setRewardRequests((data || []) as RewardRedemptionRequest[]);
+  };
+
+  const loadRewardsAdminData = async () => {
+    const [{ data: rewardsData, error: rewardsError }, { data: milestoneData, error: milestoneError }] = await Promise.all([
+      (supabase as any)
+        .from("reward_items")
+        .select("id, title, partner, threshold, category, icon, is_active")
+        .order("threshold", { ascending: true }),
+      (supabase as any)
+        .from("class_milestones")
+        .select("id, threshold, title, description, icon, sort_order, is_active")
+        .order("sort_order", { ascending: true })
+        .order("threshold", { ascending: true }),
+    ]);
+
+    if (rewardsError) {
+      console.error(rewardsError);
+      toast.error("Belohnungen konnten nicht geladen werden");
+    } else {
+      setRewardItems((rewardsData || []) as RewardItemAdmin[]);
+    }
+
+    if (milestoneError) {
+      console.error(milestoneError);
+      toast.error("Meilensteine konnten nicht geladen werden");
+    } else {
+      setMilestones((milestoneData || []) as MilestoneAdmin[]);
+    }
   };
 
   const assignStudent = async (studentId: string) => {
@@ -380,6 +451,84 @@ const Admin = () => {
     await loadData(adminUserId);
   };
 
+  const handleCreateReward = async () => {
+    if (!newReward.title.trim() || Number(newReward.threshold) <= 0) {
+      toast.error("Bitte Titel und gültige Schwelle angeben");
+      return;
+    }
+
+    setSavingReward(true);
+    const { error } = await (supabase as any).from("reward_items").insert({
+      title: newReward.title.trim(),
+      partner: newReward.partner.trim() || null,
+      threshold: Number(newReward.threshold),
+      category: newReward.category.trim() || "allgemein",
+      icon: newReward.icon.trim() || null,
+      is_active: true,
+    });
+    setSavingReward(false);
+
+    if (error) {
+      console.error(error);
+      toast.error("Belohnung konnte nicht erstellt werden");
+      return;
+    }
+
+    toast.success("Belohnung erstellt");
+    setNewReward({ title: "", partner: "", threshold: 50, category: "gutscheine", icon: "🎁" });
+    await loadRewardsAdminData();
+  };
+
+  const handleToggleRewardActive = async (rewardId: string, active: boolean) => {
+    const { error } = await (supabase as any).from("reward_items").update({ is_active: !active }).eq("id", rewardId);
+    if (error) {
+      console.error(error);
+      toast.error("Status konnte nicht geändert werden");
+      return;
+    }
+    toast.success(!active ? "Belohnung aktiviert" : "Belohnung deaktiviert");
+    await loadRewardsAdminData();
+  };
+
+  const handleCreateMilestone = async () => {
+    if (!newMilestone.title.trim() || Number(newMilestone.threshold) <= 0) {
+      toast.error("Bitte Titel und gültige Schwelle angeben");
+      return;
+    }
+
+    setSavingMilestone(true);
+    const { error } = await (supabase as any).from("class_milestones").insert({
+      threshold: Number(newMilestone.threshold),
+      title: newMilestone.title.trim(),
+      description: newMilestone.description.trim() || null,
+      icon: newMilestone.icon.trim() || null,
+      sort_order: Number(newMilestone.sort_order) || 1,
+      is_active: true,
+    });
+    setSavingMilestone(false);
+
+    if (error) {
+      console.error(error);
+      toast.error("Meilenstein konnte nicht erstellt werden");
+      return;
+    }
+
+    toast.success("Meilenstein erstellt");
+    setNewMilestone({ threshold: 2500, title: "", description: "", icon: "🏆", sort_order: 1 });
+    await loadRewardsAdminData();
+  };
+
+  const handleToggleMilestoneActive = async (milestoneId: string, active: boolean) => {
+    const { error } = await (supabase as any).from("class_milestones").update({ is_active: !active }).eq("id", milestoneId);
+    if (error) {
+      console.error(error);
+      toast.error("Status konnte nicht geändert werden");
+      return;
+    }
+    toast.success(!active ? "Meilenstein aktiviert" : "Meilenstein deaktiviert");
+    await loadRewardsAdminData();
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -426,6 +575,131 @@ const Admin = () => {
       </div>
 
       <div className="max-w-screen-xl mx-auto px-4 space-y-8">
+        {/* Rewards Admin */}
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Rewards verwalten</h2>
+
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg">Neue Belohnung</h3>
+              <div className="grid gap-3">
+                <div>
+                  <Label>Titel</Label>
+                  <Input value={newReward.title} onChange={(e) => setNewReward((p) => ({ ...p, title: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Partner</Label>
+                  <Input value={newReward.partner} onChange={(e) => setNewReward((p) => ({ ...p, partner: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Schwelle</Label>
+                    <Input type="number" min={1} value={newReward.threshold} onChange={(e) => setNewReward((p) => ({ ...p, threshold: Number(e.target.value) || 1 }))} />
+                  </div>
+                  <div>
+                    <Label>Kategorie</Label>
+                    <Input value={newReward.category} onChange={(e) => setNewReward((p) => ({ ...p, category: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Icon</Label>
+                    <Input value={newReward.icon} onChange={(e) => setNewReward((p) => ({ ...p, icon: e.target.value }))} />
+                  </div>
+                </div>
+                <Button onClick={handleCreateReward} disabled={savingReward}>
+                  {savingReward ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Belohnung anlegen
+                </Button>
+              </div>
+
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titel</TableHead>
+                      <TableHead className="text-right">Schwelle</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aktion</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rewardItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.icon || "🎁"} {item.title}</TableCell>
+                        <TableCell className="text-right">{item.threshold} ⚡</TableCell>
+                        <TableCell>{item.is_active ? "Aktiv" : "Inaktiv"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => handleToggleRewardActive(item.id, item.is_active)}>
+                            {item.is_active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg">Neue Meilensteine</h3>
+              <div className="grid gap-3">
+                <div>
+                  <Label>Titel</Label>
+                  <Input value={newMilestone.title} onChange={(e) => setNewMilestone((p) => ({ ...p, title: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Beschreibung</Label>
+                  <Input value={newMilestone.description} onChange={(e) => setNewMilestone((p) => ({ ...p, description: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Schwelle</Label>
+                    <Input type="number" min={1} value={newMilestone.threshold} onChange={(e) => setNewMilestone((p) => ({ ...p, threshold: Number(e.target.value) || 1 }))} />
+                  </div>
+                  <div>
+                    <Label>Reihenfolge</Label>
+                    <Input type="number" min={1} value={newMilestone.sort_order} onChange={(e) => setNewMilestone((p) => ({ ...p, sort_order: Number(e.target.value) || 1 }))} />
+                  </div>
+                  <div>
+                    <Label>Icon</Label>
+                    <Input value={newMilestone.icon} onChange={(e) => setNewMilestone((p) => ({ ...p, icon: e.target.value }))} />
+                  </div>
+                </div>
+                <Button onClick={handleCreateMilestone} disabled={savingMilestone}>
+                  {savingMilestone ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Meilenstein anlegen
+                </Button>
+              </div>
+
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titel</TableHead>
+                      <TableHead className="text-right">Schwelle</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aktion</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {milestones.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.icon || "🏆"} {item.title}</TableCell>
+                        <TableCell className="text-right">{item.threshold} ⚡</TableCell>
+                        <TableCell>{item.is_active ? "Aktiv" : "Inaktiv"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => handleToggleMilestoneActive(item.id, item.is_active)}>
+                            {item.is_active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Assignment Management */}
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-4 text-foreground">Lehrer-Admin: Schüler zuteilen</h2>
