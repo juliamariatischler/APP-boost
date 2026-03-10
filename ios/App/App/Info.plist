@@ -24,16 +24,16 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Die App benötigt Camera für die Kontrolle der Ausführung</string>
 	<key>NSHandsTrackingUsageDescription</key>
 	<string></string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Diese App liest deine Schrittzahl aus Apple Health, um deine Tageschallenge zu berechnen.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Diese App schreibt keine Gesundheitsdaten, benötigt aber Zugriff für die Synchronisierung.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string></string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
