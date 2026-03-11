@@ -291,6 +291,20 @@ const Auth = () => {
     }
   };
 
+  const isAssignmentInfraMissing = (error: any) => {
+    const code = error?.code ?? "";
+    const message = String(error?.message ?? "").toLowerCase();
+    return (
+      code === "PGRST202" ||
+      code === "PGRST205" ||
+      code === "42P01" ||
+      message.includes("schema cache") ||
+      message.includes("could not find the table") ||
+      message.includes("could not find the function") ||
+      message.includes("relation") && message.includes("does not exist")
+    );
+  };
+
   const handleDemoTeacherLogin = async () => {
     setDemoTeacherLoading(true);
     try {
@@ -307,31 +321,25 @@ const Auth = () => {
       });
 
       const teacherId = teacherResult.user.id;
-      const studentId = studentResult.user.id;
-
-      await (supabase.rpc as any)("assign_students_to_teacher_by_class", {
+      const { error: assignError } = await (supabase.rpc as any)("assign_students_to_teacher_by_class", {
         p_teacher_id: teacherId,
         p_school: DEMO_SCHOOL,
         p_class: DEMO_CLASS,
       });
 
-      const { error: assignmentError } = await (supabase as any)
-        .from("teacher_student_assignments")
-        .insert({
-          teacher_id: teacherId,
-          student_id: studentId,
-          created_by: teacherId,
-        });
-
-      if (assignmentError && assignmentError.code !== "23505") {
-        throw assignmentError;
+      if (assignError && !isAssignmentInfraMissing(assignError)) {
+        throw assignError;
       }
 
-      toast.success(
-        teacherResult.created
-          ? "Demo-Lehrkraftkonto erstellt und Demoschüler zugeordnet!"
-          : "Demo-Lehrkraft-Login erfolgreich!",
-      );
+      if (assignError && isAssignmentInfraMissing(assignError)) {
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.");
+      } else {
+        toast.success(
+          teacherResult.created
+            ? "Demo-Lehrkraftkonto erstellt und Demoschüler zugeordnet!"
+            : "Demo-Lehrkraft-Login erfolgreich!",
+        );
+      }
       navigate("/");
     } catch (error: any) {
       toast.error("Demo-Lehrkraft-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
