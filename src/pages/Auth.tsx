@@ -326,7 +326,9 @@ const Auth = () => {
       });
 
       const teacherId = teacherResult.user.id;
+      const studentId = studentResult.user.id;
       let assignError: any = null;
+      let assignmentSucceeded = false;
       try {
         const rpcResult = await (supabase.rpc as any)("assign_students_to_teacher_by_class", {
           p_teacher_id: teacherId,
@@ -334,6 +336,9 @@ const Auth = () => {
           p_class: DEMO_CLASS,
         });
         assignError = rpcResult?.error ?? null;
+        if (!assignError) {
+          assignmentSucceeded = true;
+        }
       } catch (rpcThrownError: any) {
         assignError = rpcThrownError;
       }
@@ -342,14 +347,34 @@ const Auth = () => {
         throw assignError;
       }
 
-      if (assignError && isAssignmentInfraMissing(assignError)) {
-        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.");
+      // Fallback: ensure explicit demo student -> demo teacher mapping when table exists.
+      try {
+        const { error: directAssignError } = await (supabase as any)
+          .from("teacher_student_assignments")
+          .upsert(
+            {
+              teacher_id: teacherId,
+              student_id: studentId,
+              created_by: teacherId,
+            },
+            { onConflict: "teacher_id,student_id" }
+          );
+
+        if (!directAssignError) {
+          assignmentSucceeded = true;
+        } else if (!isAssignmentInfraMissing(directAssignError)) {
+          throw directAssignError;
+        }
+      } catch (directAssignThrown: any) {
+        if (!isAssignmentInfraMissing(directAssignThrown)) {
+          throw directAssignThrown;
+        }
+      }
+
+      if (!assignmentSucceeded) {
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung aktuell nicht möglich (DB-Migration fehlt).");
       } else {
-        toast.success(
-          teacherResult.created
-            ? "Demo-Lehrkraftkonto erstellt und Demoschüler zugeordnet!"
-            : "Demo-Lehrkraft-Login erfolgreich!",
-        );
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Demoschüler ist der Demo-Lehrkraft zugeordnet.");
       }
       navigate("/");
     } catch (error: any) {
