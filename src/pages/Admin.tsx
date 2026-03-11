@@ -16,17 +16,19 @@ type Profile = {
   username: string;
   school: string;
   class: string;
+  points?: number;
 };
 
 type DailyResult = {
   id: string;
   user_id: string;
   date: string;
-  push_ups: number;
-  squats: number;
-  planks: number;
-  sit_ups: number;
-  jumping_jacks: number;
+  push_ups: number | null;
+  squats: number | null;
+  planks: number | null;
+  sit_ups: number | null;
+  jumping_jacks: number | null;
+  steps: number | null;
   profiles: Profile | null;
 };
 
@@ -72,6 +74,25 @@ type MilestoneAdmin = {
   icon: string | null;
   sort_order: number;
   is_active: boolean;
+};
+
+const EXERCISE_GOALS = {
+  push_ups: 20,
+  squats: 30,
+  planks: 60,
+  sit_ups: 25,
+  jumping_jacks: 40,
+} as const;
+
+const getCompletedGoalsCount = (result?: DailyResult | null) => {
+  if (!result) return 0;
+  let done = 0;
+  if ((result.push_ups || 0) >= EXERCISE_GOALS.push_ups) done++;
+  if ((result.squats || 0) >= EXERCISE_GOALS.squats) done++;
+  if ((result.planks || 0) >= EXERCISE_GOALS.planks) done++;
+  if ((result.sit_ups || 0) >= EXERCISE_GOALS.sit_ups) done++;
+  if ((result.jumping_jacks || 0) >= EXERCISE_GOALS.jumping_jacks) done++;
+  return done;
 };
 
 const Admin = () => {
@@ -545,6 +566,46 @@ const Admin = () => {
     ),
   ].sort((a, b) => a.localeCompare(b, "de"));
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const latestResultByStudent = new Map<string, DailyResult>();
+  const todayResultByStudent = new Map<string, DailyResult>();
+
+  for (const result of results) {
+    if (!latestResultByStudent.has(result.user_id)) {
+      latestResultByStudent.set(result.user_id, result);
+    }
+    if (result.date === todayStr && !todayResultByStudent.has(result.user_id)) {
+      todayResultByStudent.set(result.user_id, result);
+    }
+  }
+
+  const rankedAssignedProfiles = [...profiles].sort((a, b) => {
+    const pointsDiff = Number(b.points || 0) - Number(a.points || 0);
+    if (pointsDiff !== 0) return pointsDiff;
+    return a.username.localeCompare(b.username, "de");
+  });
+
+  const classScopedAssignedProfiles = selectedSchool && selectedClass
+    ? rankedAssignedProfiles.filter((p) => p.school === selectedSchool && p.class === selectedClass)
+    : rankedAssignedProfiles;
+
+  const openClassCandidates = selectedSchool && selectedClass
+    ? allStudents.filter(
+        (student) =>
+          student.school === selectedSchool &&
+          student.class === selectedClass &&
+          !assignedStudentIds.includes(student.id)
+      )
+    : [];
+
+  const studentsForManagement = allStudents.filter(
+    (student) =>
+      (!selectedSchool || student.school === selectedSchool) &&
+      (!selectedClass || student.class === selectedClass)
+  );
+
+  const pointsByStudentId = new Map(profiles.map((p) => [p.id, Number(p.points || 0)]));
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -702,9 +763,9 @@ const Admin = () => {
 
         {/* Assignment Management */}
         <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-4 text-foreground">Lehrer-Admin: Schüler zuteilen</h2>
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Lehrkraft: Schüler verwalten</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Du siehst im Dashboard nur dir zugeteilte Schüler. Hier kannst du manuell zuweisen oder eine ganze Klasse automatisch übernehmen.
+            Du siehst im Dashboard nur dir zugeteilte Schüler. Hier kannst du Schüler annehmen, hinzufügen, entfernen oder eine ganze Klasse übernehmen.
           </p>
 
           <div className="grid gap-3 md:grid-cols-4 mb-4">
@@ -767,7 +828,7 @@ const Admin = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allStudents.map((student) => {
+                {studentsForManagement.map((student) => {
                   const isAssigned = assignedStudentIds.includes(student.id);
                   const isBusy = assigningStudentId === student.id;
                   return (
@@ -800,16 +861,66 @@ const Admin = () => {
                             onClick={() => assignStudent(student.id)}
                           >
                             {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                            Zuteilen
+                            Hinzufügen
                           </Button>
                         )}
                       </TableCell>
                     </TableRow>
                   );
                 })}
+                {studentsForManagement.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Keine Schüler für die aktuelle Schul-/Klassenfilterung gefunden.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Schüler annehmen ({openClassCandidates.length})</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Offene Schüler aus der aktuell ausgewählten Schule/Klasse ({selectedSchool || "-"} / {selectedClass || "-"}).
+          </p>
+          {!selectedSchool || !selectedClass ? (
+            <p className="text-muted-foreground">Bitte oben zuerst Schule und Klasse auswählen.</p>
+          ) : openClassCandidates.length === 0 ? (
+            <p className="text-muted-foreground">Keine offenen Schüler mehr in dieser Klasse.</p>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Benutzername</TableHead>
+                    <TableHead>Schule</TableHead>
+                    <TableHead>Klasse</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {openClassCandidates.map((student) => {
+                    const isBusy = assigningStudentId === student.id;
+                    return (
+                      <TableRow key={student.id}>
+                        <TableCell className="font-medium">{student.username}</TableCell>
+                        <TableCell>{student.school}</TableCell>
+                        <TableCell>{student.class}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" className="gap-2" disabled={isBusy} onClick={() => assignStudent(student.id)}>
+                            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                            Annehmen
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </Card>
 
         {/* School Requests */}
@@ -934,29 +1045,72 @@ const Admin = () => {
 
         {/* Students Overview */}
         <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-4 text-foreground">Meine zugeteilten Schüler ({profiles.length})</h2>
+          <h2 className="text-2xl font-bold mb-4 text-foreground">
+            Ranking & Status meiner Schüler ({classScopedAssignedProfiles.length})
+          </h2>
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Rang</TableHead>
                     <TableHead>Benutzername</TableHead>
                     <TableHead>Schule</TableHead>
                     <TableHead>Klasse</TableHead>
+                    <TableHead className="text-right">Blitze</TableHead>
+                    <TableHead className="text-right">Aufgaben heute</TableHead>
+                    <TableHead>Letzte Aktivität</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {profiles.map((profile) => (
-                    <TableRow key={profile.id}>
-                      <TableCell className="font-medium">{profile.username}</TableCell>
-                      <TableCell>{profile.school}</TableCell>
-                      <TableCell>{profile.class}</TableCell>
+                  {classScopedAssignedProfiles.map((profile, idx) => {
+                    const todayResult = todayResultByStudent.get(profile.id);
+                    const latestResult = latestResultByStudent.get(profile.id);
+                    const todayCompleted = getCompletedGoalsCount(todayResult);
+                    const isBusy = assigningStudentId === profile.id;
+
+                    return (
+                      <TableRow key={profile.id}>
+                        <TableCell className="font-semibold">#{idx + 1}</TableCell>
+                        <TableCell className="font-medium">{profile.username}</TableCell>
+                        <TableCell>{profile.school}</TableCell>
+                        <TableCell>{profile.class}</TableCell>
+                        <TableCell className="text-right font-semibold">{Number(profile.points || 0)} ⚡</TableCell>
+                        <TableCell className="text-right">
+                          <span className={todayCompleted >= 5 ? "text-green-600 font-semibold" : "text-muted-foreground"}>
+                            {todayCompleted}/5
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {latestResult ? new Date(latestResult.date).toLocaleDateString("de-DE") : "Noch keine"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            disabled={isBusy}
+                            onClick={() => unassignStudent(profile.id)}
+                          >
+                            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+                            Entfernen
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {classScopedAssignedProfiles.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        Keine zugeteilten Schüler in der aktuellen Auswahl.
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -965,7 +1119,7 @@ const Admin = () => {
 
         {/* Results Overview */}
         <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-4 text-foreground">Tägliche Ergebnisse</h2>
+          <h2 className="text-2xl font-bold mb-4 text-foreground">Tägliche Ergebnisse & Aufgabenfortschritt</h2>
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -979,25 +1133,35 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>Datum</TableHead>
                     <TableHead>Schüler</TableHead>
+                    <TableHead className="text-right">Blitze</TableHead>
+                    <TableHead className="text-right">Erreicht</TableHead>
                     <TableHead className="text-right">Push-ups</TableHead>
                     <TableHead className="text-right">Squats</TableHead>
                     <TableHead className="text-right">Planks (s)</TableHead>
                     <TableHead className="text-right">Sit-ups</TableHead>
                     <TableHead className="text-right">Jumping Jacks</TableHead>
+                    <TableHead className="text-right">Schritte</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {results.map((result) => (
-                    <TableRow key={result.id}>
-                      <TableCell>{new Date(result.date).toLocaleDateString('de-DE')}</TableCell>
-                      <TableCell className="font-medium">{result.profiles?.username || "Unbekannt"}</TableCell>
-                      <TableCell className="text-right">{result.push_ups}</TableCell>
-                      <TableCell className="text-right">{result.squats}</TableCell>
-                      <TableCell className="text-right">{result.planks}</TableCell>
-                      <TableCell className="text-right">{result.sit_ups}</TableCell>
-                      <TableCell className="text-right">{result.jumping_jacks}</TableCell>
-                    </TableRow>
-                  ))}
+                  {results.map((result) => {
+                    const doneGoals = getCompletedGoalsCount(result);
+                    const flashes = pointsByStudentId.get(result.user_id) ?? 0;
+                    return (
+                      <TableRow key={result.id}>
+                        <TableCell>{new Date(result.date).toLocaleDateString("de-DE")}</TableCell>
+                        <TableCell className="font-medium">{result.profiles?.username || "Unbekannt"}</TableCell>
+                        <TableCell className="text-right">{flashes} ⚡</TableCell>
+                        <TableCell className="text-right">{doneGoals}/5</TableCell>
+                        <TableCell className="text-right">{result.push_ups || 0}</TableCell>
+                        <TableCell className="text-right">{result.squats || 0}</TableCell>
+                        <TableCell className="text-right">{result.planks || 0}</TableCell>
+                        <TableCell className="text-right">{result.sit_ups || 0}</TableCell>
+                        <TableCell className="text-right">{result.jumping_jacks || 0}</TableCell>
+                        <TableCell className="text-right">{result.steps || 0}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
