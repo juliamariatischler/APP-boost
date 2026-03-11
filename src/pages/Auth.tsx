@@ -42,6 +42,7 @@ const Auth = () => {
   const [schoolRequestLoading, setSchoolRequestLoading] = useState(false);
   const [requestedSchool, setRequestedSchool] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loginType, setLoginType] = useState<"student" | "teacher">("student");
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({
     username: "",
@@ -397,6 +398,18 @@ const Auth = () => {
             ) : (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
+                  <Label htmlFor="login-account-type">Login als</Label>
+                  <select
+                    id="login-account-type"
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={loginType}
+                    onChange={(e) => setLoginType(e.target.value as "student" | "teacher")}
+                  >
+                    <option value="student">Schüler:in</option>
+                    <option value="teacher">Lehrkraft</option>
+                  </select>
+                </div>
+                <div>
                   <Label htmlFor="login-email">Email</Label>
                   <Input
                     id="login-email"
@@ -431,23 +444,13 @@ const Auth = () => {
                     type="button"
                     variant="outline"
                     className="flex-1"
-                    onClick={handleDemoStudentLogin}
+                    onClick={loginType === "teacher" ? handleDemoTeacherLogin : handleDemoStudentLogin}
                     disabled={loading || demoStudentLoading || demoTeacherLoading}
                   >
-                    {demoStudentLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Demo Schüler:in
+                    {(demoStudentLoading || demoTeacherLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loginType === "teacher" ? "Demo Lehrkraft" : "Demo Schüler:in"}
                   </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleDemoTeacherLogin}
-                  disabled={loading || demoStudentLoading || demoTeacherLoading}
-                >
-                  {demoTeacherLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Demo Lehrkraft
-                </Button>
                 <Button
                   type="button"
                   variant="link"
