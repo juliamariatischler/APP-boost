@@ -294,14 +294,19 @@ const Auth = () => {
   const isAssignmentInfraMissing = (error: any) => {
     const code = error?.code ?? "";
     const message = String(error?.message ?? "").toLowerCase();
+    const details = String(error?.details ?? "").toLowerCase();
+    const hint = String(error?.hint ?? "").toLowerCase();
+    const payload = JSON.stringify(error ?? {}).toLowerCase();
+    const text = `${message} ${details} ${hint} ${payload}`;
     return (
       code === "PGRST202" ||
       code === "PGRST205" ||
       code === "42P01" ||
-      message.includes("schema cache") ||
-      message.includes("could not find the table") ||
-      message.includes("could not find the function") ||
-      message.includes("relation") && message.includes("does not exist")
+      text.includes("schema cache") ||
+      text.includes("could not find the table") ||
+      text.includes("could not find the function") ||
+      (text.includes("relation") && text.includes("does not exist")) ||
+      text.includes("teacher_student_assignments")
     );
   };
 
@@ -321,11 +326,17 @@ const Auth = () => {
       });
 
       const teacherId = teacherResult.user.id;
-      const { error: assignError } = await (supabase.rpc as any)("assign_students_to_teacher_by_class", {
-        p_teacher_id: teacherId,
-        p_school: DEMO_SCHOOL,
-        p_class: DEMO_CLASS,
-      });
+      let assignError: any = null;
+      try {
+        const rpcResult = await (supabase.rpc as any)("assign_students_to_teacher_by_class", {
+          p_teacher_id: teacherId,
+          p_school: DEMO_SCHOOL,
+          p_class: DEMO_CLASS,
+        });
+        assignError = rpcResult?.error ?? null;
+      } catch (rpcThrownError: any) {
+        assignError = rpcThrownError;
+      }
 
       if (assignError && !isAssignmentInfraMissing(assignError)) {
         throw assignError;
@@ -342,6 +353,11 @@ const Auth = () => {
       }
       navigate("/");
     } catch (error: any) {
+      if (isAssignmentInfraMissing(error)) {
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.");
+        navigate("/");
+        return;
+      }
       toast.error("Demo-Lehrkraft-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
     } finally {
       setDemoTeacherLoading(false);
