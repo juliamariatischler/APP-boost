@@ -34,7 +34,8 @@ const signupSchema = z.object({
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoStudentLoading, setDemoStudentLoading] = useState(false);
+  const [demoTeacherLoading, setDemoTeacherLoading] = useState(false);
   const [schoolsLoading, setSchoolsLoading] = useState(true);
   const [registeredSchools, setRegisteredSchools] = useState<string[]>([]);
   const [showSchoolRequest, setShowSchoolRequest] = useState(false);
@@ -50,6 +51,19 @@ const Auth = () => {
     class: "",
     accountType: "student" as "student" | "teacher",
   });
+
+  const DEMO_SCHOOL = "DemoSchule";
+  const DEMO_CLASS = "4a";
+  const DEMO_STUDENT = {
+    email: "demo@boost-challenge.de",
+    password: "demo123456",
+    username: "DemoUser",
+  };
+  const DEMO_TEACHER = {
+    email: "demo-lehrkraft@boost-challenge.de",
+    password: "demo123456",
+    username: "DemoLehrkraft",
+  };
 
   useEffect(() => {
     // Check if already logged in
@@ -185,46 +199,143 @@ const Auth = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setDemoLoading(true);
-    try {
-      // First try to sign in with demo account
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: "demo@boost-challenge.de",
-        password: "demo123456",
+  const ensureDemoAccount = async (params: {
+    email: string;
+    password: string;
+    username: string;
+    accountType: "student" | "teacher";
+  }) => {
+    const signInResult = await supabase.auth.signInWithPassword({
+      email: params.email,
+      password: params.password,
+    });
+
+    if (!signInResult.error && signInResult.data.user) {
+      const { error: profileUpdateError } = await (supabase as any)
+        .from("profiles")
+        .update({
+          school: DEMO_SCHOOL,
+          class: DEMO_CLASS,
+        })
+        .eq("id", signInResult.data.user.id);
+
+      if (profileUpdateError) {
+        throw profileUpdateError;
+      }
+
+      return { user: signInResult.data.user, created: false };
+    }
+
+    const signUpResult = await supabase.auth.signUp({
+      email: params.email,
+      password: params.password,
+      options: {
+        data: {
+          username: params.username,
+          school: DEMO_SCHOOL,
+          class: DEMO_CLASS,
+          account_type: params.accountType,
+        },
+      },
+    });
+
+    if (signUpResult.error) {
+      throw signUpResult.error;
+    }
+
+    if (!signUpResult.data.user) {
+      throw new Error("Demo-Konto konnte nicht erstellt werden.");
+    }
+
+    if (!signUpResult.data.session) {
+      const postSignupSignIn = await supabase.auth.signInWithPassword({
+        email: params.email,
+        password: params.password,
       });
 
-      if (error) {
-        // If login fails, create the demo account first
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: "demo@boost-challenge.de",
-          password: "demo123456",
-          options: {
-            data: {
-              username: "DemoUser",
-              school: "Demo Schule",
-              class: "5a",
-            },
-          },
+      if (postSignupSignIn.error || !postSignupSignIn.data.user) {
+        throw postSignupSignIn.error ?? new Error("Demo-Konto konnte nicht angemeldet werden.");
+      }
+    }
+
+    const { error: profileUpdateError } = await (supabase as any)
+      .from("profiles")
+      .update({
+        school: DEMO_SCHOOL,
+        class: DEMO_CLASS,
+      })
+      .eq("id", signUpResult.data.user.id);
+
+    if (profileUpdateError) {
+      throw profileUpdateError;
+    }
+
+    return { user: signUpResult.data.user, created: true };
+  };
+
+  const handleDemoStudentLogin = async () => {
+    setDemoStudentLoading(true);
+    try {
+      const result = await ensureDemoAccount({
+        ...DEMO_STUDENT,
+        accountType: "student",
+      });
+
+      toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!");
+      navigate("/");
+    } catch (error: any) {
+      toast.error("Demo-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
+    } finally {
+      setDemoStudentLoading(false);
+    }
+  };
+
+  const handleDemoTeacherLogin = async () => {
+    setDemoTeacherLoading(true);
+    try {
+      const studentResult = await ensureDemoAccount({
+        ...DEMO_STUDENT,
+        accountType: "student",
+      });
+
+      await supabase.auth.signOut();
+
+      const teacherResult = await ensureDemoAccount({
+        ...DEMO_TEACHER,
+        accountType: "teacher",
+      });
+
+      const teacherId = teacherResult.user.id;
+      const studentId = studentResult.user.id;
+
+      await (supabase.rpc as any)("assign_students_to_teacher_by_class", {
+        p_teacher_id: teacherId,
+        p_school: DEMO_SCHOOL,
+        p_class: DEMO_CLASS,
+      });
+
+      const { error: assignmentError } = await (supabase as any)
+        .from("teacher_student_assignments")
+        .insert({
+          teacher_id: teacherId,
+          student_id: studentId,
+          created_by: teacherId,
         });
 
-        if (signUpError) {
-          toast.error("Demo-Login fehlgeschlagen: " + signUpError.message);
-          return;
-        }
-
-        if (signUpData.session) {
-          toast.success("Demo-Konto erstellt! Willkommen!");
-          navigate("/");
-        }
-      } else if (data.session) {
-        toast.success("Demo-Login erfolgreich!");
-        navigate("/");
+      if (assignmentError && assignmentError.code !== "23505") {
+        throw assignmentError;
       }
+
+      toast.success(
+        teacherResult.created
+          ? "Demo-Lehrkraftkonto erstellt und Demoschüler zugeordnet!"
+          : "Demo-Lehrkraft-Login erfolgreich!",
+      );
+      navigate("/");
     } catch (error: any) {
-      toast.error("Demo-Login fehlgeschlagen. Bitte versuche es später erneut.");
+      toast.error("Demo-Lehrkraft-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
     } finally {
-      setDemoLoading(false);
+      setDemoTeacherLoading(false);
     }
   };
 
@@ -308,7 +419,11 @@ const Auth = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" className="flex-1" disabled={loading || demoLoading}>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={loading || demoStudentLoading || demoTeacherLoading}
+                  >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Anmelden
                   </Button>
@@ -316,13 +431,23 @@ const Auth = () => {
                     type="button"
                     variant="outline"
                     className="flex-1"
-                    onClick={handleDemoLogin}
-                    disabled={loading || demoLoading}
+                    onClick={handleDemoStudentLogin}
+                    disabled={loading || demoStudentLoading || demoTeacherLoading}
                   >
-                    {demoLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Demo
+                    {demoStudentLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Demo Schüler:in
                   </Button>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDemoTeacherLogin}
+                  disabled={loading || demoStudentLoading || demoTeacherLoading}
+                >
+                  {demoTeacherLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Demo Lehrkraft
+                </Button>
                 <Button
                   type="button"
                   variant="link"
