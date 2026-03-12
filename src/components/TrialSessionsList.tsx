@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import GrazSportsGallery from "@/components/GrazSportsGallery";
 import { 
   Calendar, 
   Clock, 
@@ -219,21 +220,26 @@ const TrialSessionsList = () => {
 
   if (sessions.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <p className="text-muted-foreground text-lg">
-          Aktuell sind keine Schnuppertermine verfügbar.
-        </p>
-        <p className="text-muted-foreground mt-2">
-          Schau bald wieder vorbei!
-        </p>
-      </Card>
+      <div className="space-y-6">
+        <GrazSportsGallery />
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground text-lg">
+            Aktuell sind keine zusätzlichen Schnuppertermine verfügbar.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            Schau bald wieder vorbei!
+          </p>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <GrazSportsGallery />
+
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Verfügbare Schnuppertermine</h2>
+        <h2 className="text-2xl font-bold text-foreground">Weitere verfügbare Schnuppertermine</h2>
         <Badge variant="secondary" className="flex items-center gap-1">
           <Zap className="h-3 w-3 text-yellow-500" />
           +{POINTS_PER_VISIT} pro Anmeldung

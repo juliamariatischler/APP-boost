@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="American Football Training">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7b1e1e"/>
+      <stop offset="100%" stop-color="#431010"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg2)"/>
+  <rect x="0" y="350" width="800" height="150" fill="#1b0a0a" opacity="0.45"/>
+  <ellipse cx="220" cy="250" rx="130" ry="85" fill="#7a4a24" stroke="#e8c8a4" stroke-width="8"/>
+  <line x1="155" y1="250" x2="285" y2="250" stroke="#fff" stroke-width="8"/>
+  <line x1="190" y1="225" x2="190" y2="275" stroke="#fff" stroke-width="6"/>
+  <line x1="210" y1="225" x2="210" y2="275" stroke="#fff" stroke-width="6"/>
+  <line x1="230" y1="225" x2="230" y2="275" stroke="#fff" stroke-width="6"/>
+  <line x1="250" y1="225" x2="250" y2="275" stroke="#fff" stroke-width="6"/>
+  <text x="390" y="235" font-size="58" font-weight="700" fill="#ffffff" font-family="Verdana, Arial, sans-serif">FOOTBALL</text>
+  <text x="390" y="290" font-size="30" fill="#ffe7e7" font-family="Verdana, Arial, sans-serif">Graz Giants Tryout</text>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Schwimmen Training">
+  <defs>
+    <linearGradient id="sw" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#075985"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#sw)"/>
+  <path d="M0 320c40 20 80 20 120 0s80-20 120 0 80 20 120 0 80-20 120 0 80 20 120 0 80-20 120 0v180H0z" fill="#0ea5e9" opacity="0.75"/>
+  <circle cx="200" cy="220" r="30" fill="#fde68a"/>
+  <path d="M155 265c20-18 70-18 95 0" stroke="#fde68a" stroke-width="12" fill="none"/>
+  <text x="575" y="235" text-anchor="middle" font-size="54" font-weight="700" fill="#e0f2fe" font-family="Verdana, Arial, sans-serif">SCHWIMMEN</text>
+  <text x="575" y="290" text-anchor="middle" font-size="30" fill="#bae6fd" font-family="Verdana, Arial, sans-serif">Try It in Graz</text>
+</svg>

@@ -46,11 +46,16 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const healthSourceLabel = HealthService.getHealthSourceLabel();
 
   useEffect(() => {
-    loadTodayData();
-    checkLocalStorageResults();
+    initializeDailyState();
   }, [userId]);
 
-  const loadTodayData = async () => {
+  const initializeDailyState = async () => {
+    const currentResults = await loadTodayData();
+    const mergedResults = await checkLocalStorageResults(currentResults);
+    await reconcileExerciseActivityFlashes(mergedResults);
+  };
+
+  const loadTodayData = async (): Promise<Record<string, number>> => {
     const today = new Date().toISOString().split('T')[0];
     
     const { data, error } = await supabase
@@ -60,25 +65,74 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       .eq("date", today)
       .maybeSingle();
 
-    if (!error && data) {
-      setSteps(data.steps || 0);
-      setStepsActive(data.steps_tracking_active || false);
-      setResults({
+    const initialResults = !error && data
+      ? {
         "Push-ups": data.push_ups || 0,
         "Squats": data.squats || 0,
         "Planks": data.planks || 0,
         "Sit-ups": data.sit_ups || 0,
         "Jumping Jacks": data.jumping_jacks || 0,
-      });
+      }
+      : {
+        "Push-ups": 0,
+        "Squats": 0,
+        "Planks": 0,
+        "Sit-ups": 0,
+        "Jumping Jacks": 0,
+      };
+
+    if (!error && data) {
+      setSteps(data.steps || 0);
+      setStepsActive(data.steps_tracking_active || false);
     }
+
+    setResults(initialResults);
     setLoading(false);
+    return initialResults;
   };
 
   const countCompletedExercises = (exerciseResults: Record<string, number>) => {
     return exercises.filter((exercise) => (exerciseResults[exercise.name] || 0) >= exercise.goal).length;
   };
 
-  const checkLocalStorageResults = () => {
+  const countStartedExercises = (exerciseResults: Record<string, number>) => {
+    return exercises.filter((exercise) => (exerciseResults[exercise.name] || 0) > 0).length;
+  };
+
+  const getTodayKey = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return `daily_started_exercises_awarded_${userId}_${today}`;
+  };
+
+  const awardFlashes = async (delta: number) => {
+    if (delta <= 0) return;
+    const { error: incrementError } = await supabase.rpc("increment_points", {
+      points_to_add: delta,
+    });
+
+    if (incrementError) {
+      console.error("Error awarding flashes:", incrementError);
+      toast.error("Ergebnis gespeichert, aber Blitze konnten nicht gutgeschrieben werden.");
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta } }));
+    toast.success(`+${delta} ⚡ gutgeschrieben!`);
+  };
+
+  const reconcileExerciseActivityFlashes = async (exerciseResults: Record<string, number>) => {
+    const startedExercises = countStartedExercises(exerciseResults);
+    const awardKey = getTodayKey();
+    const alreadyAwarded = parseInt(localStorage.getItem(awardKey) || "0", 10) || 0;
+    const delta = Math.max(0, startedExercises - alreadyAwarded);
+
+    if (delta > 0) {
+      await awardFlashes(delta);
+      localStorage.setItem(awardKey, String(startedExercises));
+    }
+  };
+
+  const checkLocalStorageResults = async (baseResults: Record<string, number>) => {
     const newResults: Record<string, number> = {};
     
     const MAX_VALUES: Record<string, number> = {
@@ -115,18 +169,20 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
     }
     
     if (Object.keys(newResults).length > 0) {
-      setResults(prev => {
-        const updated = {
-          "Push-ups": (prev["Push-ups"] || 0) + (newResults["Push-ups"] || 0),
-          "Squats": (prev["Squats"] || 0) + (newResults["Squats"] || 0),
-          "Planks": (prev["Planks"] || 0) + (newResults["Planks"] || 0),
-          "Sit-ups": (prev["Sit-ups"] || 0) + (newResults["Sit-ups"] || 0),
-          "Jumping Jacks": (prev["Jumping Jacks"] || 0) + (newResults["Jumping Jacks"] || 0),
-        };
-        saveTodayResults(updated);
-        return updated;
-      });
+      const updated = {
+        "Push-ups": (baseResults["Push-ups"] || 0) + (newResults["Push-ups"] || 0),
+        "Squats": (baseResults["Squats"] || 0) + (newResults["Squats"] || 0),
+        "Planks": (baseResults["Planks"] || 0) + (newResults["Planks"] || 0),
+        "Sit-ups": (baseResults["Sit-ups"] || 0) + (newResults["Sit-ups"] || 0),
+        "Jumping Jacks": (baseResults["Jumping Jacks"] || 0) + (newResults["Jumping Jacks"] || 0),
+      };
+
+      setResults(updated);
+      await saveTodayResults(updated);
+      return updated;
     }
+
+    return baseResults;
   };
 
   const saveTodayResults = async (currentResults: Record<string, number>) => {
@@ -167,19 +223,10 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
     } else {
       const previouslyCompleted = countCompletedExercises(previousResults);
       const currentlyCompleted = countCompletedExercises(currentResults);
-      const flashesToAward = Math.max(0, currentlyCompleted - previouslyCompleted);
+      const completionDelta = Math.max(0, currentlyCompleted - previouslyCompleted);
 
-      if (flashesToAward > 0) {
-        const { error: incrementError } = await supabase.rpc("increment_points", {
-          points_to_add: flashesToAward,
-        });
-
-        if (incrementError) {
-          console.error("Error awarding flashes:", incrementError);
-          toast.error("Ergebnis gespeichert, aber Blitze konnten nicht gutgeschrieben werden.");
-        } else {
-          toast.success(`+${flashesToAward} ⚡ gutgeschrieben!`);
-        }
+      if (completionDelta > 0) {
+        await awardFlashes(completionDelta);
       }
 
       toast.success("Ergebnisse gespeichert!");
@@ -423,6 +470,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
           <div className="flex-1">
             <h3 className="font-bold text-foreground">Pflicht 2: Übungen</h3>
             <p className="text-xs text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
+            <p className="text-xs text-muted-foreground/80">Für jede begonnene Übung gibt es 1 Blitz.</p>
           </div>
           {allExercisesComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
         </div>

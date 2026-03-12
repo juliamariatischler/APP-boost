@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Tennis Training">
+  <defs>
+    <linearGradient id="tn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2e7d32"/>
+      <stop offset="100%" stop-color="#1b5e20"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#tn)"/>
+  <circle cx="220" cy="250" r="95" fill="#d7ff45"/>
+  <path d="M135 250c20-35 60-60 85-90M305 250c-20 35-60 60-85 90" stroke="#ffffff" stroke-width="8" fill="none"/>
+  <text x="390" y="235" font-size="64" font-weight="700" fill="#ffffff" font-family="Verdana, Arial, sans-serif">TENNIS</text>
+  <text x="390" y="290" font-size="30" fill="#e7ffd1" font-family="Verdana, Arial, sans-serif">Schnuppern in Graz</text>
+</svg>

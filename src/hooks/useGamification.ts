@@ -62,6 +62,29 @@ export function useGamification(userId: string | null, userClass?: string, userS
     loadGamificationData(userId);
   }, [userId, userClass, userSchool]);
 
+  useEffect(() => {
+    const handlePointsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ delta?: number }>;
+      const delta = Number(customEvent.detail?.delta || 0);
+      if (!delta) return;
+
+      setData((prev) => {
+        const nextPoints = prev.points + delta;
+        return {
+          ...prev,
+          points: nextPoints,
+          level: getLevelForPoints(nextPoints),
+          energyRank: getEnergyRank(nextPoints, prev.classAverage),
+        };
+      });
+    };
+
+    window.addEventListener("points-updated", handlePointsUpdated);
+    return () => {
+      window.removeEventListener("points-updated", handlePointsUpdated);
+    };
+  }, []);
+
   const isCompletedDay = (day: any): boolean => {
     return (
       (day.steps || 0) >= 3000 &&

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Handball Training">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f4c81"/>
+      <stop offset="100%" stop-color="#12305e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg3)"/>
+  <rect x="0" y="350" width="800" height="150" fill="#0a1e3a" opacity="0.45"/>
+  <circle cx="220" cy="250" r="95" fill="#f08c28" stroke="#ffd8b1" stroke-width="8"/>
+  <path d="M125 250h190M220 155v190" stroke="#d96d00" stroke-width="10"/>
+  <path d="M153 183c38 28 38 106 0 134" stroke="#d96d00" stroke-width="10" fill="none"/>
+  <path d="M287 183c-38 28-38 106 0 134" stroke="#d96d00" stroke-width="10" fill="none"/>
+  <text x="390" y="235" font-size="62" font-weight="700" fill="#ffffff" font-family="Verdana, Arial, sans-serif">HANDBALL</text>
+  <text x="390" y="290" font-size="30" fill="#e5f0ff" font-family="Verdana, Arial, sans-serif">Schnuppern in Graz</text>
+</svg>

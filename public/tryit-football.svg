@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Fussball Training">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f8a3d"/>
+      <stop offset="100%" stop-color="#0f5132"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect x="0" y="340" width="800" height="160" fill="#0c3b25" opacity="0.45"/>
+  <circle cx="220" cy="250" r="95" fill="#ffffff"/>
+  <polygon points="220,205 247,224 236,256 204,256 193,224" fill="#111111"/>
+  <polygon points="220,158 245,176 236,206 204,206 194,176" fill="#111111"/>
+  <polygon points="172,219 191,233 183,259 156,259 148,233" fill="#111111"/>
+  <polygon points="268,219 292,233 284,259 257,259 249,233" fill="#111111"/>
+  <text x="420" y="235" font-size="64" font-weight="700" fill="#ffffff" font-family="Verdana, Arial, sans-serif">FUSSBALL</text>
+  <text x="420" y="290" font-size="30" fill="#e8ffe8" font-family="Verdana, Arial, sans-serif">Try It in Graz</text>
+</svg>

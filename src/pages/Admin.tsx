@@ -106,6 +106,9 @@ const Admin = () => {
   const [adminUserId, setAdminUserId] = useState<string | null>(null);
   const [selectedSchool, setSelectedSchool] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [activityFilter, setActivityFilter] = useState<"all" | "active_today" | "inactive_today">("all");
+  const [rankingSort, setRankingSort] = useState<"blitze_desc" | "name_asc" | "activity_today">("blitze_desc");
   const [assigningStudentId, setAssigningStudentId] = useState<string | null>(null);
   const [bulkAssigning, setBulkAssigning] = useState(false);
   const [schoolRequests, setSchoolRequests] = useState<SchoolRegistrationRequest[]>([]);
@@ -579,6 +582,35 @@ const Admin = () => {
     }
   }
 
+  const hasTodayActivity = (result?: DailyResult) => {
+    if (!result) return false;
+    return (
+      (result.push_ups || 0) > 0 ||
+      (result.squats || 0) > 0 ||
+      (result.planks || 0) > 0 ||
+      (result.sit_ups || 0) > 0 ||
+      (result.jumping_jacks || 0) > 0 ||
+      (result.steps || 0) > 0
+    );
+  };
+
+  const normalizedSearch = studentSearch.trim().toLowerCase();
+  const matchesSearch = (profile: Profile) => {
+    if (!normalizedSearch) return true;
+    return (
+      profile.username.toLowerCase().includes(normalizedSearch) ||
+      profile.school.toLowerCase().includes(normalizedSearch) ||
+      profile.class.toLowerCase().includes(normalizedSearch)
+    );
+  };
+
+  const matchesActivityFilter = (studentId: string) => {
+    if (activityFilter === "all") return true;
+    const isActiveToday = hasTodayActivity(todayResultByStudent.get(studentId));
+    if (activityFilter === "active_today") return isActiveToday;
+    return !isActiveToday;
+  };
+
   const rankedAssignedProfiles = [...profiles].sort((a, b) => {
     const pointsDiff = Number(b.points || 0) - Number(a.points || 0);
     if (pointsDiff !== 0) return pointsDiff;
@@ -594,17 +626,75 @@ const Admin = () => {
         (student) =>
           student.school === selectedSchool &&
           student.class === selectedClass &&
-          !assignedStudentIds.includes(student.id)
+          !assignedStudentIds.includes(student.id) &&
+          matchesSearch(student) &&
+          matchesActivityFilter(student.id)
       )
     : [];
 
   const studentsForManagement = allStudents.filter(
     (student) =>
       (!selectedSchool || student.school === selectedSchool) &&
-      (!selectedClass || student.class === selectedClass)
+      (!selectedClass || student.class === selectedClass) &&
+      matchesSearch(student) &&
+      matchesActivityFilter(student.id)
   );
 
+  const filteredAssignedProfiles = classScopedAssignedProfiles.filter(
+    (student) => matchesSearch(student) && matchesActivityFilter(student.id)
+  );
+
+  const sortedAssignedProfiles = [...filteredAssignedProfiles].sort((a, b) => {
+    if (rankingSort === "name_asc") {
+      return a.username.localeCompare(b.username, "de");
+    }
+
+    if (rankingSort === "activity_today") {
+      const aActive = hasTodayActivity(todayResultByStudent.get(a.id));
+      const bActive = hasTodayActivity(todayResultByStudent.get(b.id));
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      const pointsDiff = Number(b.points || 0) - Number(a.points || 0);
+      if (pointsDiff !== 0) return pointsDiff;
+      return a.username.localeCompare(b.username, "de");
+    }
+
+    const pointsDiff = Number(b.points || 0) - Number(a.points || 0);
+    if (pointsDiff !== 0) return pointsDiff;
+    return a.username.localeCompare(b.username, "de");
+  });
+
   const pointsByStudentId = new Map(profiles.map((p) => [p.id, Number(p.points || 0)]));
+
+  const classLeaderboard = Object.values(
+    allStudents.reduce((acc, student) => {
+      const key = `${student.school}__${student.class}`;
+      if (!acc[key]) {
+        acc[key] = {
+          key,
+          school: student.school,
+          className: student.class,
+          totalFlashes: 0,
+          studentCount: 0,
+        };
+      }
+      acc[key].totalFlashes += Number(student.points || 0);
+      acc[key].studentCount += 1;
+      return acc;
+    }, {} as Record<string, { key: string; school: string; className: string; totalFlashes: number; studentCount: number }>)
+  )
+    .map((entry) => ({
+      ...entry,
+      avgFlashes: entry.studentCount > 0 ? Math.round(entry.totalFlashes / entry.studentCount) : 0,
+    }))
+    .sort((a, b) => {
+      if (b.totalFlashes !== a.totalFlashes) return b.totalFlashes - a.totalFlashes;
+      return a.className.localeCompare(b.className, "de");
+    });
+
+  const myClassIndex = classLeaderboard.findIndex(
+    (entry) => entry.school === selectedSchool && entry.className === selectedClass
+  );
+  const myClassEntry = myClassIndex >= 0 ? classLeaderboard[myClassIndex] : null;
 
   if (!isAdmin) {
     return (
@@ -636,6 +726,106 @@ const Admin = () => {
       </div>
 
       <div className="max-w-screen-xl mx-auto px-4 space-y-8">
+        <Card className="p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <Label htmlFor="student-search">Schülersuche</Label>
+              <Input
+                id="student-search"
+                placeholder="Name, Schule oder Klasse"
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Aktivitätsfilter</Label>
+              <Select value={activityFilter} onValueChange={(v) => setActivityFilter(v as "all" | "active_today" | "inactive_today")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Aktivität wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle</SelectItem>
+                  <SelectItem value="active_today">Heute aktiv</SelectItem>
+                  <SelectItem value="inactive_today">Heute inaktiv</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStudentSearch("");
+                  setActivityFilter("all");
+                }}
+                className="w-full"
+              >
+                Filter zurücksetzen
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6 border-2 border-primary/30 bg-primary/5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4">
+            <div>
+              <h2 className="text-3xl font-black text-foreground">Klassen-Leaderboard</h2>
+              <p className="text-sm text-muted-foreground">
+                Gesamt-Ranking aller Klassen nach Blitzen. Deine aktuelle Klassen-Auswahl ist hervorgehoben.
+              </p>
+            </div>
+            {myClassEntry ? (
+              <div className="rounded-lg bg-background px-4 py-3 border">
+                <p className="text-xs text-muted-foreground">Deine Klasse</p>
+                <p className="font-bold text-lg">
+                  #{myClassIndex + 1} • {myClassEntry.className} ({myClassEntry.school})
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {myClassEntry.totalFlashes} ⚡ gesamt • Ø {myClassEntry.avgFlashes} ⚡ pro Schüler
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Wähle Schule/Klasse, um den eigenen Rang zu sehen.</p>
+            )}
+          </div>
+
+          <div className="rounded-md border overflow-x-auto bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rang</TableHead>
+                  <TableHead>Klasse</TableHead>
+                  <TableHead>Schule</TableHead>
+                  <TableHead className="text-right">Blitze gesamt</TableHead>
+                  <TableHead className="text-right">Ø Blitze</TableHead>
+                  <TableHead className="text-right">Schüler</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {classLeaderboard.slice(0, 12).map((entry, idx) => {
+                  const isMyClass = entry.school === selectedSchool && entry.className === selectedClass;
+                  return (
+                    <TableRow key={entry.key} className={isMyClass ? "bg-primary/10" : ""}>
+                      <TableCell className="font-bold">#{idx + 1}</TableCell>
+                      <TableCell className={isMyClass ? "font-bold" : "font-medium"}>{entry.className}</TableCell>
+                      <TableCell>{entry.school}</TableCell>
+                      <TableCell className="text-right font-semibold">{entry.totalFlashes} ⚡</TableCell>
+                      <TableCell className="text-right">{entry.avgFlashes}</TableCell>
+                      <TableCell className="text-right">{entry.studentCount}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {classLeaderboard.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Noch keine Klassen-Daten verfügbar.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+
         {/* Rewards Admin */}
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-4 text-foreground">Rewards verwalten</h2>
@@ -1045,9 +1235,24 @@ const Admin = () => {
 
         {/* Students Overview */}
         <Card className="p-6">
-          <h2 className="text-2xl font-bold mb-4 text-foreground">
-            Ranking & Status meiner Schüler ({classScopedAssignedProfiles.length})
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
+            <h2 className="text-2xl font-bold text-foreground">
+              Ranking & Status meiner Schüler ({filteredAssignedProfiles.length})
+            </h2>
+            <div className="w-full md:w-64">
+              <Label>Sortierung</Label>
+              <Select value={rankingSort} onValueChange={(v) => setRankingSort(v as "blitze_desc" | "name_asc" | "activity_today")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sortierung wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blitze_desc">Blitze (hoch nach niedrig)</SelectItem>
+                  <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+                  <SelectItem value="activity_today">Aktivität heute zuerst</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1068,7 +1273,7 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {classScopedAssignedProfiles.map((profile, idx) => {
+                  {sortedAssignedProfiles.map((profile, idx) => {
                     const todayResult = todayResultByStudent.get(profile.id);
                     const latestResult = latestResultByStudent.get(profile.id);
                     const todayCompleted = getCompletedGoalsCount(todayResult);
@@ -1104,7 +1309,7 @@ const Admin = () => {
                       </TableRow>
                     );
                   })}
-                  {classScopedAssignedProfiles.length === 0 && (
+                  {sortedAssignedProfiles.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Keine zugeteilten Schüler in der aktuellen Auswahl.

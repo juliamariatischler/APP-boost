@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Judo Training">
+  <defs>
+    <linearGradient id="jd" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#455a64"/>
+      <stop offset="100%" stop-color="#263238"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#jd)"/>
+  <circle cx="180" cy="190" r="28" fill="#f5d4b2"/>
+  <circle cx="265" cy="190" r="28" fill="#f5d4b2"/>
+  <rect x="145" y="220" width="70" height="110" rx="12" fill="#ffffff"/>
+  <rect x="230" y="220" width="70" height="110" rx="12" fill="#e0e0e0"/>
+  <text x="390" y="235" font-size="70" font-weight="700" fill="#ffffff" font-family="Verdana, Arial, sans-serif">JUDO</text>
+  <text x="390" y="290" font-size="30" fill="#d7e3e7" font-family="Verdana, Arial, sans-serif">Try It in Graz</text>
+</svg>

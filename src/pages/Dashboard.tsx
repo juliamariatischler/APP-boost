@@ -10,17 +10,35 @@ import { startOfWeek, endOfWeek, format } from "date-fns";
 import { de } from "date-fns/locale";
 import { LevelCard } from "@/components/boost/LevelCard";
 import { getLevelForPoints } from "@/lib/gamification";
+import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [points, setPoints] = useState(0);
+  const [userSchool, setUserSchool] = useState("");
+  const [userClass, setUserClass] = useState("");
+  const [isTeacher, setIsTeacher] = useState(false);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
   const [weeklyTotal] = useState(28); // 4 challenges * 7 days
 
   useEffect(() => {
     checkAuthAndLoadProfile();
+  }, []);
+
+  useEffect(() => {
+    const handlePointsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ delta?: number }>;
+      const delta = Number(customEvent.detail?.delta || 0);
+      if (!delta) return;
+      setPoints((prev) => prev + delta);
+    };
+
+    window.addEventListener("points-updated", handlePointsUpdated);
+    return () => {
+      window.removeEventListener("points-updated", handlePointsUpdated);
+    };
   }, []);
 
   const checkAuthAndLoadProfile = async () => {
@@ -33,10 +51,19 @@ const Dashboard = () => {
 
     setUserId(session.user.id);
 
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    const metaAccountType = String(session.user.user_metadata?.account_type || "").toLowerCase();
+    setIsTeacher(!!roleData || metaAccountType === "teacher");
+
     // Load profile
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("username, points")
+      .select("username, points, school, class")
       .eq("id", session.user.id)
       .single();
 
@@ -49,6 +76,8 @@ const Dashboard = () => {
     if (profileData) {
       setUsername(profileData.username);
       setPoints(profileData.points || 0);
+      setUserSchool(profileData.school || "");
+      setUserClass(profileData.class || "");
     } else {
       console.error("No profile found for user:", session.user.id);
       navigate("/");
@@ -102,6 +131,13 @@ const Dashboard = () => {
         <div className="mb-6">
           <LevelCard points={points} level={getLevelForPoints(points)} />
         </div>
+
+        {isTeacher && userSchool && userClass && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-3 text-foreground">Klassen-Leaderboard</h2>
+            <ClassLeaderboard userClass={userClass} userSchool={userSchool} />
+          </div>
+        )}
 
         {/* Weekly Progress */}
         <div className="bg-card rounded-lg p-4 mb-6 shadow-sm border">

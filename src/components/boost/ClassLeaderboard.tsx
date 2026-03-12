@@ -21,7 +21,7 @@ interface Props {
   userSchool: string;
 }
 
-const CLASS_MILESTONE = 300;
+const CLASS_MILESTONE_PER_STUDENT = 300;
 const PUBLIC_STUDENT_LIMIT = 10;
 
 export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
@@ -40,6 +40,8 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUserId = sessionData.session?.user.id || null;
       setMyUserId(currentUserId);
+      let teacherAssignedIds: string[] = [];
+      let isTeacher = false;
 
       if (currentUserId) {
         const { data: roleData } = await supabase
@@ -48,7 +50,32 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
           .eq("user_id", currentUserId)
           .eq("role", "admin")
           .maybeSingle();
-        setIsTeacherView(!!roleData);
+        isTeacher = !!roleData;
+        setIsTeacherView(isTeacher);
+
+        if (isTeacher) {
+          const { data: assignmentRows, error: assignmentError } = await (supabase as any)
+            .from("teacher_student_assignments")
+            .select("student_id")
+            .eq("teacher_id", currentUserId);
+
+          if (!assignmentError && assignmentRows) {
+            teacherAssignedIds = assignmentRows.map((row: { student_id: string }) => row.student_id);
+          } else if (assignmentError) {
+            const code = assignmentError.code || "";
+            const message = String(assignmentError.message || "").toLowerCase();
+            const isMissingInfra =
+              code === "PGRST205" ||
+              code === "PGRST202" ||
+              code === "42P01" ||
+              message.includes("could not find the table") ||
+              message.includes("schema cache");
+
+            if (!isMissingInfra) {
+              console.error("Error loading teacher assignments:", assignmentError);
+            }
+          }
+        }
       }
 
       // Aggregate points by class+school from profiles
@@ -78,11 +105,22 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       }
 
       if (userClass && userSchool) {
-        const { data: students } = await supabase
+        if (isTeacher && teacherAssignedIds.length === 0) {
+          setStudentRankings([]);
+          return;
+        }
+
+        let studentsQuery = supabase
           .from("profiles")
           .select("id, username, points")
           .eq("class", userClass)
-          .eq("school", userSchool)
+          .eq("school", userSchool);
+
+        if (isTeacher) {
+          studentsQuery = studentsQuery.in("id", teacherAssignedIds);
+        }
+
+        const { data: students } = await studentsQuery
           .order("points", { ascending: false })
           .order("username", { ascending: true });
 
@@ -106,8 +144,11 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
   const myClass = myClassIndex >= 0 ? rankings[myClassIndex] : null;
   const myRank = myClassIndex >= 0 ? myClassIndex + 1 : null;
   const isInTop5 = myRank !== null && myRank <= 5;
-  const classFlashes = myClass?.totalFlashes || 0;
-  const classProgress = Math.min((classFlashes / CLASS_MILESTONE) * 100, 100);
+  const classFlashesFromAssigned = studentRankings.reduce((sum, student) => sum + Number(student.points || 0), 0);
+  const classFlashes = isTeacherView ? classFlashesFromAssigned : myClass?.totalFlashes || 0;
+  const classStudentCount = studentRankings.length;
+  const classMilestone = classStudentCount * CLASS_MILESTONE_PER_STUDENT;
+  const classProgress = classMilestone > 0 ? Math.min((classFlashes / classMilestone) * 100, 100) : 0;
 
   const flashesToNextRank =
     myRank && myRank > 1
@@ -147,12 +188,31 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Klassen-Geschenk</span>
-            <span className="font-bold">{CLASS_MILESTONE} ⚡</span>
+            <span className="font-bold">{classMilestone} ⚡</span>
           </div>
           <Progress value={classProgress} className="h-2" />
-          {classFlashes < CLASS_MILESTONE && (
+          {classFlashes < classMilestone && (
             <p className="text-xs text-center text-muted-foreground">
-              Noch <span className="font-bold text-primary">{CLASS_MILESTONE - classFlashes} ⚡</span> bis zum Geschenk 🎁
+              Noch <span className="font-bold text-primary">{classMilestone - classFlashes} ⚡</span> bis zum Geschenk 🎁
+            </p>
+          )}
+          {classStudentCount > 0 ? (
+            <>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Info: Das Klassenziel wird pro Schüler berechnet.
+              </p>
+              <p className="text-[11px] text-muted-foreground text-center">
+                • {CLASS_MILESTONE_PER_STUDENT} ⚡ pro Schüler ({classStudentCount} Schüler = {classMilestone} ⚡ Klassenziel)
+              </p>
+              {isTeacherView && (
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Bei Lehrkräften zählen nur zugeteilte Schüler.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-[11px] text-muted-foreground text-center">
+              Noch keine Schüler zugeteilt.
             </p>
           )}
         </div>

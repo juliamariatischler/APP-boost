@@ -18,9 +18,9 @@ const challengeData: Record<string, { title: string; image: string; description:
     description: "Absolviere beide Pflichtteile und bleib aktiv!",
   },
   weekly: {
-    title: "Wochenaufgaben Challenge",
+    title: "2-Wochenchallenge",
     image: weeklyImg,
-    description: "Meistere die Herausforderungen dieser Woche gemeinsam mit deinen Mitschülern!",
+    description: "Bleib 14 Tage aktiv und sammle möglichst viele abgeschlossene Trainingstage.",
   },
   friend: {
     title: "Friendquest Challenge",
@@ -89,6 +89,21 @@ const ChallengeDetail = () => {
             <p className="text-lg text-muted-foreground mb-8 text-center">
               {challenge.description}
             </p>
+
+            {id === "weekly" && (
+              <div className="mb-8 rounded-lg border bg-muted/30 p-4 space-y-3">
+                <h2 className="text-xl font-bold text-foreground">So funktioniert die 2-Wochenchallenge</h2>
+                <p className="text-sm text-muted-foreground">
+                  Jeden Tag zählt: Versuche an möglichst vielen Tagen Übungen oder Schritte zu sammeln.
+                  Die Fortschrittsanzeige steigt mit jedem aktiven Tag innerhalb von 14 Tagen.
+                </p>
+                <div className="space-y-2 text-sm text-foreground">
+                  <p>1. Öffne täglich die Tageschallenge und starte mindestens eine Übung.</p>
+                  <p>2. Für volle Tagesleistung: Schritte + alle Übungsziele erreichen.</p>
+                  <p>3. Halte deinen Lauf über 14 Tage aufrecht und verbessere deinen Prozentwert.</p>
+                </div>
+              </div>
+            )}
 
             {id === "tryit" && <TrialSessionsList />}
           </Card>

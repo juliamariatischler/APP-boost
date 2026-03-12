@@ -23,6 +23,24 @@ export const TopHeader = () => {
 
   useEffect(() => {
     loadProfile();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handlePointsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ delta?: number }>;
+      const delta = Number(customEvent.detail?.delta || 0);
+      if (!delta) return;
+
+      setProfile((prev) => {
+        if (!prev) return prev;
+        return { ...prev, points: prev.points + delta };
+      });
+    };
+
+    window.addEventListener("points-updated", handlePointsUpdated);
+    return () => {
+      window.removeEventListener("points-updated", handlePointsUpdated);
+    };
   }, []);
 
   const loadProfile = async () => {
