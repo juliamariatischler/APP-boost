@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Dumbbell, Brain } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +22,8 @@ const Index = () => {
     setLoading(false);
     
     if (!session) {
-      navigate("/auth");
+      const nextPath = location.search ? `/auth${location.search}` : "/auth";
+      navigate(nextPath);
     }
   };
 
