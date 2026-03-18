@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ const signupSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [demoStudentLoading, setDemoStudentLoading] = useState(false);
   const [demoTeacherLoading, setDemoTeacherLoading] = useState(false);
@@ -58,7 +59,7 @@ const Auth = () => {
   const DEMO_STUDENT = {
     email: "demo@boost-challenge.de",
     password: "demo123456",
-    username: "DemoUser",
+    username: "Rafaela Kamper",
   };
   const DEMO_TEACHER = {
     email: "demo-lehrkraft@boost-challenge.de",
@@ -97,6 +98,16 @@ const Auth = () => {
 
     loadRegisteredSchools();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const demo = params.get("demo");
+    const name = params.get("name")?.trim();
+    if (demo !== "student") return;
+
+    handleNamedDemoStudentLogin(name || "Rafaela Kamper");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,6 +226,7 @@ const Auth = () => {
       const { error: profileUpdateError } = await (supabase as any)
         .from("profiles")
         .update({
+          username: params.username,
           school: DEMO_SCHOOL,
           class: DEMO_CLASS,
         })
@@ -262,6 +274,7 @@ const Auth = () => {
     const { error: profileUpdateError } = await (supabase as any)
       .from("profiles")
       .update({
+        username: params.username,
         school: DEMO_SCHOOL,
         class: DEMO_CLASS,
       })
@@ -279,6 +292,24 @@ const Auth = () => {
     try {
       const result = await ensureDemoAccount({
         ...DEMO_STUDENT,
+        accountType: "student",
+      });
+
+      toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!");
+      navigate("/");
+    } catch (error: any) {
+      toast.error("Demo-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
+    } finally {
+      setDemoStudentLoading(false);
+    }
+  };
+
+  const handleNamedDemoStudentLogin = async (username: string) => {
+    setDemoStudentLoading(true);
+    try {
+      const result = await ensureDemoAccount({
+        ...DEMO_STUDENT,
+        username,
         accountType: "student",
       });
 
