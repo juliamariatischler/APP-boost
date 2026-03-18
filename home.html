@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boosstschule Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #ecfeff 0%, #f8fafc 45%, #ecfdf5 100%);
+    }
+    .bolt-burst {
+      position: fixed;
+      left: 50%;
+      top: 30%;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #fde047, #f59e0b);
+      z-index: 60;
+      pointer-events: none;
+      animation: boltFly 900ms ease-out forwards;
+    }
+    .streak-hot {
+      animation: pulseHot 1200ms ease-in-out infinite;
+    }
+    @keyframes boltFly {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+      20% { opacity: 1; }
+      100% {
+        opacity: 0;
+        transform:
+          translate(
+            calc(-50% + var(--x, 0px)),
+            calc(-50% + var(--y, 0px))
+          )
+          scale(1.2);
+      }
+    }
+    @keyframes pulseHot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.15); }
+      50% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 pb-28 md:p-6 md:pb-6">
+  <header class="mx-auto mb-6 flex w-full max-w-6xl flex-col gap-4 rounded-3xl border border-emerald-100 bg-white/95 p-5 shadow-lg md:flex-row md:items-center md:justify-between">
+    <div>
+      <p class="dashboard-school text-sm font-semibold uppercase tracking-widest text-emerald-600">Boosstschule</p>
+      <div class="mt-1 flex flex-wrap items-center gap-3">
+        <h1 class="dashboard-name text-3xl font-bold text-slate-900">Dashboard</h1>
+        <span id="roleBadge" class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">-</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 rounded-full bg-yellow-50 px-4 py-2 font-bold text-yellow-700">
+        <img src="assets/flash.png" alt="Blitz" class="h-5 w-5">
+        <span class="flash-count">0</span>
+      </div>
+      <img src="assets/boost-logo.png" alt="Boost Logo" class="h-10 w-auto">
+      <button id="logoutButton" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Abmelden</button>
+    </div>
+  </header>
+
+  <main class="mx-auto w-full max-w-6xl space-y-6">
+    <p id="status" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Lade Daten...</p>
+
+    <section id="studentView" class="hidden space-y-6">
+      <div class="grid gap-4 md:grid-cols-4">
+        <article class="rounded-2xl border border-emerald-200 bg-white p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-500">Heute Blitze</p>
+          <p id="studentTodayPoints" class="mt-1 text-3xl font-black text-emerald-600">0</p>
+        </article>
+        <article class="rounded-2xl border border-orange-200 bg-white p-4">
+          <div id="streakCard" class="rounded-xl">
+            <p class="text-xs uppercase tracking-wider text-slate-500">Streak</p>
+            <p id="studentStreak" class="mt-1 text-3xl font-black text-orange-500">0</p>
+          </div>
+        </article>
+        <article class="rounded-2xl border border-cyan-200 bg-white p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-500">Workouts heute</p>
+          <p id="studentWorkouts" class="mt-1 text-3xl font-black text-cyan-600">0/2</p>
+        </article>
+        <article class="rounded-2xl border border-violet-200 bg-white p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-500">Level</p>
+          <p id="studentLevel" class="mt-1 text-3xl font-black text-violet-600">AKTIV</p>
+        </article>
+      </div>
+
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-lg font-bold text-slate-900">Workout starten</h2>
+          <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Mobile First</span>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <a href="jumpingjacks.html" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center font-semibold text-emerald-800 transition hover:bg-emerald-100">
+            Hampelmänner
+          </a>
+          <a href="squats.html" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-center font-semibold text-cyan-800 transition hover:bg-cyan-100">
+            Kniebeugen
+          </a>
+          <a href="planks.html" class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-center font-semibold text-violet-800 transition hover:bg-violet-100">
+            Plank
+          </a>
+        </div>
+      </article>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <article class="rounded-2xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-slate-900">Blitz-Jagd</h2>
+            <span id="flashDeltaBadge" class="hidden rounded-full bg-amber-500 px-3 py-1 text-xs font-bold text-white">+0</span>
+          </div>
+          <p id="nextRewardLabel" class="mt-2 text-sm text-slate-700">Nächstes Ziel: 100 Blitze</p>
+          <div class="mt-3 h-3 rounded-full bg-white/90">
+            <div id="rewardProgressBar" class="h-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" style="width:0%"></div>
+          </div>
+          <p id="rewardProgressLabel" class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">0%</p>
+        </article>
+
+        <article class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-sky-50 p-4">
+          <h2 class="text-lg font-bold text-slate-900">Team-Boost</h2>
+          <p id="classBoostStage" class="mt-2 text-sm text-slate-700">Stufe: Team Funke</p>
+          <div class="mt-3 h-3 rounded-full bg-white/90">
+            <div id="classBoostFill" class="h-3 rounded-full bg-gradient-to-r from-cyan-400 to-indigo-500" style="width:0%"></div>
+          </div>
+          <p class="mt-2 text-xs text-slate-500">Mehr aktive Kinder = stärkerer Klassen-Avatar.</p>
+        </article>
+      </div>
+
+      <article class="rounded-2xl border border-violet-200 bg-white p-4">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-lg font-bold text-slate-900">Level-Road</h2>
+          <span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">Aktiv → Power → Elite</span>
+        </div>
+        <p id="levelRoadLabel" class="mt-2 text-sm text-slate-700">Nächstes Level: Power</p>
+        <div class="mt-3 h-3 rounded-full bg-slate-100">
+          <div id="levelRoadBar" class="h-3 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500" style="width:0%"></div>
+        </div>
+      </article>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <article class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-cyan-50 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-slate-900">Live aus deiner Woche</h2>
+            <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Demo Live</span>
+          </div>
+          <p class="mt-2 text-sm text-slate-600">Mehr Statussignale, Aktivität und kleine Highlights machen die Demo näher an einer echten App-Nutzung.</p>
+          <ul id="recentActivityFeed" class="mt-4 space-y-2 text-sm text-slate-700"></ul>
+        </article>
+
+        <article class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-sky-50 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-slate-900">Try it diese Woche</h2>
+            <span class="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700">3 bis 5 Tage</span>
+          </div>
+          <p class="mt-2 text-sm text-slate-600">Konkrete Schnuppertermine mit Datum, Uhrzeit und Ort statt Platzhalter.</p>
+          <div id="tryItEvents" class="mt-4 space-y-3"></div>
+        </article>
+      </div>
+
+      <article class="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-white p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-bold text-slate-900">Was heute schon real wirkt</h2>
+          <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Mehr App-Gefühl</span>
+        </div>
+        <div id="demoSignalGrid" class="mt-4 grid gap-3 md:grid-cols-3"></div>
+      </article>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 class="text-lg font-bold text-slate-900">Persönliche Ziele</h2>
+          <div class="mt-4 space-y-4">
+            <div>
+              <div class="mb-1 flex items-center justify-between text-sm"><span>Tagesziel</span><span id="dailyGoalLabel">0 / 0</span></div>
+              <p id="dailyGoalBonus" class="mb-1 text-xs font-semibold text-amber-600">Belohnung: +0 Blitze</p>
+              <div class="h-2 rounded bg-slate-100"><div id="dailyGoalBar" class="h-2 rounded bg-emerald-500" style="width:0%"></div></div>
+            </div>
+            <div>
+              <div class="mb-1 flex items-center justify-between text-sm"><span>Wochenziel</span><span id="weeklyGoalLabel">0 / 0</span></div>
+              <p id="weeklyGoalBonus" class="mb-1 text-xs font-semibold text-amber-600">Belohnung: +0 Blitze</p>
+              <div class="h-2 rounded bg-slate-100"><div id="weeklyGoalBar" class="h-2 rounded bg-cyan-500" style="width:0%"></div></div>
+            </div>
+            <p id="streakHint" class="text-sm text-slate-600">Streak-Bonus: +20 ab 3 Tagen.</p>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 class="text-lg font-bold text-slate-900">Badges</h2>
+          <ul id="badgeList" class="mt-3 space-y-2 text-sm text-slate-700"></ul>
+        </article>
+      </div>
+
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 class="text-lg font-bold text-slate-900">Klassenranking</h2>
+        <div class="mt-3 overflow-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 text-left text-slate-500">
+                <th class="px-2 py-2">#</th>
+                <th class="px-2 py-2">Nickname</th>
+                <th class="px-2 py-2">Blitze</th>
+              </tr>
+            </thead>
+            <tbody id="studentLeaderboard"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="teacherView" class="hidden space-y-6">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <h2 class="text-lg font-bold text-slate-900">Klassen-Dashboard</h2>
+          <div class="flex gap-2">
+            <select id="classSelect" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"></select>
+            <button id="reloadTeacherData" class="rounded-xl bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-700">Neu laden</button>
+          </div>
+        </div>
+      </article>
+
+      <div class="grid gap-4 md:grid-cols-3">
+        <article class="rounded-2xl border border-emerald-200 bg-white p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-500">Teilnahme heute</p>
+          <p id="teacherParticipation" class="mt-1 text-3xl font-black text-emerald-600">0%</p>
+        </article>
+        <article class="rounded-2xl border border-cyan-200 bg-white p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-500">Aktiv / Inaktiv</p>
+          <p id="teacherActive" class="mt-1 text-3xl font-black text-cyan-600">0 / 0</p>
+        </article>
+        <article class="rounded-2xl border border-violet-200 bg-white p-4">
+          <p class="text-xs uppercase tracking-wider text-slate-500">DAU (Scope)</p>
+          <p id="teacherDau" class="mt-1 text-3xl font-black text-violet-600">0</p>
+        </article>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4">
+          <h3 class="text-base font-bold text-slate-900">Punkte pro Woche</h3>
+          <ul id="teacherWeeklyPoints" class="mt-3 space-y-1 text-sm text-slate-700"></ul>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-4">
+          <h3 class="text-base font-bold text-slate-900">Auffällige Submits</h3>
+          <ul id="teacherFlags" class="mt-3 space-y-1 text-sm text-slate-700"></ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <nav id="studentMobileNav" class="fixed inset-x-0 bottom-0 z-40 hidden border-t border-slate-200 bg-white/95 px-3 py-3 shadow-2xl backdrop-blur md:hidden">
+    <div class="grid grid-cols-3 gap-2">
+      <a href="jumpingjacks.html" class="rounded-xl bg-emerald-600 px-2 py-2 text-center text-sm font-bold text-white">Hampel</a>
+      <a href="squats.html" class="rounded-xl bg-cyan-600 px-2 py-2 text-center text-sm font-bold text-white">Kniebeuge</a>
+      <a href="planks.html" class="rounded-xl bg-violet-600 px-2 py-2 text-center text-sm font-bold text-white">Plank</a>
+    </div>
+  </nav>
+  <div id="boltFxLayer"></div>
+
+  <script>
+    let API_BASE = (localStorage.getItem("boost_api_base") || `${window.location.origin}/api/v1`).replace(/\/$/, "");
+    const USER_ID = localStorage.getItem("boost_user_id");
+    const ROLE = localStorage.getItem("boost_role");
+
+    const statusEl = document.getElementById("status");
+    const roleBadge = document.getElementById("roleBadge");
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError
+        ? "rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        : "rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600";
+    }
+
+    function logout() {
+      localStorage.removeItem("boost_user_id");
+      localStorage.removeItem("boost_role");
+      localStorage.removeItem("boost_display_name");
+      localStorage.removeItem("boost_school_name");
+      window.location.href = "index.html";
+    }
+
+    async function api(path, options = {}) {
+      const headers = {
+        "Content-Type": "application/json",
+        "x-user-id": USER_ID,
+        ...(options.headers || {}),
+      };
+      const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      return json;
+    }
+
+    async function resolveApiBase() {
+      const candidates = [
+        API_BASE,
+        `${window.location.origin}/api/v1`,
+        "http://localhost:3000/api/v1",
+        "http://127.0.0.1:3000/api/v1",
+      ];
+      const unique = [...new Set(candidates.map((x) => String(x || "").replace(/\/$/, "")))];
+      for (const base of unique) {
+        try {
+          const res = await fetch(`${base}/health`, { method: "GET" });
+          if (res.ok) {
+            API_BASE = base;
+            localStorage.setItem("boost_api_base", API_BASE);
+            return;
+          }
+        } catch (_err) {
+          // try next
+        }
+      }
+      throw new Error("Kein API-Server erreichbar. Starte Backend mit: cd Backend && node server.js");
+    }
+
+    function clampPercent(value) {
+      const n = Number(value) || 0;
+      return Math.max(0, Math.min(100, Math.round(n)));
+    }
+
+    function progressStyle(barId, current, target) {
+      const percent = target > 0 ? clampPercent((current / target) * 100) : 0;
+      document.getElementById(barId).style.width = `${percent}%`;
+    }
+
+    function renderBadges(badges) {
+      const rows = [
+        { key: "reps_100", label: "100 Reps" },
+        { key: "streak_5_days", label: "5 Tage Streak" },
+        { key: "blitze_1000", label: "1000 Blitze" },
+      ];
+      document.getElementById("badgeList").innerHTML = rows
+        .map((row) => {
+          const done = Boolean(badges?.[row.key]);
+          return `<li class="flex items-center justify-between rounded-lg border px-3 py-2 ${done ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}"><span>${row.label}</span><strong>${done ? "Freigeschaltet" : "Offen"}</strong></li>`;
+        })
+        .join("");
+    }
+
+    function renderLeaderboard(entries) {
+      const tbody = document.getElementById("studentLeaderboard");
+      tbody.innerHTML = (entries || []).map((entry) =>
+        `<tr class="border-b border-slate-100"><td class="px-2 py-2 font-semibold">${entry.rank}</td><td class="px-2 py-2">${entry.display_name}</td><td class="px-2 py-2 font-bold text-emerald-700">${entry.points}</td></tr>`
+      ).join("");
+    }
+
+    function renderLevelRoad(level) {
+      const total = Number(level?.points_total || 0);
+      const byLevel = { AKTIV: 0, POWER: 300, ELITE: 1000 };
+      const current = String(level?.current_level || "AKTIV").toUpperCase();
+      const currentMin = byLevel[current] ?? 0;
+      const next = level?.next_level ? String(level.next_level).toUpperCase() : null;
+      const nextMin = next ? (byLevel[next] ?? currentMin) : currentMin;
+      const windowSize = Math.max(1, nextMin - currentMin);
+      const inWindow = Math.max(0, Math.min(windowSize, total - currentMin));
+      const percent = clampPercent((inWindow / windowSize) * 100);
+
+      document.getElementById("levelRoadBar").style.width = `${percent}%`;
+      document.getElementById("levelRoadLabel").textContent = next
+        ? `Noch ${level.points_to_next_level || 0} Blitze bis ${next}`
+        : "Max-Level erreicht: Elite";
+    }
+
+    function addDays(date, days) {
+      const copy = new Date(date);
+      copy.setDate(copy.getDate() + days);
+      return copy;
+    }
+
+    function formatEventDate(date, hour, minute) {
+      const eventDate = new Date(date);
+      eventDate.setHours(hour, minute, 0, 0);
+      return new Intl.DateTimeFormat("de-AT", {
+        weekday: "long",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(eventDate);
+    }
+
+    function renderTryItEvents() {
+      const container = document.getElementById("tryItEvents");
+      const baseDate = new Date();
+      const events = [
+        {
+          title: "Skatehalle Nord Einsteiger-Session",
+          startsAt: formatEventDate(addDays(baseDate, 3), 15, 30),
+          location: "Skatehalle Nord, Waagner-Biro-Straße 112a, 8020 Graz",
+          note: "Leihboards vor Ort, 6 freie Plätze",
+        },
+        {
+          title: "Young Motion Streetdance Schnuppertraining",
+          startsAt: formatEventDate(addDays(baseDate, 4), 17, 0),
+          location: "Tanzstudio City Move, Annenstraße 33, 8020 Graz",
+          note: "Für 10 bis 13 Jahre, Sportschuhe reichen",
+        },
+        {
+          title: "Handballclub Hügellandhof Probetraining",
+          startsAt: formatEventDate(addDays(baseDate, 5), 16, 30),
+          location: "Billrothstraße 1, 8010 Graz",
+          note: "Trainerin Anna Berger wartet am Halleneingang",
+        },
+      ];
+
+      container.innerHTML = events.map((event) => `
+        <article class="rounded-2xl border border-cyan-100 bg-white/90 p-3 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold text-slate-900">${event.title}</p>
+              <p class="mt-1 text-sm text-slate-700">${event.startsAt}</p>
+              <p class="mt-1 text-sm text-slate-600">Ort: ${event.location}</p>
+            </div>
+            <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">Try it</span>
+          </div>
+          <p class="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">${event.note}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderRecentActivity(dashboard, goals, leaderboard) {
+      const container = document.getElementById("recentActivityFeed");
+      const participation = clampPercent(Number(dashboard.class_participation_today || 0) * 100);
+      const topThree = (leaderboard.entries || []).slice(0, 3).map((entry) => entry.display_name).join(", ");
+      const items = [
+        `${dashboard.today?.points || 0} Blitze heute schon verbucht.`,
+        `${participation}% deiner Klasse waren heute bereits aktiv.`,
+        topThree ? `Vorne im Klassenranking: ${topThree}.` : "Klassenranking füllt sich gerade.",
+        goals?.daily?.completed
+          ? `Tagesziel erledigt. Bonus von +${goals.daily.reward_points} wartet bereits.`
+          : `Tagesziel bei ${goals.daily.current_points}/${goals.daily.target_points} Punkten.`,
+      ];
+
+      container.innerHTML = items.map((item, index) => `
+        <li class="flex items-start gap-3 rounded-xl border ${index === 0 ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"} px-3 py-3">
+          <span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${index === 0 ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-700"} text-xs font-bold">${index + 1}</span>
+          <span>${item}</span>
+        </li>
+      `).join("");
+    }
+
+    function renderDemoSignals(dashboard, goals) {
+      const container = document.getElementById("demoSignalGrid");
+      const signals = [
+        {
+          title: "Challenge-Status",
+          value: "3 heute aktiv",
+          body: "Squats, Plank und Hampelmänner zählen stabil in die Demo ein.",
+          classes: "border-emerald-200 bg-emerald-50",
+        },
+        {
+          title: "Vorschau",
+          value: "2 im Preview",
+          body: "Push-ups und Sit-ups bleiben sichtbar, aber bewusst als noch nicht voll verlässlich markiert.",
+          classes: "border-amber-200 bg-amber-50",
+        },
+        {
+          title: "Momentum",
+          value: `${dashboard.streak_days || 0} Tage Streak`,
+          body: goals?.weekly?.completed
+            ? "Wochenziel ist schon geschafft, die Session wirkt dadurch lebendig."
+            : `Noch ${Math.max(0, (goals?.weekly?.target_points || 0) - (goals?.weekly?.current_points || 0))} Punkte bis zum Wochenbonus.`,
+          classes: "border-cyan-200 bg-cyan-50",
+        },
+      ];
+
+      container.innerHTML = signals.map((signal) => `
+        <article class="rounded-2xl border p-3 ${signal.classes}">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">${signal.title}</p>
+          <p class="mt-1 text-lg font-black text-slate-900">${signal.value}</p>
+          <p class="mt-2 text-sm text-slate-700">${signal.body}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderBlitzJagd(total) {
+      const steps = [0, 100, 250, 500, 1000, 2000];
+      let left = 0;
+      let right = 2000;
+      for (let i = 0; i < steps.length - 1; i += 1) {
+        const a = steps[i];
+        const b = steps[i + 1];
+        if (total >= a && total < b) {
+          left = a;
+          right = b;
+          break;
+        }
+      }
+      if (total >= 2000) {
+        left = 2000;
+        right = 2600;
+      }
+      const percent = clampPercent(((total - left) / Math.max(1, right - left)) * 100);
+      document.getElementById("rewardProgressBar").style.width = `${percent}%`;
+      document.getElementById("rewardProgressLabel").textContent = `${total} / ${right} Blitze`;
+      document.getElementById("nextRewardLabel").textContent = total >= 2000
+        ? "Super! Du bist in der Blitz-Legende."
+        : `Nächstes Ziel: ${right} Blitze`;
+    }
+
+    function renderClassBoost(participationRate) {
+      const percent = clampPercent((Number(participationRate || 0)) * 100);
+      document.getElementById("classBoostFill").style.width = `${percent}%`;
+
+      let stage = "Team Funke";
+      if (percent >= 80) stage = "Team Superblitz";
+      else if (percent >= 60) stage = "Team Blitz";
+      else if (percent >= 30) stage = "Team Strom";
+      document.getElementById("classBoostStage").textContent = `Stufe: ${stage} (${percent}% aktiv)`;
+    }
+
+    function showBlitzCelebration(delta) {
+      const layer = document.getElementById("boltFxLayer");
+      const count = Math.min(18, Math.max(8, delta));
+      for (let i = 0; i < count; i += 1) {
+        const dot = document.createElement("span");
+        dot.className = "bolt-burst";
+        const angle = (i / count) * Math.PI * 2;
+        const radius = 80 + Math.random() * 180;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        dot.style.setProperty("--x", `${x.toFixed(0)}px`);
+        dot.style.setProperty("--y", `${y.toFixed(0)}px`);
+        dot.style.animationDelay = `${(Math.random() * 180).toFixed(0)}ms`;
+        layer.appendChild(dot);
+        setTimeout(() => dot.remove(), 1000);
+      }
+    }
+
+    function renderDelta(total) {
+      const key = "boost_last_blitze_total";
+      const previous = Number(localStorage.getItem(key) || "0");
+      const delta = Math.max(0, total - previous);
+      localStorage.setItem(key, String(total));
+
+      const badge = document.getElementById("flashDeltaBadge");
+      if (delta > 0) {
+        badge.textContent = `+${delta}`;
+        badge.classList.remove("hidden");
+        showBlitzCelebration(delta);
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    async function autoClaimGoalBonuses(goals) {
+      const claimable = [];
+      if (goals?.daily?.completed && !goals?.daily?.claimed) claimable.push("daily");
+      if (goals?.weekly?.completed && !goals?.weekly?.claimed) claimable.push("weekly");
+      if (claimable.length === 0) return 0;
+
+      let awardedTotal = 0;
+      for (const goalKey of claimable) {
+        try {
+          const result = await api("/student/goals/claim", {
+            method: "POST",
+            body: JSON.stringify({ goal_key: goalKey }),
+          });
+          awardedTotal += Number(result?.points_awarded || 0);
+        } catch (_err) {
+          // keep dashboard usable even if a claim fails
+        }
+      }
+      return awardedTotal;
+    }
+
+    async function loadStudentView(me) {
+      document.getElementById("studentView").classList.remove("hidden");
+      document.getElementById("studentMobileNav").classList.remove("hidden");
+      let [dashboard, goals, leaderboard] = await Promise.all([
+        api("/student/dashboard"),
+        api("/student/goals"),
+        api("/leaderboards/class?top=10&include_me=true"),
+      ]);
+
+      const goalBonus = await autoClaimGoalBonuses(goals);
+      if (goalBonus > 0) {
+        showBlitzCelebration(goalBonus + 8);
+        setStatus(`Ziel erreicht! +${goalBonus} Blitze wurden auf dein Punktekonto gebucht.`);
+        [dashboard, goals, leaderboard] = await Promise.all([
+          api("/student/dashboard"),
+          api("/student/goals"),
+          api("/leaderboards/class?top=10&include_me=true"),
+        ]);
+      }
+
+      document.querySelector(".flash-count").textContent = dashboard.blitze_total || 0;
+      document.getElementById("studentTodayPoints").textContent = dashboard.today?.points || 0;
+      document.getElementById("studentStreak").textContent = dashboard.streak_days || 0;
+      document.getElementById("studentWorkouts").textContent = `${dashboard.today?.scored_workouts || 0}/${dashboard.today?.scored_workouts_limit || 2}`;
+      document.getElementById("studentLevel").textContent = dashboard.level?.current_level || "AKTIV";
+      document.getElementById("streakCard").classList.toggle("streak-hot", Number(dashboard.streak_days || 0) >= 3);
+      renderDelta(Number(dashboard.blitze_total || 0));
+      renderBlitzJagd(Number(dashboard.blitze_total || 0));
+      renderClassBoost(Number(dashboard.class_participation_today || 0));
+      renderLevelRoad(dashboard.level || {});
+      renderRecentActivity(dashboard, goals, leaderboard);
+      renderTryItEvents();
+      renderDemoSignals(dashboard, goals);
+
+      document.getElementById("dailyGoalLabel").textContent = `${goals.daily.current_points} / ${goals.daily.target_points}`;
+      document.getElementById("weeklyGoalLabel").textContent = `${goals.weekly.current_points} / ${goals.weekly.target_points}`;
+      document.getElementById("dailyGoalBonus").textContent = goals.daily.claimed
+        ? `Belohnung abgeholt: +${goals.daily.reward_points} Blitze`
+        : `Belohnung: +${goals.daily.reward_points} Blitze`;
+      document.getElementById("weeklyGoalBonus").textContent = goals.weekly.claimed
+        ? `Belohnung abgeholt: +${goals.weekly.reward_points} Blitze`
+        : `Belohnung: +${goals.weekly.reward_points} Blitze`;
+      progressStyle("dailyGoalBar", goals.daily.current_points, goals.daily.target_points);
+      progressStyle("weeklyGoalBar", goals.weekly.current_points, goals.weekly.target_points);
+      document.getElementById("streakHint").textContent = `Streak: ${goals.streak.current_days} Tage. Bonus +${goals.streak.bonus_points} ab Tag ${goals.streak.bonus_on_day}.`;
+
+      renderBadges(dashboard.badges);
+      renderLeaderboard(leaderboard.entries || []);
+      if (goalBonus === 0) {
+        setStatus(`Student Dashboard geladen (${me.display_name}).`);
+      }
+    }
+
+    function renderTeacherKpi(kpi) {
+      document.getElementById("teacherDau").textContent = kpi.dau || 0;
+    }
+
+    function renderTeacherClassDashboard(data) {
+      const participation = clampPercent((data.participation_rate_today || 0) * 100);
+      const activeCount = data.active_students?.length || 0;
+      const inactiveCount = data.inactive_students?.length || 0;
+
+      document.getElementById("teacherParticipation").textContent = `${participation}%`;
+      document.getElementById("teacherActive").textContent = `${activeCount} / ${inactiveCount}`;
+
+      document.getElementById("teacherWeeklyPoints").innerHTML = (data.points_per_week || [])
+        .map((row) => `<li class="rounded border border-slate-100 bg-slate-50 px-3 py-2">${row.date}: <strong>${row.points}</strong> Blitze</li>`)
+        .join("");
+
+      const flags = data.suspicious_submits || [];
+      document.getElementById("teacherFlags").innerHTML = flags.length
+        ? flags.map((flag) => `<li class="rounded border border-red-100 bg-red-50 px-3 py-2">${flag.submitted_at?.slice(0, 10)} • ${flag.student_id} • ${flag.flags.join(", ")}</li>`).join("")
+        : '<li class="rounded border border-emerald-100 bg-emerald-50 px-3 py-2">Keine auffälligen Submits.</li>';
+    }
+
+    async function loadTeacherView(me) {
+      document.getElementById("teacherView").classList.remove("hidden");
+      const [classes, kpi] = await Promise.all([
+        api("/teacher/classes"),
+        api("/kpi/mvp-summary"),
+      ]);
+
+      const select = document.getElementById("classSelect");
+      select.innerHTML = classes.map((cls) => `<option value="${cls.id}">${cls.name} (${cls.join_code})</option>`).join("");
+
+      renderTeacherKpi(kpi);
+
+      async function loadClassDashboard() {
+        const classId = select.value;
+        if (!classId) {
+          setStatus("Keine Klasse vorhanden. Bitte zuerst Klasse anlegen.", true);
+          return;
+        }
+        const dashboard = await api(`/teacher/classes/${classId}/dashboard`);
+        renderTeacherClassDashboard(dashboard);
+        setStatus(`Lehrer Dashboard geladen (${me.display_name}).`);
+      }
+
+      document.getElementById("reloadTeacherData").addEventListener("click", loadClassDashboard);
+      select.addEventListener("change", loadClassDashboard);
+      await loadClassDashboard();
+    }
+
+    async function init() {
+      if (!USER_ID || !ROLE) {
+        window.location.replace("index.html");
+        return;
+      }
+
+      document.querySelector(".dashboard-name").textContent = localStorage.getItem("boost_display_name") || "Dashboard";
+      document.querySelector(".dashboard-school").textContent = localStorage.getItem("boost_school_name") || "Boosstschule";
+      roleBadge.textContent = ROLE;
+
+      document.getElementById("logoutButton").addEventListener("click", logout);
+
+      try {
+        await resolveApiBase();
+        const me = await api("/me");
+        if (me.role === "STUDENT") {
+          await loadStudentView(me);
+        } else {
+          await loadTeacherView(me);
+        }
+      } catch (err) {
+        setStatus(`Fehler beim Laden: ${err.message}`, true);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

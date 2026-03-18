@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Plank Timer</title>
+  <title>KI Plank-Timer</title>
 
   <style>
     :root {
@@ -183,13 +183,37 @@
       text-align: center;
       margin-top: 6px;
     }
+
+    .reward-overlay{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(17,24,39,.55); z-index:80; padding:20px;
+    }
+    .reward-card{
+      width:min(92vw,420px); background:#fff; border-radius:16px; padding:22px;
+      text-align:center; box-shadow:0 18px 40px rgba(0,0,0,.28);
+    }
+    .reward-points{ font-size:2.2rem; font-weight:900; color:#f59e0b; }
+    .reward-title{ font-size:1.2rem; font-weight:800; color:#111827; margin-bottom:6px; }
+    .reward-text{ color:#4b5563; font-size:.95rem; }
+    .fx-layer{ position:fixed; inset:0; pointer-events:none; z-index:90; }
+    .bolt{
+      position:absolute; width:14px; height:14px; border-radius:999px;
+      background:linear-gradient(135deg,#fde047,#f59e0b);
+      box-shadow:0 0 18px rgba(245,158,11,.55);
+      animation:bolt-pop .9s ease-out forwards;
+    }
+    @keyframes bolt-pop{
+      0%{ opacity:0; transform:translate(-50%,-50%) scale(.3); }
+      20%{ opacity:1; }
+      100%{ opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); }
+    }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <h1 class="title">AI Plank Timer</h1>
-    <p class="subtitle">Gehe in eine Plank-Position und bleibe stabil.</p>
+    <h1 class="title">KI Plank-Timer</h1>
+    <p class="subtitle">Stell die Kamera seitlich auf und zeig dich im Profil.</p>
 
     <div class="card">
       <div id="loading" class="loader-wrap">
@@ -223,11 +247,11 @@
             </div>
 
             <div class="stat">
-              <p class="label">Feedback</p>
-              <p id="feedback" class="feedback">Lade…</p>
+              <p class="label">Hinweis</p>
+              <p id="feedback" class="feedback">Kamera: seitlich aufstellen.</p>
             </div>
 
-            <button id="reset-button" class="btn">Reset</button>
+            <button id="reset-button" class="btn">Zuruecksetzen</button>
             <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <div class="debug" id="debug-log"></div>
@@ -236,13 +260,21 @@
       </div>
     </div>
   </div>
+  <div id="rewardOverlay" class="reward-overlay">
+    <div class="reward-card">
+      <p class="reward-title">Ziel erreicht!</p>
+      <p id="rewardPoints" class="reward-points">+0 Blitze</p>
+      <p id="rewardText" class="reward-text">Deine Punkte werden ins Konto gebucht.</p>
+    </div>
+  </div>
+  <div id="fxLayer" class="fx-layer"></div>
 
-  <!-- TensorFlow – pinned .min.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-  <script src="/celebration.js"></script>
+  <!-- TensorFlow -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
 
   <script>
     const video=document.getElementById('webcam');
@@ -256,12 +288,93 @@
     const loadingMsg=document.getElementById('loading-message');
     const backendInfo=document.getElementById('backend-info');
     const debugLog=document.getElementById('debug-log');
+    const finishBtn=document.getElementById('finish-button');
+    const rewardOverlay=document.getElementById('rewardOverlay');
+    const rewardPoints=document.getElementById('rewardPoints');
+    const rewardText=document.getElementById('rewardText');
+    const fxLayer=document.getElementById('fxLayer');
 
     let detector,isPlanking=false,time=0,timerInterval=null;
-    let unstableFrames=0;
-    const KEYPOINT_CONFIDENCE = 0.35;
-    const BACK_ANGLE_THRESHOLD = 145;
-    const MAX_UNSTABLE_FRAMES = 12;
+
+    async function resolveApiBase(){
+      const stored = localStorage.getItem('boost_api_base') || '';
+      const candidates = [
+        stored,
+        `${window.location.origin}/api/v1`,
+        'http://localhost:3000/api/v1',
+        'http://127.0.0.1:3000/api/v1',
+      ].filter(Boolean).map((x) => x.replace(/\/$/, ''));
+      for(const base of [...new Set(candidates)]){
+        try{
+          const health = await fetch(`${base}/health`);
+          if(health.ok){
+            localStorage.setItem('boost_api_base', base);
+            return base;
+          }
+        }catch(_err){
+          // try next
+        }
+      }
+      throw new Error('Kein API-Server erreichbar.');
+    }
+
+    function launchBoltFx(strength){
+      const count = Math.max(10, Math.min(26, strength + 8));
+      for(let i = 0; i < count; i += 1){
+        const dot = document.createElement('span');
+        dot.className = 'bolt';
+        const x = 20 + Math.random() * 60;
+        const y = 18 + Math.random() * 58;
+        const angle = (Math.PI * 2 * i) / count;
+        const radius = 70 + Math.random() * 180;
+        dot.style.left = `${x}%`;
+        dot.style.top = `${y}%`;
+        dot.style.setProperty('--dx', `${Math.cos(angle) * radius}px`);
+        dot.style.setProperty('--dy', `${Math.sin(angle) * radius}px`);
+        dot.style.animationDelay = `${Math.floor(Math.random() * 160)}ms`;
+        fxLayer.appendChild(dot);
+        setTimeout(() => dot.remove(), 1000);
+      }
+    }
+
+    function showReward(points, text){
+      rewardPoints.textContent = `+${points} Blitze`;
+      rewardText.textContent = text;
+      rewardOverlay.style.display = 'flex';
+      launchBoltFx(points);
+    }
+
+    async function submitWorkoutToAccount(exerciseId, achievedValue){
+      const userId = localStorage.getItem('boost_user_id');
+      if(!userId) throw new Error('Kein aktiver Login gefunden.');
+      const apiBase = await resolveApiBase();
+
+      const startRes = await fetch(`${apiBase}/student/workout-sessions/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ template_id: 'tpl_fitness_m1' }),
+      });
+      const startJson = await startRes.json().catch(() => ({}));
+      if(!startRes.ok || !startJson.id) throw new Error(startJson.error || `HTTP ${startRes.status}`);
+
+      const submitRes = await fetch(`${apiBase}/student/workout-sessions/${startJson.id}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({
+          results: [
+            {
+              exercise_id: exerciseId,
+              achieved_value: Math.max(0, Math.floor(achievedValue)),
+              detection_confidence: 0.9,
+              motion_score: 0.9,
+            },
+          ],
+        }),
+      });
+      const submitJson = await submitRes.json().catch(() => ({}));
+      if(!submitRes.ok) throw new Error(submitJson.error || `HTTP ${submitRes.status}`);
+      return submitJson;
+    }
 
     function angle(a,b,c){
       const r=Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x);
@@ -276,8 +389,27 @@
       backendInfo.textContent='TFJS Backend: '+tf.getBackend();
     }
 
+    function isLocalhostHost(hostname){
+      return hostname==='localhost' || hostname==='127.0.0.1' || hostname==='[::1]';
+    }
+
     async function setupCamera(){
-      const stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}});
+      const constraints={video:{width:640,height:480,facingMode:'user'},audio:false};
+      const secureOk=window.isSecureContext || isLocalhostHost(window.location.hostname);
+      const modernGetUserMedia=navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+      const legacyGetUserMedia=navigator.webkitGetUserMedia;
+
+      if(!secureOk){
+        throw new Error('Kamera auf iPhone/Safari braucht HTTPS. Nutze https:// oder localhost.');
+      }
+      if(!modernGetUserMedia && !legacyGetUserMedia){
+        throw new Error('Kamera-API in diesem Browser nicht verfuegbar.');
+      }
+
+      const stream=modernGetUserMedia
+        ? await navigator.mediaDevices.getUserMedia(constraints)
+        : await new Promise((resolve,reject)=>{legacyGetUserMedia.call(navigator,constraints,resolve,reject);});
+
       video.srcObject=stream;
       return new Promise(res=>video.onloadedmetadata=()=>res());
     }
@@ -293,7 +425,7 @@
       ctx.strokeStyle="#6b7280"; ctx.lineWidth=2;
       pairs.forEach(([a,b])=>{
         const k1=pose.keypoints[a],k2=pose.keypoints[b];
-        if(k1.score>KEYPOINT_CONFIDENCE&&k2.score>KEYPOINT_CONFIDENCE){
+        if(k1.score>0.5&&k2.score>0.5){
           ctx.beginPath();ctx.moveTo(k1.x,k1.y);ctx.lineTo(k2.x,k2.y);ctx.stroke();
         }
       });
@@ -301,7 +433,7 @@
 
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
-        if(kp.score>KEYPOINT_CONFIDENCE){
+        if(kp.score>0.5){
           ctx.beginPath();
           ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
           ctx.fillStyle="#6b7280";
@@ -327,24 +459,18 @@
       const shoulder=pickSide(k,'shoulder');
       const hip=pickSide(k,'hip');
       const knee=pickSide(k,'knee');
-      if(!(shoulder?.score>KEYPOINT_CONFIDENCE&&hip?.score>KEYPOINT_CONFIDENCE&&knee?.score>KEYPOINT_CONFIDENCE)){
-        unstableFrames++;
-        feedbackEl.textContent="Bleib im Bild – ich halte kurz weiter.";
+      if(!(shoulder?.score>0.5&&hip?.score>0.5&&knee?.score>0.5)){
+        feedbackEl.textContent="Kamera sieht dich nicht gut.";
         stageEl.textContent="-";
-        if(unstableFrames > MAX_UNSTABLE_FRAMES){
-          stopTimer();
-          isPlanking=false;
-        }
-        return;
+        stopTimer();isPlanking=false;return;
       }
-      unstableFrames = 0;
       const back=angle(shoulder,hip,knee);
-      if(back>BACK_ANGLE_THRESHOLD){
-        stageEl.textContent="HOLD";
+      if(back>150){
+        stageEl.textContent="HALTEN";
         feedbackEl.textContent="Halten!";
         if(!isPlanking){isPlanking=true;startTimer();}
       }else{
-        stageEl.textContent="BAD";
+        stageEl.textContent="INSTABIL";
         feedbackEl.textContent="Hüfte stabil halten!";
         isPlanking=false;stopTimer();
       }
@@ -368,13 +494,22 @@
       feedbackEl.textContent='Zurückgesetzt!';
     });
 
-    document.getElementById('finish-button').addEventListener('click',()=>{
-      if(time === 0){
-        localStorage.setItem('planks_result', 0);
-        window.location.href='/challenge/daily';
-        return;
+    finishBtn.addEventListener('click', async () => {
+      finishBtn.disabled = true;
+      finishBtn.textContent = 'Speichere...';
+      localStorage.setItem('planks_total', String(time));
+      try{
+        const result = await submitWorkoutToAccount('ex_plank', time);
+        const points = Number(result.calculated_points || 0);
+        showReward(points, points > 0
+          ? 'Stark! Die Blitze wurden auf dein Punktekonto gebucht.'
+          : 'Workout gespeichert. Heute wurden keine zusätzlichen Blitze gutgeschrieben.');
+      }catch(err){
+        showReward(0, `Konnte nicht buchen: ${err.message}`);
       }
-      createCelebration(time + 's', 'PLANK!', 'planks_result', '/challenge/daily');
+      setTimeout(() => {
+        window.location.href = 'home.html';
+      }, 1600);
     });
 
     async function main(){
