@@ -192,6 +192,25 @@
         </article>
       </div>
 
+      <div class="grid gap-4 md:grid-cols-2">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-slate-900">Deine letzten 14 Tage</h2>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Heatmap + Liste</span>
+          </div>
+          <div id="studentHistoryHeatmap" class="mt-4 grid grid-cols-7 gap-2"></div>
+          <ul id="studentRecentTracking" class="mt-4 space-y-2 text-sm text-slate-700"></ul>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-slate-900">Wochenvergleich</h2>
+            <span id="studentWeekDelta" class="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700">0</span>
+          </div>
+          <div id="studentWeekCompare" class="mt-4 space-y-3 text-sm text-slate-700"></div>
+        </article>
+      </div>
+
       <article class="rounded-2xl border border-slate-200 bg-white p-4">
         <h2 class="text-lg font-bold text-slate-900">Klassenranking</h2>
         <div class="mt-3 overflow-auto">
@@ -246,6 +265,15 @@
           <ul id="teacherFlags" class="mt-3 space-y-1 text-sm text-slate-700"></ul>
         </article>
       </div>
+
+      <article class="rounded-2xl border border-slate-200 bg-white p-4">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-base font-bold text-slate-900">Verlauf letzte 14 Tage</h3>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Heatmap + Zeitverlauf</span>
+        </div>
+        <div id="teacherTrendHeatmap" class="mt-4 grid grid-cols-7 gap-2"></div>
+        <ul id="teacherDailyTrend" class="mt-4 space-y-2 text-sm text-slate-700"></ul>
+      </article>
     </section>
   </main>
 
@@ -338,6 +366,15 @@
           return `<li class="flex items-center justify-between rounded-lg border px-3 py-2 ${done ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}"><span>${row.label}</span><strong>${done ? "Freigeschaltet" : "Offen"}</strong></li>`;
         })
         .join("");
+    }
+
+    function formatShortDate(dateStr) {
+      const date = new Date(`${dateStr}T00:00:00`);
+      return new Intl.DateTimeFormat("de-AT", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+      }).format(date);
     }
 
     function renderLeaderboard(entries) {
@@ -477,6 +514,66 @@
       `).join("");
     }
 
+    function historyTone(points, maxPoints) {
+      if (points <= 0) return "border-slate-200 bg-slate-100 text-slate-400";
+      const ratio = maxPoints > 0 ? points / maxPoints : 0;
+      if (ratio >= 0.75) return "border-emerald-400 bg-emerald-500 text-white";
+      if (ratio >= 0.45) return "border-emerald-300 bg-emerald-300 text-emerald-950";
+      return "border-emerald-200 bg-emerald-100 text-emerald-800";
+    }
+
+    function renderHeatmap(containerId, days, labelKey = "points") {
+      const container = document.getElementById(containerId);
+      const maxValue = Math.max(0, ...days.map((day) => Number(day?.[labelKey] || 0)));
+      container.innerHTML = days.map((day) => `
+        <div class="rounded-2xl border px-2 py-3 text-center ${historyTone(Number(day?.[labelKey] || 0), maxValue)}">
+          <p class="text-[10px] font-semibold uppercase tracking-wide">${formatShortDate(day.date)}</p>
+          <p class="mt-1 text-sm font-black">${day[labelKey] || 0}</p>
+        </div>
+      `).join("");
+    }
+
+    function renderStudentHistory(privateBoard) {
+      const trackingList = document.getElementById("studentRecentTracking");
+      const weekCompare = document.getElementById("studentWeekCompare");
+      const weekDelta = document.getElementById("studentWeekDelta");
+
+      const recentDays = privateBoard?.recent_days || [];
+      renderHeatmap("studentHistoryHeatmap", recentDays, "points");
+      trackingList.innerHTML = recentDays.length
+        ? recentDays.map((day) => `
+            <li class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <div>
+                <span class="font-medium text-slate-700">${formatShortDate(day.date)}</span>
+                <p class="text-xs text-slate-500">${day.workouts || 0} Workouts</p>
+              </div>
+              <span class="rounded-full ${day.points > 0 ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"} px-3 py-1 text-xs font-bold">
+                ${day.points > 0 ? `${day.points} Blitze` : "Pause"}
+              </span>
+            </li>
+          `).join("")
+        : '<li class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">Noch keine Tracking-Daten vorhanden.</li>';
+
+      const delta = Number(privateBoard?.delta_points || 0);
+      weekDelta.textContent = delta >= 0 ? `+${delta} zur Vorwoche` : `${delta} zur Vorwoche`;
+      weekDelta.className = delta >= 0
+        ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
+        : "rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700";
+
+      weekCompare.innerHTML = `
+        <div class="rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Diese Woche</p>
+          <p class="mt-1 text-2xl font-black text-slate-900">${privateBoard?.this_week?.points || 0}</p>
+          <p class="mt-1 text-xs text-slate-600">${privateBoard?.this_week?.from || "-"} bis ${privateBoard?.this_week?.to || "-"}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Letzte Woche</p>
+          <p class="mt-1 text-2xl font-black text-slate-900">${privateBoard?.last_week?.points || 0}</p>
+          <p class="mt-1 text-xs text-slate-600">${privateBoard?.last_week?.from || "-"} bis ${privateBoard?.last_week?.to || "-"}</p>
+        </div>
+      `;
+    }
+
     function renderBlitzJagd(total) {
       const steps = [0, 100, 250, 500, 1000, 2000];
       let left = 0;
@@ -571,20 +668,22 @@
     async function loadStudentView(me) {
       document.getElementById("studentView").classList.remove("hidden");
       document.getElementById("studentMobileNav").classList.remove("hidden");
-      let [dashboard, goals, leaderboard] = await Promise.all([
+      let [dashboard, goals, leaderboard, privateBoard] = await Promise.all([
         api("/student/dashboard"),
         api("/student/goals"),
         api("/leaderboards/class?top=10&include_me=true"),
+        api("/leaderboards/student/private"),
       ]);
 
       const goalBonus = await autoClaimGoalBonuses(goals);
       if (goalBonus > 0) {
         showBlitzCelebration(goalBonus + 8);
         setStatus(`Ziel erreicht! +${goalBonus} Blitze wurden auf dein Punktekonto gebucht.`);
-        [dashboard, goals, leaderboard] = await Promise.all([
+        [dashboard, goals, leaderboard, privateBoard] = await Promise.all([
           api("/student/dashboard"),
           api("/student/goals"),
           api("/leaderboards/class?top=10&include_me=true"),
+          api("/leaderboards/student/private"),
         ]);
       }
 
@@ -601,6 +700,7 @@
       renderRecentActivity(dashboard, goals, leaderboard);
       renderTryItEvents();
       renderDemoSignals(dashboard, goals);
+      renderStudentHistory(privateBoard);
 
       document.getElementById("dailyGoalLabel").textContent = `${goals.daily.current_points} / ${goals.daily.target_points}`;
       document.getElementById("weeklyGoalLabel").textContent = `${goals.weekly.current_points} / ${goals.weekly.target_points}`;
@@ -643,6 +743,26 @@
         : '<li class="rounded border border-emerald-100 bg-emerald-50 px-3 py-2">Keine auffälligen Submits.</li>';
     }
 
+    function renderTeacherDailyTrend(overview) {
+      const trend = overview?.daily_trend || [];
+      const container = document.getElementById("teacherDailyTrend");
+      renderHeatmap("teacherTrendHeatmap", trend, "points");
+      container.innerHTML = trend.length
+        ? trend.map((row) => `
+            <li class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <div>
+                <p class="font-semibold text-slate-800">${formatShortDate(row.date)}</p>
+                <p class="text-xs text-slate-500">${row.participants}/${overview.students_total || 0} aktiv</p>
+              </div>
+              <div class="text-right">
+                <p class="font-black text-slate-900">${row.points} Blitze</p>
+                <p class="text-xs text-slate-500">${clampPercent((row.participation_rate || 0) * 100)}% Teilnahme</p>
+              </div>
+            </li>
+          `).join("")
+        : '<li class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">Noch kein Verlauf vorhanden.</li>';
+    }
+
     async function loadTeacherView(me) {
       document.getElementById("teacherView").classList.remove("hidden");
       const [classes, kpi] = await Promise.all([
@@ -661,8 +781,12 @@
           setStatus("Keine Klasse vorhanden. Bitte zuerst Klasse anlegen.", true);
           return;
         }
-        const dashboard = await api(`/teacher/classes/${classId}/dashboard`);
+        const [dashboard, overview] = await Promise.all([
+          api(`/teacher/classes/${classId}/dashboard`),
+          api(`/teacher/classes/${classId}/overview`),
+        ]);
         renderTeacherClassDashboard(dashboard);
+        renderTeacherDailyTrend(overview);
         setStatus(`Lehrer Dashboard geladen (${me.display_name}).`);
       }
 

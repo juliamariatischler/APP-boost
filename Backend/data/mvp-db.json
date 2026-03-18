@@ -1,0 +1,743 @@
+{
+  "users": [
+    {
+      "id": "student_anna",
+      "role": "STUDENT",
+      "display_name": "Anna",
+      "school_id": "school_1",
+      "class_id": "class_1"
+    },
+    {
+      "id": "student_ben",
+      "role": "STUDENT",
+      "display_name": "Ben",
+      "school_id": "school_1",
+      "class_id": "class_1"
+    },
+    {
+      "id": "student_demo",
+      "role": "STUDENT",
+      "display_name": "DemoBlitz",
+      "school_id": "school_1",
+      "class_id": "class_1"
+    },
+    {
+      "id": "student_zoe",
+      "role": "STUDENT",
+      "display_name": "Zoe",
+      "school_id": "school_1",
+      "class_id": "class_1"
+    },
+    {
+      "id": "student_leni",
+      "role": "STUDENT",
+      "display_name": "Leni",
+      "school_id": "school_1",
+      "class_id": "class_2"
+    },
+    {
+      "id": "student_noah",
+      "role": "STUDENT",
+      "display_name": "Noah",
+      "school_id": "school_1",
+      "class_id": "class_2"
+    },
+    {
+      "id": "teacher_mia",
+      "role": "TEACHER",
+      "display_name": "Frau Mia",
+      "school_id": "school_1",
+      "class_id": null,
+      "email": "mia@schule.de"
+    },
+    {
+      "id": "schooladmin_luca",
+      "role": "SCHOOL_ADMIN",
+      "display_name": "Admin Luca",
+      "school_id": "school_1",
+      "class_id": null
+    },
+    {
+      "id": "sysadmin_root",
+      "role": "SYSTEM_ADMIN",
+      "display_name": "System Root",
+      "school_id": null,
+      "class_id": null
+    }
+  ],
+  "schools": [
+    {
+      "id": "school_1",
+      "name": "Grundschule Nord",
+      "region": "DE-BY",
+      "code": "GSN",
+      "settings": {
+        "leaderboard_visibility": "school_internal"
+      }
+    },
+    {
+      "id": "school_2",
+      "name": "Grundschule Sued",
+      "region": "DE-BY",
+      "code": "GSS",
+      "settings": {
+        "leaderboard_visibility": "school_internal"
+      }
+    }
+  ],
+  "classes": [
+    {
+      "id": "class_1",
+      "school_id": "school_1",
+      "name": "2A",
+      "year_grade": 5,
+      "join_code": "JOIN2A",
+      "teacher_id": "teacher_mia"
+    },
+    {
+      "id": "class_2",
+      "school_id": "school_1",
+      "name": "2B",
+      "year_grade": 5,
+      "join_code": "JOIN2B",
+      "teacher_id": "teacher_mia"
+    }
+  ],
+  "students": [
+    {
+      "id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "display_name": "BlitzTiger",
+      "avatar_config": {
+        "color": "#10b981",
+        "icon": "tiger"
+      },
+      "consent_status": "GRANTED",
+      "created_at": "2026-03-01T08:00:00.000Z"
+    },
+    {
+      "id": "student_ben",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "display_name": "MoveRocket",
+      "avatar_config": {
+        "color": "#2563eb",
+        "icon": "rocket"
+      },
+      "consent_status": "GRANTED",
+      "created_at": "2026-03-01T08:03:00.000Z"
+    },
+    {
+      "id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "display_name": "DemoBlitz",
+      "avatar_config": {
+        "color": "#f59e0b",
+        "icon": "falcon"
+      },
+      "consent_status": "GRANTED",
+      "created_at": "2026-03-02T09:10:00.000Z"
+    },
+    {
+      "id": "student_zoe",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "display_name": "ChillFalke",
+      "avatar_config": {
+        "color": "#8b5cf6",
+        "icon": "wave"
+      },
+      "consent_status": "GRANTED",
+      "created_at": "2026-03-03T10:20:00.000Z"
+    },
+    {
+      "id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "display_name": "SkySprint",
+      "avatar_config": {
+        "color": "#0ea5e9",
+        "icon": "comet"
+      },
+      "consent_status": "GRANTED",
+      "created_at": "2026-03-01T08:10:00.000Z"
+    },
+    {
+      "id": "student_noah",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "display_name": "TurboWelle",
+      "avatar_config": {
+        "color": "#ef4444",
+        "icon": "panther"
+      },
+      "consent_status": "GRANTED",
+      "created_at": "2026-03-01T08:14:00.000Z"
+    }
+  ],
+  "exercise_catalog": [
+    {
+      "id": "ex_jj",
+      "name": "Hampelmann",
+      "type": "reps",
+      "unit_label": "Reps",
+      "safety_note": "Rutschfeste Schuhe."
+    },
+    {
+      "id": "ex_squat",
+      "name": "Kniebeuge",
+      "type": "reps",
+      "unit_label": "Reps",
+      "safety_note": "Ruecken neutral halten."
+    },
+    {
+      "id": "ex_plank",
+      "name": "Plank",
+      "type": "time",
+      "unit_label": "Sekunden",
+      "safety_note": "Nicht ins Hohlkreuz."
+    }
+  ],
+  "workout_templates": [
+    {
+      "id": "tpl_daily_1",
+      "title": "Heute aktiv",
+      "description": "Kurze Mission fuer die Pause.",
+      "difficulty": 2,
+      "exercises": [
+        {
+          "exercise_id": "ex_jj",
+          "target_value": 20,
+          "order": 1
+        },
+        {
+          "exercise_id": "ex_squat",
+          "target_value": 10,
+          "order": 2
+        }
+      ],
+      "base_points": 30,
+      "bonus_points_rules": null,
+      "duration_estimate": 8,
+      "created_by": "system"
+    },
+    {
+      "id": "tpl_fitness_m1",
+      "title": "Modul 1 Fitness",
+      "description": "Hampelmann, Kniebeuge und Plank",
+      "difficulty": 2,
+      "exercises": [
+        {
+          "exercise_id": "ex_jj",
+          "target_value": 20,
+          "order": 1
+        },
+        {
+          "exercise_id": "ex_squat",
+          "target_value": 15,
+          "order": 2
+        },
+        {
+          "exercise_id": "ex_plank",
+          "target_value": 30,
+          "order": 3
+        }
+      ],
+      "duration_estimate": 8,
+      "created_by": "system"
+    }
+  ],
+  "class_missions": [
+    {
+      "id": "mission_seed_1",
+      "class_id": "class_1",
+      "template_id": "tpl_fitness_m1",
+      "start_at": "2026-03-18T06:00:00.000Z",
+      "end_at": "2026-03-20T18:00:00.000Z",
+      "activated_by": "teacher_mia"
+    },
+    {
+      "id": "mission_seed_2",
+      "class_id": "class_2",
+      "template_id": "tpl_fitness_m1",
+      "start_at": "2026-03-18T06:00:00.000Z",
+      "end_at": "2026-03-20T18:00:00.000Z",
+      "activated_by": "teacher_mia"
+    }
+  ],
+  "challenges": [],
+  "workout_sessions": [
+    {
+      "id": "sess_demo_0318",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-18T07:55:00.000Z",
+      "submitted_at": "2026-03-18T08:03:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-demo-0318"
+    },
+    {
+      "id": "sess_demo_0317",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-17T08:01:00.000Z",
+      "submitted_at": "2026-03-17T08:09:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-demo-0317"
+    },
+    {
+      "id": "sess_demo_0316",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-16T08:00:00.000Z",
+      "submitted_at": "2026-03-16T08:08:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-demo-0316"
+    },
+    {
+      "id": "sess_demo_0315",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-15T09:05:00.000Z",
+      "submitted_at": "2026-03-15T09:13:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-demo-0315"
+    },
+    {
+      "id": "sess_anna_0318",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-18T08:10:00.000Z",
+      "submitted_at": "2026-03-18T08:18:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-anna-0318"
+    },
+    {
+      "id": "sess_anna_0316",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-16T08:14:00.000Z",
+      "submitted_at": "2026-03-16T08:22:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-anna-0316"
+    },
+    {
+      "id": "sess_anna_0314",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-14T09:20:00.000Z",
+      "submitted_at": "2026-03-14T09:28:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-anna-0314"
+    },
+    {
+      "id": "sess_anna_0312",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-12T08:30:00.000Z",
+      "submitted_at": "2026-03-12T08:38:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-anna-0312"
+    },
+    {
+      "id": "sess_ben_0317",
+      "student_id": "student_ben",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-17T10:00:00.000Z",
+      "submitted_at": "2026-03-17T10:09:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-ben-0317"
+    },
+    {
+      "id": "sess_ben_0313",
+      "student_id": "student_ben",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-13T10:10:00.000Z",
+      "submitted_at": "2026-03-13T10:18:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-ben-0313"
+    },
+    {
+      "id": "sess_leni_0318",
+      "student_id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-18T08:40:00.000Z",
+      "submitted_at": "2026-03-18T08:48:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-leni-0318"
+    },
+    {
+      "id": "sess_leni_0317",
+      "student_id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-17T08:34:00.000Z",
+      "submitted_at": "2026-03-17T08:42:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-leni-0317"
+    },
+    {
+      "id": "sess_leni_0316",
+      "student_id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-16T08:31:00.000Z",
+      "submitted_at": "2026-03-16T08:39:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-leni-0316"
+    },
+    {
+      "id": "sess_noah_0314",
+      "student_id": "student_noah",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "template_id": "tpl_fitness_m1",
+      "started_at": "2026-03-14T11:00:00.000Z",
+      "submitted_at": "2026-03-14T11:08:00.000Z",
+      "status": "SUBMITTED",
+      "evidence_type": "CAMERA_ON_DEVICE",
+      "client_hash": "seed-noah-0314"
+    }
+  ],
+  "workout_results": [
+    {
+      "id": "wres_demo_0318",
+      "session_id": "sess_demo_0318",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 120,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-18T08:03:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 20, "detection_confidence": 0.91, "motion_score": 0.89 },
+        { "exercise_id": "ex_squat", "achieved_value": 15, "detection_confidence": 0.93, "motion_score": 0.88 },
+        { "exercise_id": "ex_plank", "achieved_value": 35, "detection_confidence": 0.92, "motion_score": 0.86 }
+      ]
+    },
+    {
+      "id": "wres_demo_0317",
+      "session_id": "sess_demo_0317",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 102,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-17T08:09:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 18, "detection_confidence": 0.9, "motion_score": 0.86 },
+        { "exercise_id": "ex_squat", "achieved_value": 12, "detection_confidence": 0.9, "motion_score": 0.84 },
+        { "exercise_id": "ex_plank", "achieved_value": 30, "detection_confidence": 0.91, "motion_score": 0.83 }
+      ]
+    },
+    {
+      "id": "wres_demo_0316",
+      "session_id": "sess_demo_0316",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 93,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-16T08:08:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 16, "detection_confidence": 0.87, "motion_score": 0.82 },
+        { "exercise_id": "ex_squat", "achieved_value": 12, "detection_confidence": 0.88, "motion_score": 0.82 },
+        { "exercise_id": "ex_plank", "achieved_value": 25, "detection_confidence": 0.9, "motion_score": 0.82 }
+      ]
+    },
+    {
+      "id": "wres_demo_0315",
+      "session_id": "sess_demo_0315",
+      "student_id": "student_demo",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 90,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-15T09:13:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 20, "detection_confidence": 0.88, "motion_score": 0.82 },
+        { "exercise_id": "ex_squat", "achieved_value": 10, "detection_confidence": 0.87, "motion_score": 0.8 },
+        { "exercise_id": "ex_plank", "achieved_value": 20, "detection_confidence": 0.89, "motion_score": 0.81 }
+      ]
+    },
+    {
+      "id": "wres_anna_0318",
+      "session_id": "sess_anna_0318",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 114,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-18T08:18:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 22, "detection_confidence": 0.93, "motion_score": 0.88 },
+        { "exercise_id": "ex_squat", "achieved_value": 14, "detection_confidence": 0.92, "motion_score": 0.87 },
+        { "exercise_id": "ex_plank", "achieved_value": 28, "detection_confidence": 0.93, "motion_score": 0.86 }
+      ]
+    },
+    {
+      "id": "wres_anna_0316",
+      "session_id": "sess_anna_0316",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 100,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-16T08:22:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 18, "detection_confidence": 0.9, "motion_score": 0.84 },
+        { "exercise_id": "ex_squat", "achieved_value": 14, "detection_confidence": 0.9, "motion_score": 0.85 },
+        { "exercise_id": "ex_plank", "achieved_value": 22, "detection_confidence": 0.9, "motion_score": 0.83 }
+      ]
+    },
+    {
+      "id": "wres_anna_0314",
+      "session_id": "sess_anna_0314",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 101,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-14T09:28:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 20, "detection_confidence": 0.89, "motion_score": 0.83 },
+        { "exercise_id": "ex_squat", "achieved_value": 12, "detection_confidence": 0.89, "motion_score": 0.83 },
+        { "exercise_id": "ex_plank", "achieved_value": 25, "detection_confidence": 0.91, "motion_score": 0.82 }
+      ]
+    },
+    {
+      "id": "wres_anna_0312",
+      "session_id": "sess_anna_0312",
+      "student_id": "student_anna",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 82,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-12T08:38:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 16, "detection_confidence": 0.86, "motion_score": 0.79 },
+        { "exercise_id": "ex_squat", "achieved_value": 10, "detection_confidence": 0.88, "motion_score": 0.8 },
+        { "exercise_id": "ex_plank", "achieved_value": 20, "detection_confidence": 0.88, "motion_score": 0.8 }
+      ]
+    },
+    {
+      "id": "wres_ben_0317",
+      "session_id": "sess_ben_0317",
+      "student_id": "student_ben",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 52,
+      "flags": ["low_movement:ex_squat", "poor_detection:ex_squat"],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-17T10:09:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 9, "detection_confidence": 0.71, "motion_score": 0.58 },
+        { "exercise_id": "ex_squat", "achieved_value": 8, "detection_confidence": 0.42, "motion_score": 0.26 },
+        { "exercise_id": "ex_plank", "achieved_value": 10, "detection_confidence": 0.74, "motion_score": 0.51 }
+      ]
+    },
+    {
+      "id": "wres_ben_0313",
+      "session_id": "sess_ben_0313",
+      "student_id": "student_ben",
+      "class_id": "class_1",
+      "school_id": "school_1",
+      "calculated_points": 80,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-13T10:18:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 15, "detection_confidence": 0.84, "motion_score": 0.75 },
+        { "exercise_id": "ex_squat", "achieved_value": 10, "detection_confidence": 0.84, "motion_score": 0.74 },
+        { "exercise_id": "ex_plank", "achieved_value": 20, "detection_confidence": 0.85, "motion_score": 0.75 }
+      ]
+    },
+    {
+      "id": "wres_leni_0318",
+      "session_id": "sess_leni_0318",
+      "student_id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "calculated_points": 97,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-18T08:48:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 18, "detection_confidence": 0.91, "motion_score": 0.87 },
+        { "exercise_id": "ex_squat", "achieved_value": 12, "detection_confidence": 0.9, "motion_score": 0.85 },
+        { "exercise_id": "ex_plank", "achieved_value": 25, "detection_confidence": 0.91, "motion_score": 0.84 }
+      ]
+    },
+    {
+      "id": "wres_leni_0317",
+      "session_id": "sess_leni_0317",
+      "student_id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "calculated_points": 107,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-17T08:42:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 20, "detection_confidence": 0.92, "motion_score": 0.87 },
+        { "exercise_id": "ex_squat", "achieved_value": 14, "detection_confidence": 0.92, "motion_score": 0.87 },
+        { "exercise_id": "ex_plank", "achieved_value": 25, "detection_confidence": 0.91, "motion_score": 0.85 }
+      ]
+    },
+    {
+      "id": "wres_leni_0316",
+      "session_id": "sess_leni_0316",
+      "student_id": "student_leni",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "calculated_points": 80,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-16T08:39:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 15, "detection_confidence": 0.87, "motion_score": 0.8 },
+        { "exercise_id": "ex_squat", "achieved_value": 10, "detection_confidence": 0.87, "motion_score": 0.8 },
+        { "exercise_id": "ex_plank", "achieved_value": 20, "detection_confidence": 0.88, "motion_score": 0.8 }
+      ]
+    },
+    {
+      "id": "wres_noah_0314",
+      "session_id": "sess_noah_0314",
+      "student_id": "student_noah",
+      "class_id": "class_2",
+      "school_id": "school_1",
+      "calculated_points": 92,
+      "flags": [],
+      "teacher_approved": false,
+      "submitted_at": "2026-03-14T11:08:00.000Z",
+      "results": [
+        { "exercise_id": "ex_jj", "achieved_value": 18, "detection_confidence": 0.86, "motion_score": 0.79 },
+        { "exercise_id": "ex_squat", "achieved_value": 12, "detection_confidence": 0.87, "motion_score": 0.8 },
+        { "exercise_id": "ex_plank", "achieved_value": 20, "detection_confidence": 0.88, "motion_score": 0.8 }
+      ]
+    }
+  ],
+  "points_ledger": [
+    { "id": "pl_demo_0318", "student_id": "student_demo", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_demo_0318", "points_delta": 120, "created_at": "2026-03-18T08:03:00.000Z" },
+    { "id": "pl_demo_0317", "student_id": "student_demo", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_demo_0317", "points_delta": 102, "created_at": "2026-03-17T08:09:00.000Z" },
+    { "id": "pl_demo_0316", "student_id": "student_demo", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_demo_0316", "points_delta": 93, "created_at": "2026-03-16T08:08:00.000Z" },
+    { "id": "pl_demo_0315", "student_id": "student_demo", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_demo_0315", "points_delta": 90, "created_at": "2026-03-15T09:13:00.000Z" },
+    { "id": "pl_anna_0318", "student_id": "student_anna", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_anna_0318", "points_delta": 114, "created_at": "2026-03-18T08:18:00.000Z" },
+    { "id": "pl_anna_0316", "student_id": "student_anna", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_anna_0316", "points_delta": 100, "created_at": "2026-03-16T08:22:00.000Z" },
+    { "id": "pl_anna_0314", "student_id": "student_anna", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_anna_0314", "points_delta": 101, "created_at": "2026-03-14T09:28:00.000Z" },
+    { "id": "pl_anna_0312", "student_id": "student_anna", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_anna_0312", "points_delta": 82, "created_at": "2026-03-12T08:38:00.000Z" },
+    { "id": "pl_ben_0317", "student_id": "student_ben", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_ben_0317", "points_delta": 52, "created_at": "2026-03-17T10:09:00.000Z" },
+    { "id": "pl_ben_0313", "student_id": "student_ben", "class_id": "class_1", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_ben_0313", "points_delta": 80, "created_at": "2026-03-13T10:18:00.000Z" },
+    { "id": "pl_leni_0318", "student_id": "student_leni", "class_id": "class_2", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_leni_0318", "points_delta": 97, "created_at": "2026-03-18T08:48:00.000Z" },
+    { "id": "pl_leni_0317", "student_id": "student_leni", "class_id": "class_2", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_leni_0317", "points_delta": 107, "created_at": "2026-03-17T08:42:00.000Z" },
+    { "id": "pl_leni_0316", "student_id": "student_leni", "class_id": "class_2", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_leni_0316", "points_delta": 80, "created_at": "2026-03-16T08:39:00.000Z" },
+    { "id": "pl_noah_0314", "student_id": "student_noah", "class_id": "class_2", "school_id": "school_1", "source_type": "WORKOUT", "source_id": "wres_noah_0314", "points_delta": 92, "created_at": "2026-03-14T11:08:00.000Z" }
+  ],
+  "kpi_events": [
+    {
+      "id": "evt_seed_1",
+      "created_at": "2026-03-02T09:10:00.000Z",
+      "type": "student_registered",
+      "actor_id": "student_demo",
+      "role": "STUDENT",
+      "school_id": "school_1",
+      "class_id": "class_1",
+      "meta": {
+        "via": "join_code"
+      }
+    },
+    {
+      "id": "evt_seed_2",
+      "created_at": "2026-03-18T08:03:00.000Z",
+      "type": "workout_submitted",
+      "actor_id": "student_demo",
+      "role": "STUDENT",
+      "school_id": "school_1",
+      "class_id": "class_1",
+      "meta": {
+        "session_id": "sess_demo_0318",
+        "result_id": "wres_demo_0318",
+        "scored_points": 120,
+        "flags_count": 0
+      }
+    },
+    {
+      "id": "evt_seed_3",
+      "created_at": "2026-03-18T08:18:00.000Z",
+      "type": "workout_submitted",
+      "actor_id": "student_anna",
+      "role": "STUDENT",
+      "school_id": "school_1",
+      "class_id": "class_1",
+      "meta": {
+        "session_id": "sess_anna_0318",
+        "result_id": "wres_anna_0318",
+        "scored_points": 114,
+        "flags_count": 0
+      }
+    },
+    {
+      "id": "evt_seed_4",
+      "created_at": "2026-03-18T08:48:00.000Z",
+      "type": "workout_submitted",
+      "actor_id": "student_leni",
+      "role": "STUDENT",
+      "school_id": "school_1",
+      "class_id": "class_2",
+      "meta": {
+        "session_id": "sess_leni_0318",
+        "result_id": "wres_leni_0318",
+        "scored_points": 97,
+        "flags_count": 0
+      }
+    }
+  ],
+  "goal_rewards": []
+}
