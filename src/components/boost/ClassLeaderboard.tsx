@@ -8,6 +8,7 @@ interface ClassRanking {
   className: string;
   school: string;
   totalFlashes: number;
+  studentCount?: number;
 }
 
 interface StudentRanking {
@@ -79,29 +80,47 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       }
 
       // Aggregate points by class+school from profiles
-      const { data } = await supabase
+      const { data: presentationData } = await (supabase as any)
+        .from("presentation_class_rankings")
+        .select("school, class, total_flashes, student_count, sort_order")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("total_flashes", { ascending: false });
+
+      if (presentationData && presentationData.length > 0) {
+        setRankings(
+          presentationData.map((entry: { school: string; class: string; total_flashes: number; student_count: number }) => ({
+            className: entry.class,
+            school: entry.school,
+            totalFlashes: Number(entry.total_flashes || 0),
+            studentCount: Number(entry.student_count || 30),
+          }))
+        );
+      } else {
+        const { data } = await supabase
         .from("profiles")
         .select("class, school, points");
 
-      if (data) {
-        const classMap = new Map<string, ClassRanking>();
-        for (const p of data) {
-          const key = `${p.class}|${p.school}`;
-          const existing = classMap.get(key);
-          if (existing) {
-            existing.totalFlashes += p.points;
-          } else {
-            classMap.set(key, {
-              className: p.class,
-              school: p.school,
-              totalFlashes: p.points,
-            });
+        if (data) {
+          const classMap = new Map<string, ClassRanking>();
+          for (const p of data) {
+            const key = `${p.class}|${p.school}`;
+            const existing = classMap.get(key);
+            if (existing) {
+              existing.totalFlashes += p.points;
+            } else {
+              classMap.set(key, {
+                className: p.class,
+                school: p.school,
+                totalFlashes: p.points,
+              });
+            }
           }
+          const sorted = Array.from(classMap.values()).sort(
+            (a, b) => b.totalFlashes - a.totalFlashes
+          );
+          setRankings(sorted);
         }
-        const sorted = Array.from(classMap.values()).sort(
-          (a, b) => b.totalFlashes - a.totalFlashes
-        );
-        setRankings(sorted);
       }
 
       if (userClass && userSchool) {
@@ -146,7 +165,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
   const isInTop5 = myRank !== null && myRank <= 5;
   const classFlashesFromAssigned = studentRankings.reduce((sum, student) => sum + Number(student.points || 0), 0);
   const classFlashes = isTeacherView ? classFlashesFromAssigned : myClass?.totalFlashes || 0;
-  const classStudentCount = studentRankings.length;
+  const classStudentCount = myClass?.studentCount || studentRankings.length;
   const classMilestone = classStudentCount * CLASS_MILESTONE_PER_STUDENT;
   const classProgress = classMilestone > 0 ? Math.min((classFlashes / classMilestone) * 100, 100) : 0;
 
