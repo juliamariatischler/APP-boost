@@ -26,6 +26,7 @@ const EXERCISE_GOALS = {
   planks: 60,
   sit_ups: 25,
 };
+const STEP_GOAL = 3000;
 
 interface ChallengeScrollProps {
   userId: string;
