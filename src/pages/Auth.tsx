@@ -11,6 +11,7 @@ import boostLogo from "@/assets/boost-logo.png";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
+import { DEMO_FIXED_POINTS } from "@/lib/demo";
 
 // Input validation schemas
 const loginSchema = z.object({
@@ -230,6 +231,7 @@ const Auth = () => {
           username: params.username,
           school: DEMO_SCHOOL,
           class: DEMO_CLASS,
+          points: DEMO_FIXED_POINTS,
         })
         .eq("id", signInResult.data.user.id);
 
@@ -278,6 +280,7 @@ const Auth = () => {
         username: params.username,
         school: DEMO_SCHOOL,
         class: DEMO_CLASS,
+        points: DEMO_FIXED_POINTS,
       })
       .eq("id", signUpResult.data.user.id);
 

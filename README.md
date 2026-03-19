@@ -104,7 +104,8 @@ For scalable multi-device sync (idempotent ingest + sync cursors), a migration w
 - Home (`/dashboard`) now shows the level card (`Mein Level`) from Boost.
 - Daily point decay is applied server-side via:
   - `supabase/migrations/20260310200000_daily_points_decay.sql`
-- Refined 24h rule + warning via:
+- Refined inactivity rule + warning via:
   - `supabase/migrations/20260310203000_points_decay_24h_warning.sql`
-- Rule: if no activity for `24h`, `1` Blitz decays (never below `0`).
+  - `supabase/migrations/20260319120000_points_decay_36h.sql`
+- Rule: if no activity for `36h`, `1` Blitz decays (never below `0`).
 - Warning: one in-app notification is shown in the `2h` window before decay.

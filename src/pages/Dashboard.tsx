@@ -11,6 +11,7 @@ import { de } from "date-fns/locale";
 import { LevelCard } from "@/components/boost/LevelCard";
 import { getLevelForPoints } from "@/lib/gamification";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
+import { getDemoAwarePoints, isDemoEmail } from "@/lib/demo";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const Dashboard = () => {
   const [userSchool, setUserSchool] = useState("");
   const [userClass, setUserClass] = useState("");
   const [isTeacher, setIsTeacher] = useState(false);
+  const [isDemoUser, setIsDemoUser] = useState(false);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
   const [weeklyTotal] = useState(28); // 4 challenges * 7 days
 
@@ -31,7 +33,7 @@ const Dashboard = () => {
     const handlePointsUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ delta?: number }>;
       const delta = Number(customEvent.detail?.delta || 0);
-      if (!delta) return;
+      if (!delta || isDemoUser) return;
       setPoints((prev) => prev + delta);
     };
 
@@ -39,7 +41,7 @@ const Dashboard = () => {
     return () => {
       window.removeEventListener("points-updated", handlePointsUpdated);
     };
-  }, []);
+  }, [isDemoUser]);
 
   const checkAuthAndLoadProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -50,6 +52,7 @@ const Dashboard = () => {
     }
 
     setUserId(session.user.id);
+    setIsDemoUser(isDemoEmail(session.user.email));
 
     const { data: roleData } = await supabase
       .from("user_roles")
@@ -75,7 +78,7 @@ const Dashboard = () => {
 
     if (profileData) {
       setUsername(profileData.username);
-      setPoints(profileData.points || 0);
+      setPoints(getDemoAwarePoints(profileData.points, session.user.email));
       setUserSchool(profileData.school || "");
       setUserClass(profileData.class || "");
     } else {

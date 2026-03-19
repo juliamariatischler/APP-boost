@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getDemoAwarePoints } from "@/lib/demo";
 
 type RewardItem = {
   id: string;
@@ -47,6 +48,7 @@ const Rewards = () => {
     setLoading(true);
     const { data: authData } = await supabase.auth.getSession();
     const uid = authData.session?.user?.id;
+    const email = authData.session?.user?.email;
     if (!uid) {
       navigate("/auth");
       return;
@@ -65,7 +67,7 @@ const Rewards = () => {
       return;
     }
 
-    setMyFlashes(Number(profile.points || 0));
+    setMyFlashes(getDemoAwarePoints(profile.points, email));
 
     const [{ data: rewardRows, error: rewardsError }, { data: milestoneRows, error: milestonesError }, { data: classPoints, error: classPointsError }] =
       await Promise.all([

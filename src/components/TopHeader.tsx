@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import boostLogo from "@/assets/boost-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getDemoAwarePoints, isDemoEmail } from "@/lib/demo";
 
 interface Profile {
   username: string;
@@ -18,6 +19,7 @@ export const TopHeader = () => {
   const location = useLocation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDemoUser, setIsDemoUser] = useState(false);
 
   const isDashboard = location.pathname === "/dashboard";
 
@@ -29,7 +31,7 @@ export const TopHeader = () => {
     const handlePointsUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ delta?: number }>;
       const delta = Number(customEvent.detail?.delta || 0);
-      if (!delta) return;
+      if (!delta || isDemoUser) return;
 
       setProfile((prev) => {
         if (!prev) return prev;
@@ -41,7 +43,7 @@ export const TopHeader = () => {
     return () => {
       window.removeEventListener("points-updated", handlePointsUpdated);
     };
-  }, []);
+  }, [isDemoUser]);
 
   const loadProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -50,23 +52,28 @@ export const TopHeader = () => {
       return;
     }
 
-    const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");
-    if (decayError) {
-      console.error("Points decay error:", decayError);
-    } else {
-      const decayedPoints = Number(decayState?.decayed_points || 0);
-      const shouldWarn = Boolean(decayState?.should_warn);
-      const minutesUntilDecay = Number(decayState?.minutes_until_decay || 0);
+    const demoUser = isDemoEmail(session.user.email);
+    setIsDemoUser(demoUser);
 
-      if (decayedPoints > 0) {
-        toast.info(`${decayedPoints} ⚡ verfallen (24h Inaktivität).`);
-      }
+    if (!demoUser) {
+      const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");
+      if (decayError) {
+        console.error("Points decay error:", decayError);
+      } else {
+        const decayedPoints = Number(decayState?.decayed_points || 0);
+        const shouldWarn = Boolean(decayState?.should_warn);
+        const minutesUntilDecay = Number(decayState?.minutes_until_decay || 0);
 
-      if (shouldWarn) {
-        const hoursUntilDecay = Math.max(1, Math.ceil(minutesUntilDecay / 60));
-        toast.warning(`Achtung: Blitz-Verfall in ca. ${hoursUntilDecay}h`, {
-          description: "Sei aktiv, damit in den nächsten 2 Stunden kein Blitz verfällt."
-        });
+        if (decayedPoints > 0) {
+          toast.info(`${decayedPoints} ⚡ verfallen nach 36h ohne Aktivität.`);
+        }
+
+        if (shouldWarn) {
+          const hoursUntilDecay = Math.max(1, Math.ceil(minutesUntilDecay / 60));
+          toast.warning(`Achtung: Blitz-Verfall in ca. ${hoursUntilDecay}h`, {
+            description: "Wenn du 36 Stunden nichts machst, verfällt 1 Blitz."
+          });
+        }
       }
     }
 
@@ -77,7 +84,10 @@ export const TopHeader = () => {
       .single();
 
     if (profileData) {
-      setProfile(profileData);
+      setProfile({
+        ...profileData,
+        points: getDemoAwarePoints(profileData.points, session.user.email),
+      });
     }
 
     // Check if admin
@@ -117,6 +127,7 @@ export const TopHeader = () => {
           <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-lg shrink-0">
             <Zap className="h-5 w-5 text-primary fill-primary" />
             <span className="font-bold text-primary">{profile.points}</span>
+            <span className="text-xs font-medium text-primary/80">gesamt</span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

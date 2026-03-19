@@ -38,7 +38,7 @@ export const LevelCard = ({ points, level }: Props) => {
       <div className="flex items-end gap-2 mb-3">
         <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500" />
         <span className="text-2xl font-black text-foreground">{points}</span>
-        <span className="text-sm text-muted-foreground mb-0.5">Blitze</span>
+        <span className="text-sm text-muted-foreground mb-0.5">Gesamtblitze</span>
       </div>
 
       {nextLevel && (
