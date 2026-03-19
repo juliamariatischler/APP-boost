@@ -11,7 +11,7 @@ import boostLogo from "@/assets/boost-logo.png";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
-import { DEMO_FIXED_POINTS } from "@/lib/demo";
+import { DEMO_MIN_POINTS } from "@/lib/demo";
 
 // Input validation schemas
 const loginSchema = z.object({
@@ -60,7 +60,7 @@ const Auth = () => {
   const DEMO_STUDENT = {
     email: "demo@boost-challenge.de",
     password: "demo123456",
-    username: "Rafaela Kamper",
+    username: "Demo",
   };
   const DEMO_TEACHER = {
     email: "demo-lehrkraft@boost-challenge.de",
@@ -107,7 +107,7 @@ const Auth = () => {
     const name = params.get("name")?.trim();
     if (demo !== "student") return;
 
-    handleNamedDemoStudentLogin(name || "Rafaela Kamper");
+    handleNamedDemoStudentLogin(name || "Demo");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
@@ -225,13 +225,19 @@ const Auth = () => {
     });
 
     if (!signInResult.error && signInResult.data.user) {
+      const { data: existingProfile } = await (supabase as any)
+        .from("profiles")
+        .select("points")
+        .eq("id", signInResult.data.user.id)
+        .maybeSingle();
+
       const { error: profileUpdateError } = await (supabase as any)
         .from("profiles")
         .update({
           username: params.username,
           school: DEMO_SCHOOL,
           class: DEMO_CLASS,
-          points: DEMO_FIXED_POINTS,
+          points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
         })
         .eq("id", signInResult.data.user.id);
 
@@ -280,7 +286,7 @@ const Auth = () => {
         username: params.username,
         school: DEMO_SCHOOL,
         class: DEMO_CLASS,
-        points: DEMO_FIXED_POINTS,
+        points: DEMO_MIN_POINTS,
       })
       .eq("id", signUpResult.data.user.id);
 
@@ -444,19 +450,20 @@ const Auth = () => {
 
     setSchoolRequestLoading(false);
 
-    if (error) {
-      console.error("School request failed:", error);
-      toast.error("Schulanfrage konnte nicht gesendet werden.");
-      return;
-    }
-
     if (!registeredSchools.includes(schoolName)) {
       setRegisteredSchools((prev) => [...prev, schoolName].sort((a, b) => a.localeCompare(b)));
     }
     setSignupData((prev) => ({ ...prev, school: schoolName }));
-    toast.success("Schule hinzugefügt und ausgewählt.");
     setRequestedSchool("");
     setShowSchoolRequest(false);
+
+    if (error) {
+      console.error("School request failed:", error);
+      toast.success("Schule übernommen. Die Anfrage an die Datenbank konnte gerade nicht gespeichert werden.");
+      return;
+    }
+
+    toast.success("Schule hinzugefügt und ausgewählt.");
   };
 
   return (

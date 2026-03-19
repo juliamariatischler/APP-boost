@@ -15,7 +15,7 @@ const challengeData: Record<string, { title: string; image: string; description:
   daily: {
     title: "Tägliche Challenge",
     image: dailyImg,
-    description: "Absolviere beide Pflichtteile und bleib aktiv!",
+    description: "Absolviere beide Challenge-Teile und bleib aktiv!",
   },
   weekly: {
     title: "2-Wochenchallenge",

@@ -19,7 +19,6 @@ export const TopHeader = () => {
   const location = useLocation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isDemoUser, setIsDemoUser] = useState(false);
 
   const isDashboard = location.pathname === "/dashboard";
 
@@ -31,7 +30,7 @@ export const TopHeader = () => {
     const handlePointsUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ delta?: number }>;
       const delta = Number(customEvent.detail?.delta || 0);
-      if (!delta || isDemoUser) return;
+      if (!delta) return;
 
       setProfile((prev) => {
         if (!prev) return prev;
@@ -43,7 +42,7 @@ export const TopHeader = () => {
     return () => {
       window.removeEventListener("points-updated", handlePointsUpdated);
     };
-  }, [isDemoUser]);
+  }, []);
 
   const loadProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -53,7 +52,6 @@ export const TopHeader = () => {
     }
 
     const demoUser = isDemoEmail(session.user.email);
-    setIsDemoUser(demoUser);
 
     if (!demoUser) {
       const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");

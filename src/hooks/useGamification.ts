@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLevelForPoints, calculateStreak, getEnergyRank, type LevelInfo, type StreakInfo, type EnergyRank } from "@/lib/gamification";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
-import { getDemoAwarePoints, isDemoEmail } from "@/lib/demo";
+import { getDemoAwarePoints } from "@/lib/demo";
 
 interface Badge {
   id: string;
@@ -43,7 +43,6 @@ export interface GamificationData {
 }
 
 export function useGamification(userId: string | null, userClass?: string, userSchool?: string): GamificationData {
-  const [isDemoUser, setIsDemoUser] = useState(false);
   const [data, setData] = useState<GamificationData>({
     points: 0,
     level: getLevelForPoints(0),
@@ -68,7 +67,7 @@ export function useGamification(userId: string | null, userClass?: string, userS
     const handlePointsUpdated = (event: Event) => {
       const customEvent = event as CustomEvent<{ delta?: number }>;
       const delta = Number(customEvent.detail?.delta || 0);
-      if (!delta || isDemoUser) return;
+      if (!delta) return;
 
       setData((prev) => {
         const nextPoints = prev.points + delta;
@@ -85,7 +84,7 @@ export function useGamification(userId: string | null, userClass?: string, userS
     return () => {
       window.removeEventListener("points-updated", handlePointsUpdated);
     };
-  }, [isDemoUser]);
+  }, []);
 
   const isCompletedDay = (day: any): boolean => {
     return (
@@ -102,8 +101,6 @@ export function useGamification(userId: string | null, userClass?: string, userS
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const email = sessionData.session?.user?.email;
-      const demoUser = isDemoEmail(email);
-      setIsDemoUser(demoUser);
 
       const baseQueries = [
         supabase.from("profiles").select("points, rescue_days_used, last_rescue_reset").eq("id", uid).single(),

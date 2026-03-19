@@ -354,7 +354,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               <Trophy className="h-8 w-8 text-green-600" />
               <div>
                 <h2 className="text-lg font-bold text-green-600">🎉 Tageschallenge geschafft!</h2>
-                <p className="text-sm text-green-600/80">Du hast beide Pflichtteile abgeschlossen.</p>
+                <p className="text-sm text-green-600/80">Du hast beide Challenge-Teile abgeschlossen.</p>
               </div>
             </>
           ) : (
@@ -363,7 +363,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               <div>
                 <h2 className="text-lg font-bold text-foreground">Tageschallenge</h2>
                 <p className="text-sm text-muted-foreground">
-                  Erledige beide Pflichtteile, um die Challenge abzuschließen.
+                  Erledige beide Challenge-Teile, um die Challenge abzuschließen.
                 </p>
               </div>
             </>
@@ -380,7 +380,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             {isStepsComplete ? <CheckCircle2 className="h-5 w-5" /> : "1"}
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-foreground">Pflicht 1: Gehen</h3>
+            <h3 className="font-bold text-foreground">Challenge 1: Gehen</h3>
             <p className="text-xs text-muted-foreground">Mindestens {STEP_GOAL.toLocaleString()} Schritte sammeln</p>
           </div>
           {isStepsComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
@@ -468,7 +468,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             {allExercisesComplete ? <CheckCircle2 className="h-5 w-5" /> : "2"}
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-foreground">Pflicht 2: Übungen</h3>
+            <h3 className="font-bold text-foreground">Challenge 2: Übungen</h3>
             <p className="text-xs text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
             <p className="text-xs text-muted-foreground/80">Für jede begonnene Übung gibt es 1 Blitz.</p>
           </div>
