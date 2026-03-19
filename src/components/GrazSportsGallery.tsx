@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ExternalLink, MapPin } from "lucide-react";
+import { Calendar, Clock, ExternalLink, MapPin, Users } from "lucide-react";
 
 type SportOffer = {
   id: string;
@@ -17,6 +17,11 @@ type SportOffer = {
   image: string;
   club: string;
   location: string;
+  address: string;
+  dateLabel: string;
+  timeLabel: string;
+  ageLabel: string;
+  meetingPoint: string;
   summary: string;
   details: string;
   websiteUrl: string;
@@ -30,9 +35,14 @@ const offers: SportOffer[] = [
     image: "/tryit-football.svg",
     club: "SV Kainbach-Hönigtal",
     location: "Kainbach bei Graz",
+    address: "Sportplatz Kainbach, Schaftalstraße 157, 8044 Kainbach",
+    dateLabel: "Sonntag, 22.03.2026",
+    timeLabel: "15:30 bis 17:00 Uhr",
+    ageLabel: "8 bis 12 Jahre",
+    meetingPoint: "Treffpunkt 15 Minuten vorher beim Vereinsheim",
     summary: "Techniktraining und Team-Probetraining für Einsteiger:innen.",
     details:
-      "Du lernst Passspiel, Ballkontrolle und bekommst einen Einblick ins Vereinstraining. Optimal für alle, die Fußball in der Nähe von Graz ausprobieren wollen.",
+      "Du lernst Passspiel, Ballkontrolle und bekommst einen Einblick ins Vereinstraining. Optimal für alle, die Fußball in der Nähe von Graz ausprobieren wollen. Hallenschuhe oder Noppenschuhe mitnehmen.",
     websiteUrl: "https://www.google.com/search?q=SV+Kainbach-H%C3%B6nigtal",
     bookingUrl:
       "https://www.google.com/search?q=SV+Kainbach-H%C3%B6nigtal+Probetraining",
@@ -43,9 +53,14 @@ const offers: SportOffer[] = [
     image: "/tryit-american-football.svg",
     club: "Graz Giants",
     location: "Graz",
+    address: "ASKÖ Stadion Eggenberg, Schloßstraße 20, 8020 Graz",
+    dateLabel: "Montag, 23.03.2026",
+    timeLabel: "18:00 bis 19:30 Uhr",
+    ageLabel: "11 bis 15 Jahre",
+    meetingPoint: "Treffpunkt beim Haupteingang Nord",
     summary: "Erstes Football-Training mit Basics zu Technik, Positionen und Sicherheit.",
     details:
-      "Beim Tryout der Graz Giants bekommst du eine Einführung in Tackling-Basics, Laufwege und Teamplay. Es sind regelmäßig Einstiegsangebote für neue Spieler:innen verfügbar.",
+      "Beim Tryout der Graz Giants bekommst du eine Einführung in Tackling-Basics, Laufwege und Teamplay. Sportkleidung und Wasserflasche reichen für den Einstieg.",
     websiteUrl: "https://www.grazgiants.at/",
     bookingUrl: "https://www.grazgiants.at/",
   },
@@ -55,9 +70,14 @@ const offers: SportOffer[] = [
     image: "/tryit-handball.svg",
     club: "HSG Holding Graz",
     location: "Graz",
+    address: "Sporthalle Bruckner, Billrothstraße 1, 8010 Graz",
+    dateLabel: "Dienstag, 24.03.2026",
+    timeLabel: "16:30 bis 18:00 Uhr",
+    ageLabel: "9 bis 13 Jahre",
+    meetingPoint: "Treffpunkt direkt beim Halleneingang links",
     summary: "Schnuppertraining mit Wurftechnik, Koordination und Spielpraxis.",
     details:
-      "Du probierst verschiedene Handball-Stationen aus und trainierst in einer Gruppe mit Altersfokus. Perfekt, wenn du eine schnelle Teamsportart kennenlernen willst.",
+      "Du probierst verschiedene Handball-Stationen aus und trainierst in einer Gruppe mit Altersfokus. Perfekt, wenn du eine schnelle Teamsportart kennenlernen willst. Hallenschuhe mit heller Sohle empfohlen.",
     websiteUrl: "https://www.hsggraz.at/",
     bookingUrl: "https://www.hsggraz.at/",
   },
@@ -67,9 +87,14 @@ const offers: SportOffer[] = [
     image: "/tryit-volleyball.svg",
     club: "UVC Graz",
     location: "Graz",
+    address: "Blue Box Arena, Herrgottwiesgasse 260, 8055 Graz",
+    dateLabel: "Montag, 23.03.2026",
+    timeLabel: "17:15 bis 18:45 Uhr",
+    ageLabel: "10 bis 14 Jahre",
+    meetingPoint: "Treffpunkt vor Court 2",
     summary: "Schnuppertraining mit Aufschlag, Annahme und Teamspiel.",
     details:
-      "Du trainierst die Volleyball-Grundlagen mit Coach-Betreuung und steigst direkt in einfache Spielsituationen ein. Ideal zum Reinschnuppern in den Teamsport.",
+      "Du trainierst die Volleyball-Grundlagen mit Coach-Betreuung und steigst direkt in einfache Spielsituationen ein. Ideal zum Reinschnuppern in den Teamsport. Knieschoner sind optional.",
     websiteUrl: "https://www.uvcgraz.at/",
     bookingUrl: "https://www.uvcgraz.at/",
   },
@@ -79,9 +104,14 @@ const offers: SportOffer[] = [
     image: "/tryit-tennis.svg",
     club: "Grazer Tennis Club",
     location: "Graz",
+    address: "Grazer Tennis Club, Rosenberggürtel 63, 8010 Graz",
+    dateLabel: "Sonntag, 22.03.2026",
+    timeLabel: "10:00 bis 11:30 Uhr",
+    ageLabel: "8 bis 14 Jahre",
+    meetingPoint: "Treffpunkt am Clubhaus beim Platzplan",
     summary: "Einstiegstraining zu Vorhand, Rückhand und Aufschlag.",
     details:
-      "Beim Probetraining lernst du Schlagtechnik, Bewegung am Platz und kurze Matchformen kennen. Schläger können meist vor Ort ausgeliehen werden.",
+      "Beim Probetraining lernst du Schlagtechnik, Bewegung am Platz und kurze Matchformen kennen. Schläger können vor Ort ausgeliehen werden, Sportschuhe bitte mitbringen.",
     websiteUrl: "https://www.google.com/search?q=Grazer+Tennis+Club",
     bookingUrl: "https://www.google.com/search?q=Grazer+Tennis+Club+Probetraining",
   },
@@ -91,9 +121,14 @@ const offers: SportOffer[] = [
     image: "/tryit-judo.svg",
     club: "Judo Club Graz",
     location: "Graz",
+    address: "ASKÖ Halle Eggenberg, Georgigasse 1, 8020 Graz",
+    dateLabel: "Dienstag, 24.03.2026",
+    timeLabel: "17:00 bis 18:15 Uhr",
+    ageLabel: "7 bis 12 Jahre",
+    meetingPoint: "Treffpunkt vor dem Dojo, barfuß erst in der Halle",
     summary: "Sicher fallen, erste Wurftechniken und Partnerübungen.",
     details:
-      "Im Judo-Schnuppertraining lernst du kontrollierte Bewegungen, Respekt im Dojo und grundlegende Techniken. Geeignet für Anfänger:innen.",
+      "Im Judo-Schnuppertraining lernst du kontrollierte Bewegungen, Respekt im Dojo und grundlegende Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
     websiteUrl: "https://www.google.com/search?q=Judo+Club+Graz",
     bookingUrl: "https://www.google.com/search?q=Judo+Club+Graz+Schnuppertraining",
   },
@@ -103,9 +138,14 @@ const offers: SportOffer[] = [
     image: "/tryit-basketball.svg",
     club: "UBSC Graz",
     location: "Graz",
+    address: "Raiffeisen Sportpark, Hüttenbrennergasse 31, 8010 Graz",
+    dateLabel: "Montag, 23.03.2026",
+    timeLabel: "16:45 bis 18:00 Uhr",
+    ageLabel: "10 bis 13 Jahre",
+    meetingPoint: "Treffpunkt im Foyer beim Court A",
     summary: "Dribbling, Wurf und schnelles Teamplay im Probetraining.",
     details:
-      "Du bekommst eine strukturierte Einführung in die Basketball-Basics und kannst direkt in kleine Spielformen einsteigen.",
+      "Du bekommst eine strukturierte Einführung in die Basketball-Basics und kannst direkt in kleine Spielformen einsteigen. Hallenschuhe und Trinkflasche genügen.",
     websiteUrl: "https://www.ubscgraz.at/",
     bookingUrl: "https://www.ubscgraz.at/",
   },
@@ -115,9 +155,14 @@ const offers: SportOffer[] = [
     image: "/tryit-swimming.svg",
     club: "ATUS Graz Schwimmen",
     location: "Graz",
+    address: "Auster Sportbad, Janzgasse 21, 8020 Graz",
+    dateLabel: "Sonntag, 22.03.2026",
+    timeLabel: "09:00 bis 10:15 Uhr",
+    ageLabel: "9 bis 14 Jahre",
+    meetingPoint: "Treffpunkt beim Drehkreuz im Eingangsbereich",
     summary: "Techniktraining für Wasserlage, Atmung und Kraul-Grundlagen.",
     details:
-      "Beim Schwimm-Schnuppertermin arbeitest du an Technik und Ausdauer in kleinen Gruppen. Geeignet für verschiedene Leistungsniveaus.",
+      "Beim Schwimm-Schnuppertermin arbeitest du an Technik und Ausdauer in kleinen Gruppen. Schwimmbrille und Badekappe empfohlen, Eintritt über die Gruppe organisiert.",
     websiteUrl: "https://www.google.com/search?q=ATUS+Graz+Schwimmen",
     bookingUrl: "https://www.google.com/search?q=ATUS+Graz+Schwimmen+Schnuppertraining",
   },
@@ -134,8 +179,8 @@ const GrazSportsGallery = () => {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Wähle eine Sportart und tippe auf die Karte, um Details und den Link zum Verein
-        oder Probetraining zu sehen.
+        Wähle eine Sportart und tippe auf die Karte, um genaue Termine mit Datum, Uhrzeit,
+        Treffpunkt und Ort zu sehen.
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -161,6 +206,14 @@ const GrazSportsGallery = () => {
                 <MapPin className="h-4 w-4 text-primary" />
                 <span>{offer.location}</span>
               </div>
+              <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span>{offer.dateLabel}</span>
+              </div>
+              <div className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 text-primary" />
+                <span>{offer.timeLabel}</span>
+              </div>
               <p className="text-sm text-foreground">{offer.summary}</p>
             </div>
           </Card>
@@ -184,6 +237,45 @@ const GrazSportsGallery = () => {
                   alt={selectedOffer.sport}
                   className="h-48 w-full rounded-md object-cover"
                 />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Card className="p-3">
+                    <div className="flex items-start gap-2 text-sm text-foreground">
+                      <Calendar className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-semibold">Datum</p>
+                        <p className="text-muted-foreground">{selectedOffer.dateLabel}</p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="flex items-start gap-2 text-sm text-foreground">
+                      <Clock className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-semibold">Uhrzeit</p>
+                        <p className="text-muted-foreground">{selectedOffer.timeLabel}</p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="flex items-start gap-2 text-sm text-foreground">
+                      <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-semibold">Ort</p>
+                        <p className="text-muted-foreground">{selectedOffer.address}</p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="flex items-start gap-2 text-sm text-foreground">
+                      <Users className="mt-0.5 h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-semibold">Alter / Treffpunkt</p>
+                        <p className="text-muted-foreground">{selectedOffer.ageLabel}</p>
+                        <p className="text-muted-foreground">{selectedOffer.meetingPoint}</p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
                 <p className="text-sm text-foreground">{selectedOffer.details}</p>
 
                 <div className="flex flex-wrap gap-2">
