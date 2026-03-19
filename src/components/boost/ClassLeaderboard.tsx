@@ -24,6 +24,13 @@ interface Props {
 
 const CLASS_MILESTONE_PER_STUDENT = 300;
 const PUBLIC_STUDENT_LIMIT = 10;
+const PRESENTATION_CLASS_RANKINGS: ClassRanking[] = [
+  { className: "3b", school: "NMS Klusemann", totalFlashes: 2840, studentCount: 30 },
+  { className: "4a", school: "NMS Straden", totalFlashes: 2635, studentCount: 30 },
+  { className: "3e", school: "Ursulinen", totalFlashes: 2410, studentCount: 30 },
+  { className: "3c", school: "NMS Graz St. Peter", totalFlashes: 2195, studentCount: 30 },
+  { className: "2a", school: "MS Graz Smart City", totalFlashes: 1980, studentCount: 30 },
+];
 
 export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
   const [rankings, setRankings] = useState<ClassRanking[]>([]);
@@ -97,30 +104,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
           }))
         );
       } else {
-        const { data } = await supabase
-        .from("profiles")
-        .select("class, school, points");
-
-        if (data) {
-          const classMap = new Map<string, ClassRanking>();
-          for (const p of data) {
-            const key = `${p.class}|${p.school}`;
-            const existing = classMap.get(key);
-            if (existing) {
-              existing.totalFlashes += p.points;
-            } else {
-              classMap.set(key, {
-                className: p.class,
-                school: p.school,
-                totalFlashes: p.points,
-              });
-            }
-          }
-          const sorted = Array.from(classMap.values()).sort(
-            (a, b) => b.totalFlashes - a.totalFlashes
-          );
-          setRankings(sorted);
-        }
+        setRankings(PRESENTATION_CLASS_RANKINGS);
       }
 
       if (userClass && userSchool) {
