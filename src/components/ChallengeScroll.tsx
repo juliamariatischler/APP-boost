@@ -8,6 +8,7 @@ import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import { format, subDays } from "date-fns";
+import { isDemoEmail } from "@/lib/demo";
 
 interface Challenge {
   id: string;
@@ -44,6 +45,8 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
   const loadChallengeProgress = async () => {
     const today = new Date().toISOString().split('T')[0];
     const fourteenDaysAgo = format(subDays(new Date(), 13), "yyyy-MM-dd");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const demoUser = isDemoEmail(sessionData.session?.user?.email);
 
     const [
       todayResultRes,
@@ -76,6 +79,7 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
 
     const todayData = todayResultRes.data;
     if (!todayResultRes.error && todayData) {
+      const stepsProgress = Math.min((todayData.steps || 0) / STEP_GOAL, 1) * 50;
       const completedExercises = [
         (todayData.jumping_jacks || 0) >= EXERCISE_GOALS.jumping_jacks,
         (todayData.push_ups || 0) >= EXERCISE_GOALS.push_ups,
@@ -83,9 +87,11 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
         (todayData.planks || 0) >= EXERCISE_GOALS.planks,
         (todayData.sit_ups || 0) >= EXERCISE_GOALS.sit_ups,
       ].filter(Boolean).length;
-      setDailyProgress(Math.round((completedExercises / 5) * 100));
+      const exercisesProgress = Math.min(completedExercises / 5, 1) * 50;
+      const computedDailyProgress = Math.round(stepsProgress + exercisesProgress);
+      setDailyProgress(demoUser ? Math.max(26, computedDailyProgress) : computedDailyProgress);
     } else {
-      setDailyProgress(0);
+      setDailyProgress(demoUser ? 26 : 0);
     }
 
     const twoWeekData = twoWeekResultsRes.data || [];
