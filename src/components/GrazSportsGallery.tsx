@@ -22,6 +22,7 @@ type SportOffer = {
   timeLabel: string;
   ageLabel: string;
   meetingPoint: string;
+  rewardLabel: string;
   summary: string;
   details: string;
   websiteUrl: string;
@@ -40,6 +41,7 @@ const offers: SportOffer[] = [
     timeLabel: "15:30 bis 17:00 Uhr",
     ageLabel: "8 bis 12 Jahre",
     meetingPoint: "Treffpunkt 15 Minuten vorher beim Vereinsheim",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Techniktraining und Team-Probetraining für Einsteiger:innen.",
     details:
       "Du lernst Passspiel, Ballkontrolle und bekommst einen Einblick ins Vereinstraining. Optimal für alle, die Fußball in der Nähe von Graz ausprobieren wollen. Hallenschuhe oder Noppenschuhe mitnehmen.",
@@ -58,6 +60,7 @@ const offers: SportOffer[] = [
     timeLabel: "18:00 bis 19:30 Uhr",
     ageLabel: "11 bis 15 Jahre",
     meetingPoint: "Treffpunkt beim Haupteingang Nord",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Erstes Football-Training mit Basics zu Technik, Positionen und Sicherheit.",
     details:
       "Beim Tryout der Graz Giants bekommst du eine Einführung in Tackling-Basics, Laufwege und Teamplay. Sportkleidung und Wasserflasche reichen für den Einstieg.",
@@ -71,10 +74,11 @@ const offers: SportOffer[] = [
     club: "HSG Holding Graz",
     location: "Graz",
     address: "Sporthalle Bruckner, Billrothstraße 1, 8010 Graz",
-    dateLabel: "Dienstag, 24.03.2026",
-    timeLabel: "16:30 bis 18:00 Uhr",
+    dateLabel: "Freitag, 20.03.2026",
+    timeLabel: "18:00 bis 19:30 Uhr",
     ageLabel: "9 bis 13 Jahre",
     meetingPoint: "Treffpunkt direkt beim Halleneingang links",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Schnuppertraining mit Wurftechnik, Koordination und Spielpraxis.",
     details:
       "Du probierst verschiedene Handball-Stationen aus und trainierst in einer Gruppe mit Altersfokus. Perfekt, wenn du eine schnelle Teamsportart kennenlernen willst. Hallenschuhe mit heller Sohle empfohlen.",
@@ -92,6 +96,7 @@ const offers: SportOffer[] = [
     timeLabel: "17:15 bis 18:45 Uhr",
     ageLabel: "10 bis 14 Jahre",
     meetingPoint: "Treffpunkt vor Court 2",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Schnuppertraining mit Aufschlag, Annahme und Teamspiel.",
     details:
       "Du trainierst die Volleyball-Grundlagen mit Coach-Betreuung und steigst direkt in einfache Spielsituationen ein. Ideal zum Reinschnuppern in den Teamsport. Knieschoner sind optional.",
@@ -109,6 +114,7 @@ const offers: SportOffer[] = [
     timeLabel: "10:00 bis 11:30 Uhr",
     ageLabel: "8 bis 14 Jahre",
     meetingPoint: "Treffpunkt am Clubhaus beim Platzplan",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Einstiegstraining zu Vorhand, Rückhand und Aufschlag.",
     details:
       "Beim Probetraining lernst du Schlagtechnik, Bewegung am Platz und kurze Matchformen kennen. Schläger können vor Ort ausgeliehen werden, Sportschuhe bitte mitbringen.",
@@ -126,6 +132,7 @@ const offers: SportOffer[] = [
     timeLabel: "17:00 bis 18:15 Uhr",
     ageLabel: "7 bis 12 Jahre",
     meetingPoint: "Treffpunkt vor dem Dojo, barfuß erst in der Halle",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Sicher fallen, erste Wurftechniken und Partnerübungen.",
     details:
       "Im Judo-Schnuppertraining lernst du kontrollierte Bewegungen, Respekt im Dojo und grundlegende Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
@@ -143,6 +150,7 @@ const offers: SportOffer[] = [
     timeLabel: "16:45 bis 18:00 Uhr",
     ageLabel: "10 bis 13 Jahre",
     meetingPoint: "Treffpunkt im Foyer beim Court A",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Dribbling, Wurf und schnelles Teamplay im Probetraining.",
     details:
       "Du bekommst eine strukturierte Einführung in die Basketball-Basics und kannst direkt in kleine Spielformen einsteigen. Hallenschuhe und Trinkflasche genügen.",
@@ -160,6 +168,7 @@ const offers: SportOffer[] = [
     timeLabel: "09:00 bis 10:15 Uhr",
     ageLabel: "9 bis 14 Jahre",
     meetingPoint: "Treffpunkt beim Drehkreuz im Eingangsbereich",
+    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     summary: "Techniktraining für Wasserlage, Atmung und Kraul-Grundlagen.",
     details:
       "Beim Schwimm-Schnuppertermin arbeitest du an Technik und Ausdauer in kleinen Gruppen. Schwimmbrille und Badekappe empfohlen, Eintritt über die Gruppe organisiert.",
@@ -213,6 +222,10 @@ const GrazSportsGallery = () => {
               <div className="mb-3 flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4 text-primary" />
                 <span>{offer.timeLabel}</span>
+              </div>
+              <div className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                Nächstes Training am {offer.dateLabel.replace(/^[^,]+, /, "")} um{" "}
+                {offer.timeLabel.split(" bis ")[0]} in {offer.location}
               </div>
               <p className="text-sm text-foreground">{offer.summary}</p>
             </div>
@@ -277,6 +290,14 @@ const GrazSportsGallery = () => {
                   </Card>
                 </div>
                 <p className="text-sm text-foreground">{selectedOffer.details}</p>
+                <Card className="border-primary/20 bg-primary/5 p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    Nächstes Training am {selectedOffer.dateLabel.replace(/^[^,]+, /, "")} um{" "}
+                    {selectedOffer.timeLabel.split(" bis ")[0]} Uhr in {selectedOffer.location}
+                    {" "}bei {selectedOffer.club}.
+                  </p>
+                  <p className="mt-1 text-sm text-primary">{selectedOffer.rewardLabel}</p>
+                </Card>
 
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline">
@@ -296,7 +317,7 @@ const GrazSportsGallery = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Probetraining anfragen
+                      Nimm teil und sichere dir 3 Blitze
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
                   </Button>

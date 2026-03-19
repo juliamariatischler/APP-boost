@@ -71,10 +71,11 @@ const Auth = () => {
     // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/");
+        const params = new URLSearchParams(location.search);
+        navigate(params.get("demo") === "student" ? "/dashboard" : "/");
       }
     });
-  }, [navigate]);
+  }, [location.search, navigate]);
 
   useEffect(() => {
     const loadRegisteredSchools = async () => {
@@ -296,7 +297,7 @@ const Auth = () => {
       });
 
       toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!");
-      navigate("/");
+      navigate("/dashboard");
     } catch (error: any) {
       toast.error("Demo-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
     } finally {
@@ -314,7 +315,7 @@ const Auth = () => {
       });
 
       toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!");
-      navigate("/");
+      navigate("/dashboard");
     } catch (error: any) {
       toast.error("Demo-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
     } finally {
