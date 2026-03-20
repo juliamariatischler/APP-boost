@@ -29,6 +29,41 @@ type ClassMilestone = {
   sort_order: number;
 };
 
+const fallbackRewards: RewardItem[] = [
+  { id: "fallback-bipa-50", title: "BIPA Gutschein 5 EUR", partner: "BIPA", threshold: 50, category: "gutscheine", icon: "🎀" },
+  { id: "fallback-dm-75", title: "dm Gutschein 5 EUR", partner: "dm", threshold: 75, category: "gutscheine", icon: "🧴" },
+  { id: "fallback-intersport-100", title: "Sport-Trinkflasche", partner: "Intersport", threshold: 100, category: "sport", icon: "🍶" },
+  { id: "fallback-spar-200", title: "SPAR Gutschein 10 EUR", partner: "SPAR", threshold: 200, category: "gutscheine", icon: "🛒" },
+  { id: "fallback-intersport-400", title: "Sport-Rucksack", partner: "Intersport", threshold: 400, category: "sport", icon: "🎒" },
+];
+
+const fallbackMilestones: ClassMilestone[] = [
+  {
+    id: "fallback-class-2500",
+    threshold: 2500,
+    title: "Klassen-Equipment",
+    description: "Baelle, Seile und mehr fuer eure Klasse.",
+    icon: "⚽",
+    sort_order: 1,
+  },
+  {
+    id: "fallback-class-4000",
+    threshold: 4000,
+    title: "Klassen-Event",
+    description: "Ein gemeinsames Sport-Event als naechstes grosses Ziel.",
+    icon: "🎉",
+    sort_order: 2,
+  },
+  {
+    id: "fallback-class-6000",
+    threshold: 6000,
+    title: "Partner-Paket",
+    description: "Ein Ueberraschungspaket fuer die ganze Klasse.",
+    icon: "🎁",
+    sort_order: 3,
+  },
+];
+
 const Rewards = () => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("alle");
@@ -88,15 +123,19 @@ const Rewards = () => {
     if (rewardsError) {
       console.error(rewardsError);
       toast.error("Belohnungen konnten nicht geladen werden.");
+      setRewards(fallbackRewards);
     } else {
-      setRewards((rewardRows || []) as RewardItem[]);
+      const nextRewards = ((rewardRows || []) as RewardItem[]).filter((reward) => reward.threshold > 0);
+      setRewards(nextRewards.length > 0 ? nextRewards : fallbackRewards);
     }
 
     if (milestonesError) {
       console.error(milestonesError);
       toast.error("Meilensteine konnten nicht geladen werden.");
+      setMilestones(fallbackMilestones);
     } else {
-      setMilestones((milestoneRows || []) as ClassMilestone[]);
+      const nextMilestones = ((milestoneRows || []) as ClassMilestone[]).filter((milestone) => milestone.threshold > 0);
+      setMilestones(nextMilestones.length > 0 ? nextMilestones : fallbackMilestones);
     }
 
     if (classPointsError) {

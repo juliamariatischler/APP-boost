@@ -18,6 +18,7 @@ import {
   Zap
 } from "lucide-react";
 import { format } from "date-fns";
+import { isValid, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 
 const POINTS_PER_VISIT = 25;
@@ -47,7 +48,7 @@ type TrialSession = {
   min_age: number | null;
   max_age: number | null;
   requirements: string | null;
-  clubs: Club;
+  clubs: Club | null;
 };
 
 type Registration = {
@@ -210,6 +211,15 @@ const TrialSessionsList = () => {
     return time.substring(0, 5);
   };
 
+  const formatSessionDate = (date: string) => {
+    const parsedDate = parseISO(date);
+    if (!isValid(parsedDate)) {
+      return date;
+    }
+
+    return format(parsedDate, "EEEE, d. MMMM yyyy", { locale: de });
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -250,22 +260,26 @@ const TrialSessionsList = () => {
         const availableSpots = getAvailableSpots(session);
         const isFull = availableSpots <= 0;
         const registered = isRegistered(session.id);
+        const club = session.clubs;
+        const clubName = club?.name || "Verein";
+        const clubSportType = club?.sport_type || "Sport";
+        const clubInitial = clubName.charAt(0).toUpperCase();
 
         return (
           <Card key={session.id} className="p-6 bg-card">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Club Info */}
               <div className="flex-shrink-0">
-                {session.clubs.logo_url ? (
+                {club?.logo_url ? (
                   <img 
-                    src={session.clubs.logo_url} 
-                    alt={session.clubs.name}
+                    src={club.logo_url} 
+                    alt={clubName}
                     className="w-20 h-20 rounded-lg object-cover"
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-lg bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl font-bold text-primary">
-                      {session.clubs.name.charAt(0)}
+                      {clubInitial}
                     </span>
                   </div>
                 )}
@@ -276,10 +290,10 @@ const TrialSessionsList = () => {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h3 className="text-xl font-bold text-foreground">{session.title}</h3>
-                    <p className="text-primary font-medium">{session.clubs.name}</p>
+                    <p className="text-primary font-medium">{clubName}</p>
                   </div>
                   <Badge variant="secondary" className="text-sm">
-                    {session.clubs.sport_type}
+                    {clubSportType}
                   </Badge>
                 </div>
 
@@ -290,9 +304,7 @@ const TrialSessionsList = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2 text-foreground">
                     <Calendar className="h-4 w-4 text-primary" />
-                    <span>
-                      {format(new Date(session.date), "EEEE, d. MMMM yyyy", { locale: de })}
-                    </span>
+                    <span>{formatSessionDate(session.date)}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-foreground">
@@ -336,27 +348,27 @@ const TrialSessionsList = () => {
 
                 {/* Club Contact - Only show contact buttons, not raw data */}
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground pt-2 border-t">
-                  {session.clubs.contact_email && (
+                  {club?.contact_email && (
                     <a 
-                      href={`mailto:${session.clubs.contact_email}`}
+                      href={`mailto:${club.contact_email}`}
                       className="flex items-center gap-1 hover:text-primary transition-colors"
                     >
                       <Mail className="h-3 w-3" />
                       E-Mail senden
                     </a>
                   )}
-                  {session.clubs.contact_phone && (
+                  {club?.contact_phone && (
                     <a 
-                      href={`tel:${session.clubs.contact_phone}`}
+                      href={`tel:${club.contact_phone}`}
                       className="flex items-center gap-1 hover:text-primary transition-colors"
                     >
                       <Phone className="h-3 w-3" />
                       Anrufen
                     </a>
                   )}
-                  {session.clubs.website && (
+                  {club?.website && (
                     <a 
-                      href={session.clubs.website}
+                      href={club.website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 hover:text-primary transition-colors"
