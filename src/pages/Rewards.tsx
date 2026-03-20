@@ -122,7 +122,6 @@ const Rewards = () => {
 
     if (rewardsError) {
       console.error(rewardsError);
-      toast.error("Belohnungen konnten nicht geladen werden.");
       setRewards(fallbackRewards);
     } else {
       const nextRewards = ((rewardRows || []) as RewardItem[]).filter((reward) => reward.threshold > 0);
@@ -131,7 +130,6 @@ const Rewards = () => {
 
     if (milestonesError) {
       console.error(milestonesError);
-      toast.error("Meilensteine konnten nicht geladen werden.");
       setMilestones(fallbackMilestones);
     } else {
       const nextMilestones = ((milestoneRows || []) as ClassMilestone[]).filter((milestone) => milestone.threshold > 0);
