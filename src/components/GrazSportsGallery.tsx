@@ -25,7 +25,6 @@ type SportOffer = {
   rewardLabel: string;
   rewardPoints: number;
   formatLabel: string;
-  stars: number;
   summary: string;
   details: string;
   websiteUrl: string;
@@ -47,7 +46,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    stars: 1,
     summary: "Techniktraining und Team-Probetraining für Einsteiger:innen.",
     details:
       "Du lernst Passspiel, Ballkontrolle und bekommst einen Einblick ins Vereinstraining. Optimal für alle, die Fußball in der Nähe von Graz ausprobieren wollen. Hallenschuhe oder Noppenschuhe mitnehmen.",
@@ -69,7 +67,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    stars: 2,
     summary: "Erstes Football-Training mit Basics zu Technik, Positionen und Sicherheit.",
     details:
       "Beim Tryout der Graz Giants bekommst du eine Einführung in Tackling-Basics, Laufwege und Teamplay. Sportkleidung und Wasserflasche reichen für den Einstieg.",
@@ -90,7 +87,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    stars: 1,
     summary: "Schnuppertraining mit Wurftechnik, Koordination und Spielpraxis.",
     details:
       "Du probierst verschiedene Handball-Stationen aus und trainierst in einer Gruppe mit Altersfokus. Perfekt, wenn du eine schnelle Teamsportart kennenlernen willst. Hallenschuhe mit heller Sohle empfohlen.",
@@ -111,7 +107,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Kurs",
-    stars: 3,
     summary: "Schnuppertraining mit Aufschlag, Annahme und Teamspiel.",
     details:
       "Du trainierst die Volleyball-Grundlagen mit Coach-Betreuung und steigst direkt in einfache Spielsituationen ein. Ideal zum Reinschnuppern in den Teamsport. Knieschoner sind optional.",
@@ -132,7 +127,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    stars: 2,
     summary: "Einstiegstraining zu Vorhand, Rückhand und Aufschlag.",
     details:
       "Beim Probetraining lernst du Schlagtechnik, Bewegung am Platz und kurze Matchformen kennen. Schläger können vor Ort ausgeliehen werden, Sportschuhe bitte mitbringen.",
@@ -153,7 +147,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    stars: 2,
     summary: "Sicher fallen, erste Wurftechniken und Partnerübungen.",
     details:
       "Im Judo-Schnuppertraining lernst du kontrollierte Bewegungen, Respekt im Dojo und grundlegende Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
@@ -174,7 +167,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Kurs",
-    stars: 3,
     summary: "Dribbling, Wurf und schnelles Teamplay im Probetraining.",
     details:
       "Du bekommst eine strukturierte Einführung in die Basketball-Basics und kannst direkt in kleine Spielformen einsteigen. Hallenschuhe und Trinkflasche genügen.",
@@ -195,7 +187,6 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Kurs",
-    stars: 3,
     summary: "Techniktraining für Wasserlage, Atmung und Kraul-Grundlagen.",
     details:
       "Beim Schwimm-Schnuppertermin arbeitest du an Technik und Ausdauer in kleinen Gruppen. Schwimmbrille und Badekappe empfohlen, Eintritt über die Gruppe organisiert.",
@@ -243,9 +234,6 @@ const GrazSportsGallery = () => {
                 <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
                   +{offer.rewardPoints} Blitze
                 </Badge>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {"★".repeat(offer.stars)}
-                </span>
               </div>
               <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 text-primary" />
@@ -338,9 +326,6 @@ const GrazSportsGallery = () => {
                     <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
                       +{selectedOffer.rewardPoints} Blitze
                     </Badge>
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {"★".repeat(selectedOffer.stars)}
-                    </span>
                   </div>
                 </Card>
 
