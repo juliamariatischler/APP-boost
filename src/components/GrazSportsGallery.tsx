@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +10,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Calendar, Clock, ExternalLink, MapPin, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type SportOffer = {
   id: string;
   sport: string;
   image: string;
   club: string;
+  federation: "ASVÖ" | "ASKÖ" | "SPORTUNION";
   location: string;
   address: string;
   dateLabel: string;
@@ -27,18 +29,23 @@ type SportOffer = {
   formatLabel: string;
   summary: string;
   details: string;
+  imageHeadline: string;
+  imageSubline: string;
   websiteUrl: string;
   bookingUrl: string;
 };
+
+type OfferFilter = "all" | "Probetraining" | "Kurs";
 
 const offers: SportOffer[] = [
   {
     id: "soccer-kainbach",
     sport: "Fußball",
     image: "/tryit-football.svg",
-    club: "SV Kainbach-Hönigtal",
+    club: "ESK Graz",
+    federation: "ASKÖ",
     location: "Kainbach bei Graz",
-    address: "Sportplatz Kainbach, Schaftalstraße 157, 8044 Kainbach",
+    address: "ASKÖ Stadion Eggenberg, Schloßstraße 20, 8020 Graz",
     dateLabel: "Sonntag, 22.03.2026",
     timeLabel: "15:30 bis 17:00 Uhr",
     ageLabel: "8 bis 12 Jahre",
@@ -46,40 +53,45 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    summary: "Techniktraining und Team-Probetraining für Einsteiger:innen.",
+    summary: "Fußball-Probetraining mit echtem Teamgefühl, Tempo und viel Ballkontakt.",
     details:
-      "Du lernst Passspiel, Ballkontrolle und bekommst einen Einblick ins Vereinstraining. Optimal für alle, die Fußball in der Nähe von Graz ausprobieren wollen. Hallenschuhe oder Noppenschuhe mitnehmen.",
-    websiteUrl: "https://www.google.com/search?q=SV+Kainbach-H%C3%B6nigtal",
-    bookingUrl:
-      "https://www.google.com/search?q=SV+Kainbach-H%C3%B6nigtal+Probetraining",
+      "Du lernst Passspiel, Ballkontrolle und bekommst einen direkten Einblick in das Vereinsleben. Die ASKÖ-Vereinszuordnung von ESK Graz ist über die ASKÖ-Steiermark-Vereinssuche belegt. Sportschuhe und Trinkflasche mitnehmen.",
+    imageHeadline: "Spuer den Teamspirit",
+    imageSubline: "Offenes Probetraining mit echtem Stadiongefuehl.",
+    websiteUrl: "http://www.eskgraz.at",
+    bookingUrl: "http://www.eskgraz.at",
   },
   {
     id: "football-giants",
-    sport: "Football",
+    sport: "Sportakrobatik",
     image: "/tryit-american-football.svg",
-    club: "Graz Giants",
+    club: "SPORTUNION Graz",
+    federation: "SPORTUNION",
     location: "Graz",
-    address: "ASKÖ Stadion Eggenberg, Schloßstraße 20, 8020 Graz",
+    address: "Feuerbachgasse 21, 8020 Graz",
     dateLabel: "Montag, 23.03.2026",
     timeLabel: "18:00 bis 19:30 Uhr",
-    ageLabel: "11 bis 15 Jahre",
-    meetingPoint: "Treffpunkt beim Haupteingang Nord",
+    ageLabel: "7 bis 15 Jahre",
+    meetingPoint: "Treffpunkt im Eingangsbereich 10 Minuten vorher",
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
-    formatLabel: "Probetraining",
-    summary: "Erstes Football-Training mit Basics zu Technik, Positionen und Sicherheit.",
+    formatLabel: "Kurs",
+    summary: "Bewegung, Koordination und mutige erste Elemente in einer starken Gruppe.",
     details:
-      "Beim Tryout der Graz Giants bekommst du eine Einführung in Tackling-Basics, Laufwege und Teamplay. Sportkleidung und Wasserflasche reichen für den Einstieg.",
-    websiteUrl: "https://www.grazgiants.at/",
-    bookingUrl: "https://www.grazgiants.at/",
+      "Die SPORTUNION Graz fuehrt laut offiziellem Vereinsprofil ein breites Kinder- und Kursprogramm. Dieses Angebot setzt auf Koordination, Haltung und ein starkes Gemeinschaftsgefuehl. Sportkleidung und Wasser reichen fuer den Einstieg.",
+    imageHeadline: "Mut trifft Bewegung",
+    imageSubline: "Kursstart mit Fokus auf Koordination und Selbstvertrauen.",
+    websiteUrl: "https://graz.sportunion.at/",
+    bookingUrl: "https://graz.sportunion.at/",
   },
   {
     id: "handball-graz",
     sport: "Handball",
     image: "/tryit-handball.svg",
-    club: "HSG Holding Graz",
+    club: "ASKÖ Handball Graz",
+    federation: "ASKÖ",
     location: "Graz",
-    address: "Sporthalle Bruckner, Billrothstraße 1, 8010 Graz",
+    address: "ASKÖ Stadion Eggenberg, Schloßstraße 20, 8020 Graz",
     dateLabel: "Freitag, 20.03.2026",
     timeLabel: "18:00 bis 19:30 Uhr",
     ageLabel: "9 bis 13 Jahre",
@@ -87,19 +99,22 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    summary: "Schnuppertraining mit Wurftechnik, Koordination und Spielpraxis.",
+    summary: "Schnuppertraining mit Tempo, Wurfkraft und echtem Hallenfeeling.",
     details:
-      "Du probierst verschiedene Handball-Stationen aus und trainierst in einer Gruppe mit Altersfokus. Perfekt, wenn du eine schnelle Teamsportart kennenlernen willst. Hallenschuhe mit heller Sohle empfohlen.",
-    websiteUrl: "https://www.hsggraz.at/",
-    bookingUrl: "https://www.hsggraz.at/",
+      "Das Angebot orientiert sich an ASKÖ-nahen Hallensportstrukturen in Graz und setzt auf einen direkten Einstieg in Technik und Spielpraxis. Hallenschuhe mit heller Sohle empfohlen.",
+    imageHeadline: "Volle Halle, voller Fokus",
+    imageSubline: "Probetraining fuer schnelle Entscheidungen und starke Wuerfe.",
+    websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
+    bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
   },
   {
     id: "volleyball-graz",
     sport: "Volleyball",
     image: "/tryit-volleyball.svg",
-    club: "UVC Graz",
+    club: "UVC Holding Graz",
+    federation: "SPORTUNION",
     location: "Graz",
-    address: "Blue Box Arena, Herrgottwiesgasse 260, 8055 Graz",
+    address: "Pfanghofweg 2b, 8045 Graz",
     dateLabel: "Montag, 23.03.2026",
     timeLabel: "17:15 bis 18:45 Uhr",
     ageLabel: "10 bis 14 Jahre",
@@ -107,9 +122,11 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Kurs",
-    summary: "Schnuppertraining mit Aufschlag, Annahme und Teamspiel.",
+    summary: "Volleyball-Kurs mit sichtbarem Leistungsumfeld und starkem Nachwuchscharakter.",
     details:
-      "Du trainierst die Volleyball-Grundlagen mit Coach-Betreuung und steigst direkt in einfache Spielsituationen ein. Ideal zum Reinschnuppern in den Teamsport. Knieschoner sind optional.",
+      "UVC Holding Graz ist laut SPORTUNION-Vereinsprofil ein SPORTUNION-Verein in Graz. Der Kurs vermittelt Aufschlag, Annahme und Teamspiel in einem Umfeld mit starker Nachwuchsarbeit. Knieschoner sind optional.",
+    imageHeadline: "Spring rein ins Spiel",
+    imageSubline: "Volleyball-Kurs mit Vereinsdynamik und Teamenergie.",
     websiteUrl: "https://www.uvcgraz.at/",
     bookingUrl: "https://www.uvcgraz.at/",
   },
@@ -117,9 +134,10 @@ const offers: SportOffer[] = [
     id: "tennis-graz",
     sport: "Tennis",
     image: "/tryit-tennis.svg",
-    club: "Grazer Tennis Club",
+    club: "GAK Tennis",
+    federation: "ASVÖ",
     location: "Graz",
-    address: "Grazer Tennis Club, Rosenberggürtel 63, 8010 Graz",
+    address: "Körösistraße 57, 8010 Graz",
     dateLabel: "Sonntag, 22.03.2026",
     timeLabel: "10:00 bis 11:30 Uhr",
     ageLabel: "8 bis 14 Jahre",
@@ -127,19 +145,22 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    summary: "Einstiegstraining zu Vorhand, Rückhand und Aufschlag.",
+    summary: "Tennis-Probetraining mit Clubatmosphaere, Tempo und klaren Erfolgsmomenten.",
     details:
-      "Beim Probetraining lernst du Schlagtechnik, Bewegung am Platz und kurze Matchformen kennen. Schläger können vor Ort ausgeliehen werden, Sportschuhe bitte mitbringen.",
-    websiteUrl: "https://www.google.com/search?q=Grazer+Tennis+Club",
-    bookingUrl: "https://www.google.com/search?q=Grazer+Tennis+Club+Probetraining",
+      "GAK Tennis wird in einem aktuellen ASVÖ-Steiermark-Beitrag als ASVÖ-Verein im Vereinscoaching-Kontext genannt. Das Probetraining setzt auf Schlagtechnik, Bewegung am Platz und schnelle Matchformen. Schlaeger koennen vor Ort ausgeliehen werden.",
+    imageHeadline: "Dein erster sauberer Treffer",
+    imageSubline: "Probetraining mit Clubfeeling auf rotem Sand.",
+    websiteUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
+    bookingUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
   },
   {
     id: "judo-graz",
     sport: "Judo",
     image: "/tryit-judo.svg",
-    club: "Judo Club Graz",
+    club: "ASKÖ-Judo-Club-Graz",
+    federation: "ASKÖ",
     location: "Graz",
-    address: "ASKÖ Halle Eggenberg, Georgigasse 1, 8020 Graz",
+    address: "8020 Graz",
     dateLabel: "Dienstag, 24.03.2026",
     timeLabel: "17:00 bis 18:15 Uhr",
     ageLabel: "7 bis 12 Jahre",
@@ -147,19 +168,22 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Probetraining",
-    summary: "Sicher fallen, erste Wurftechniken und Partnerübungen.",
+    summary: "Judo-Probetraining mit Respekt, Balance und sichtbarem Fortschritt.",
     details:
-      "Im Judo-Schnuppertraining lernst du kontrollierte Bewegungen, Respekt im Dojo und grundlegende Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
-    websiteUrl: "https://www.google.com/search?q=Judo+Club+Graz",
-    bookingUrl: "https://www.google.com/search?q=Judo+Club+Graz+Schnuppertraining",
+      "Der ASKÖ-Judo-Club-Graz ist in der ASKÖ-Steiermark-Vereinssuche als Grazer Judo-Verein aufgefuehrt. Im Schnuppertraining lernen Kinder kontrollierte Bewegungen, Respekt im Dojo und erste Techniken. Lange Jogginghose und T-Shirt reichen fuer den Einstieg.",
+    imageHeadline: "Staerke mit Haltung",
+    imageSubline: "Probetraining mit Respekt, Mut und Koerperkontrolle.",
+    websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
+    bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
   },
   {
     id: "basketball-graz",
     sport: "Basketball",
     image: "/tryit-basketball.svg",
-    club: "UBSC Graz",
+    club: "Damen-Basketballclub Graz",
+    federation: "ASKÖ",
     location: "Graz",
-    address: "Raiffeisen Sportpark, Hüttenbrennergasse 31, 8010 Graz",
+    address: "8047 Graz",
     dateLabel: "Montag, 23.03.2026",
     timeLabel: "16:45 bis 18:00 Uhr",
     ageLabel: "10 bis 13 Jahre",
@@ -167,19 +191,22 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Kurs",
-    summary: "Dribbling, Wurf und schnelles Teamplay im Probetraining.",
+    summary: "Basketball-Kurs mit Energie, Teamplay und klarer Nachwuchsorientierung.",
     details:
-      "Du bekommst eine strukturierte Einführung in die Basketball-Basics und kannst direkt in kleine Spielformen einsteigen. Hallenschuhe und Trinkflasche genügen.",
-    websiteUrl: "https://www.ubscgraz.at/",
-    bookingUrl: "https://www.ubscgraz.at/",
+      "Der Damen-Basketballclub Graz ist laut ASKÖ-Steiermark-Vereinssuche ein Grazer ASKÖ-Basketballverein. Der Kurs verbindet Dribbling, Wurf und kleine Spielformen mit klarer Trainerstruktur. Hallenschuhe und Trinkflasche genuegen.",
+    imageHeadline: "Volle Energie auf dem Court",
+    imageSubline: "Kurs mit Tempo, Teamplay und starker Clubidentitaet.",
+    websiteUrl: "http://www.dbbc.at",
+    bookingUrl: "http://www.dbbc.at",
   },
   {
     id: "swimming-graz",
-    sport: "Schwimmen",
+    sport: "Fechten",
     image: "/tryit-swimming.svg",
-    club: "ATUS Graz Schwimmen",
+    club: "Steirischer Landesfechtclub Graz",
+    federation: "ASVÖ",
     location: "Graz",
-    address: "Auster Sportbad, Janzgasse 21, 8020 Graz",
+    address: "8010 Graz",
     dateLabel: "Sonntag, 22.03.2026",
     timeLabel: "09:00 bis 10:15 Uhr",
     ageLabel: "9 bis 14 Jahre",
@@ -187,16 +214,44 @@ const offers: SportOffer[] = [
     rewardLabel: "Nimm teil und sichere dir 3 Blitze",
     rewardPoints: 3,
     formatLabel: "Kurs",
-    summary: "Techniktraining für Wasserlage, Atmung und Kraul-Grundlagen.",
+    summary: "Fechtkurs mit Fokus, Reaktion und einem starken ersten Aha-Moment.",
     details:
-      "Beim Schwimm-Schnuppertermin arbeitest du an Technik und Ausdauer in kleinen Gruppen. Schwimmbrille und Badekappe empfohlen, Eintritt über die Gruppe organisiert.",
-    websiteUrl: "https://www.google.com/search?q=ATUS+Graz+Schwimmen",
-    bookingUrl: "https://www.google.com/search?q=ATUS+Graz+Schwimmen+Schnuppertraining",
+      "Der Steirische Landesfechtclub in Graz wird in einem ASVÖ-Steiermark-Beitrag als ASVÖ-Verein genannt. Der Kurs fokussiert Reaktion, Koordination und den spielerischen Einstieg in eine besondere Sportart.",
+    imageHeadline: "Schnell denken, schnell reagieren",
+    imageSubline: "Fechtkurs mit Stil, Fokus und echtem Neugierfaktor.",
+    websiteUrl: "https://www.asvoe-steiermark.at/de/newsshow-richtig-fit-fuer-asvoe-vereine",
+    bookingUrl: "https://www.asvoe-steiermark.at/de/newsshow-richtig-fit-fuer-asvoe-vereine",
   },
 ];
 
 const GrazSportsGallery = () => {
   const [selectedOffer, setSelectedOffer] = useState<SportOffer | null>(null);
+  const [activeFilter, setActiveFilter] = useState<OfferFilter>("all");
+
+  const filterCounts = useMemo(
+    () => ({
+      all: offers.length,
+      Probetraining: offers.filter((offer) => offer.formatLabel === "Probetraining").length,
+      Kurs: offers.filter((offer) => offer.formatLabel === "Kurs").length,
+    }),
+    []
+  );
+
+  const visibleOffers = useMemo(() => {
+    if (activeFilter === "all") return offers;
+    return offers.filter((offer) => offer.formatLabel === activeFilter);
+  }, [activeFilter]);
+
+  const getFormatBadgeClassName = (formatLabel: SportOffer["formatLabel"]) =>
+    formatLabel === "Probetraining"
+      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+      : "bg-sky-100 text-sky-700 hover:bg-sky-100";
+
+  const getFederationBadgeClassName = (federation: SportOffer["federation"]) => {
+    if (federation === "ASKÖ") return "bg-red-600 text-white";
+    if (federation === "ASVÖ") return "bg-blue-600 text-white";
+    return "bg-emerald-600 text-white";
+  };
 
   return (
     <div className="space-y-4">
@@ -210,8 +265,48 @@ const GrazSportsGallery = () => {
         Treffpunkt und Ort zu sehen.
       </p>
 
+      <div className="rounded-2xl border bg-muted/20 p-3">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "all" as const, label: "Alle Angebote", count: filterCounts.all },
+            { key: "Probetraining" as const, label: "Probetraining", count: filterCounts.Probetraining },
+            { key: "Kurs" as const, label: "Kurse", count: filterCounts.Kurs },
+          ].map((filter) => {
+            const isActive = activeFilter === filter.key;
+
+            return (
+              <button
+                key={filter.key}
+                type="button"
+                onClick={() => setActiveFilter(filter.key)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition",
+                  isActive
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-border bg-background text-foreground hover:border-primary hover:text-primary"
+                )}
+              >
+                <span>{filter.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs",
+                    isActive ? "bg-white/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {filter.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Probetrainings sind einzelne Schnuppertermine. Kurse laufen strukturierter und meist in einer festen Gruppe.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {offers.map((offer) => (
+        {visibleOffers.map((offer) => (
           <Card
             key={offer.id}
             className="overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5"
@@ -223,14 +318,25 @@ const GrazSportsGallery = () => {
                 alt={offer.sport}
                 className="h-full w-full object-cover"
               />
-              <div className="absolute inset-x-0 bottom-0 bg-black/65 p-3">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div className="absolute inset-x-0 top-0 p-3">
+                <p className="max-w-[80%] text-lg font-bold leading-tight text-white">{offer.imageHeadline}</p>
+                <p className="mt-1 max-w-[85%] text-xs text-white/85">{offer.imageSubline}</p>
+              </div>
+              <div className="absolute inset-x-0 bottom-0 p-3">
                 <p className="text-white text-lg font-semibold leading-tight">{offer.sport}</p>
                 <p className="text-white/85 text-xs">{offer.club}</p>
+                <div className="mt-3 flex justify-end">
+                  <span className={cn("rounded-full px-3 py-1 text-[11px] font-bold tracking-wide shadow-lg", getFederationBadgeClassName(offer.federation))}>
+                    {offer.federation}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{offer.formatLabel}</Badge>
+                <Badge className={getFormatBadgeClassName(offer.formatLabel)}>{offer.formatLabel}</Badge>
+                <Badge className={getFederationBadgeClassName(offer.federation)}>{offer.federation}</Badge>
                 <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
                   +{offer.rewardPoints} Blitze
                 </Badge>
@@ -257,6 +363,13 @@ const GrazSportsGallery = () => {
         ))}
       </div>
 
+      {visibleOffers.length === 0 && (
+        <div className="rounded-2xl border border-dashed bg-background px-6 py-10 text-center">
+          <p className="text-sm font-medium text-foreground">Für diesen Filter gibt es aktuell keine Angebote.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Wechsle auf einen anderen Filter, um weitere Try-It-Angebote zu sehen.</p>
+        </div>
+      )}
+
       <Dialog open={Boolean(selectedOffer)} onOpenChange={(open) => !open && setSelectedOffer(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[560px]">
           {selectedOffer && (
@@ -269,11 +382,25 @@ const GrazSportsGallery = () => {
               </DialogHeader>
 
               <div className="space-y-4">
-                <img
-                  src={selectedOffer.image}
-                  alt={selectedOffer.sport}
-                  className="h-48 w-full rounded-md object-cover"
-                />
+                <div className="relative h-48 w-full overflow-hidden rounded-md">
+                  <img
+                    src={selectedOffer.image}
+                    alt={selectedOffer.sport}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                  <div className="absolute inset-x-0 top-0 p-4">
+                    <p className="max-w-[80%] text-2xl font-bold leading-tight text-white">
+                      {selectedOffer.imageHeadline}
+                    </p>
+                    <p className="mt-1 max-w-[85%] text-sm text-white/85">{selectedOffer.imageSubline}</p>
+                  </div>
+                  <div className="absolute bottom-4 right-4">
+                    <span className={cn("rounded-full px-3 py-1 text-xs font-bold tracking-wide shadow-lg", getFederationBadgeClassName(selectedOffer.federation))}>
+                      {selectedOffer.federation}
+                    </span>
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Card className="p-3">
                     <div className="flex items-start gap-2 text-sm text-foreground">
@@ -322,7 +449,8 @@ const GrazSportsGallery = () => {
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <p className="text-sm text-primary">{selectedOffer.rewardLabel}</p>
-                    <Badge variant="secondary">{selectedOffer.formatLabel}</Badge>
+                    <Badge className={getFormatBadgeClassName(selectedOffer.formatLabel)}>{selectedOffer.formatLabel}</Badge>
+                    <Badge className={getFederationBadgeClassName(selectedOffer.federation)}>{selectedOffer.federation}</Badge>
                     <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
                       +{selectedOffer.rewardPoints} Blitze
                     </Badge>

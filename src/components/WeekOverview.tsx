@@ -16,9 +16,9 @@ interface DailyResult {
 
 const EXERCISE_GOALS = {
   jumping_jacks: 40,
-  push_ups: 20,
-  squats: 30,
-  planks: 60,
+  push_ups: 10,
+  squats: 10,
+  planks: 10,
   sit_ups: 25,
 };
 

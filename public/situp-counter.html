@@ -56,7 +56,7 @@
 <body>
   <div class="container">
     <h1 class="title">AI Sit-up Counter</h1>
-    <p class="subtitle">Leg dich seitlich zur Kamera.</p>
+    <p class="subtitle">Leg dich seitlich zur Kamera. Oberkoerper, Huefte und Knie sollten moeglichst sichtbar sein.</p>
 
     <div class="card">
       <!-- Loading -->
@@ -131,15 +131,40 @@
     let detector;
     let counter = 0;
     let stage = "down"; // down = unten, up = oben
-    const KEYPOINT_CONFIDENCE = 0.35;
-    const DOWN_ANGLE_THRESHOLD = 140;
-    const UP_ANGLE_THRESHOLD = 75;
+    const KEYPOINT_CONFIDENCE = 0.22;
+    const MIN_VISIBLE_SCORE = 0.18;
+    const DOWN_ANGLE_THRESHOLD = 145;
+    const UP_ANGLE_THRESHOLD = 115;
+    const DOWN_SHOULDER_LIFT = 0.18;
+    const UP_SHOULDER_LIFT = 0.3;
+    const REQUIRED_STABLE_FRAMES = 2;
+    const MAX_HISTORY = 5;
+    let missingPoseFrames = 0;
+    let stableUpFrames = 0;
+    let stableDownFrames = 0;
+    const hipAngleHistory = [];
+    const shoulderLiftHistory = [];
 
     function angle(a,b,c){
       const r=Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x);
       let d=Math.abs(r*180/Math.PI);
       if(d>180)d=360-d;
       return d;
+    }
+
+    function distance(a,b){
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function average(values){
+      if(values.length === 0) return null;
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function pushHistory(list, value){
+      if(value === null || Number.isNaN(value)) return;
+      list.push(value);
+      if(list.length > MAX_HISTORY) list.shift();
     }
 
     async function initBackend(){
@@ -183,40 +208,108 @@
       });
     }
 
-    function pickSide(kps,name){
-      const l=kps.find(k=>k.name===`left_${name}`);
-      const r=kps.find(k=>k.name===`right_${name}`);
-      return ((l?.score||0)>=(r?.score||0))?l:r;
+    function getBestSidePose(kps){
+      const leftShoulder = kps.find(k => k.name === "left_shoulder");
+      const leftHip = kps.find(k => k.name === "left_hip");
+      const leftKnee = kps.find(k => k.name === "left_knee");
+      const rightShoulder = kps.find(k => k.name === "right_shoulder");
+      const rightHip = kps.find(k => k.name === "right_hip");
+      const rightKnee = kps.find(k => k.name === "right_knee");
+
+      const leftScore = (leftShoulder?.score || 0) + (leftHip?.score || 0) + (leftKnee?.score || 0);
+      const rightScore = (rightShoulder?.score || 0) + (rightHip?.score || 0) + (rightKnee?.score || 0);
+      const useLeft = leftScore >= rightScore;
+
+      return {
+        shoulder: useLeft ? leftShoulder : rightShoulder,
+        hip: useLeft ? leftHip : rightHip,
+        knee: useLeft ? leftKnee : rightKnee,
+      };
     }
 
-    function processSitup(pose){
-      const k = pose.keypoints;
-      const hip = pickSide(k,'hip');
-      const shoulder = pickSide(k,'shoulder');
-      const ear = pickSide(k,'ear');
+    function evaluateStage(hipAngleValue, shoulderLiftValue){
+      let upVotes = 0;
+      let downVotes = 0;
 
-      if(!(hip?.score>KEYPOINT_CONFIDENCE && shoulder?.score>KEYPOINT_CONFIDENCE && ear?.score>KEYPOINT_CONFIDENCE)){
-        feedbackEl.textContent = "Kamera sieht dich nicht richtig.";
-        stageEl.textContent = "-";
-        return;
+      if(hipAngleValue !== null){
+        if(hipAngleValue >= DOWN_ANGLE_THRESHOLD) downVotes++;
+        if(hipAngleValue <= UP_ANGLE_THRESHOLD) upVotes++;
       }
 
-      // Schulter – Hüfte – Ohr (Annäherung an Rumpfbeuge)
-      const trunkAngle = angle(shoulder, hip, ear);
+      if(shoulderLiftValue !== null){
+        if(shoulderLiftValue <= DOWN_SHOULDER_LIFT) downVotes++;
+        if(shoulderLiftValue >= UP_SHOULDER_LIFT) upVotes++;
+      }
 
-      if(trunkAngle > DOWN_ANGLE_THRESHOLD){
+      if(downVotes > upVotes && downVotes > 0){
+        stableDownFrames++;
+        stableUpFrames = 0;
+      } else if(upVotes > downVotes && upVotes > 0){
+        stableUpFrames++;
+        stableDownFrames = 0;
+      } else {
+        stableUpFrames = 0;
+        stableDownFrames = 0;
+      }
+
+      if(stableDownFrames >= REQUIRED_STABLE_FRAMES){
         stage = "down";
         stageEl.textContent = "DOWN";
-        feedbackEl.textContent = "Hochkommen!";
-      } else if(trunkAngle < UP_ANGLE_THRESHOLD){
+        feedbackEl.textContent = "Komm hoch!";
+        feedbackEl.style.color = "#374151";
+      } else if(stableUpFrames >= REQUIRED_STABLE_FRAMES){
         if(stage === "down"){
           counter++;
-          feedbackEl.textContent = "Nice!";
+          countEl.textContent = counter;
+          feedbackEl.textContent = "Super!";
+          feedbackEl.style.color = "#059669";
+        } else {
+          feedbackEl.textContent = "Oben halten";
+          feedbackEl.style.color = "#059669";
         }
         stage = "up";
         stageEl.textContent = "UP";
       }
+    }
 
+    function processSitup(pose){
+      const { shoulder, hip, knee } = getBestSidePose(pose.keypoints);
+      const shoulderVisible = (shoulder?.score || 0) > MIN_VISIBLE_SCORE;
+      const hipVisible = (hip?.score || 0) > MIN_VISIBLE_SCORE;
+      const kneeVisible = (knee?.score || 0) > MIN_VISIBLE_SCORE;
+
+      if(!(shoulderVisible && hipVisible)){
+        missingPoseFrames++;
+        if(missingPoseFrames >= 6){
+          feedbackEl.textContent = "Rueck etwas weiter weg oder dreh dich seitlicher zur Kamera.";
+          feedbackEl.style.color = "#b45309";
+          stageEl.textContent = stage.toUpperCase();
+        }
+        return;
+      }
+
+      missingPoseFrames = 0;
+
+      let hipAngleValue = null;
+      if(kneeVisible){
+        hipAngleValue = angle(shoulder, hip, knee);
+      }
+
+      let shoulderLiftValue = null;
+      if(kneeVisible){
+        shoulderLiftValue = (hip.y - shoulder.y) / Math.max(distance(hip, knee), 1);
+      }
+
+      pushHistory(hipAngleHistory, hipAngleValue);
+      pushHistory(shoulderLiftHistory, shoulderLiftValue);
+
+      const smoothedHipAngle = average(hipAngleHistory);
+      const smoothedShoulderLift = average(shoulderLiftHistory);
+
+      evaluateStage(smoothedHipAngle, smoothedShoulderLift);
+      const angleText = smoothedHipAngle === null ? "--" : Math.round(smoothedHipAngle);
+      const liftText = smoothedShoulderLift === null ? "--" : smoothedShoulderLift.toFixed(2);
+      debugLog.textContent = `Winkel: ${angleText} | Oberkoerper: ${liftText}`;
       countEl.textContent = counter;
     }
 
@@ -233,6 +326,12 @@
           drawSkeleton(pose);
           drawKeypoints(pose);
           processSitup(pose);
+        } else {
+          missingPoseFrames++;
+          if(missingPoseFrames >= 6){
+            feedbackEl.textContent = "Ich sehe dich gerade nicht gut genug. Versuch es seitlich und etwas weiter weg.";
+            feedbackEl.style.color = "#b45309";
+          }
         }
       }catch(err){
         debugLog.textContent = 'Fehler: ' + err.message;
@@ -243,8 +342,15 @@
 
     document.getElementById("reset-button").addEventListener("click", () => {
       counter = 0; stage = "down";
+      missingPoseFrames = 0;
+      stableUpFrames = 0;
+      stableDownFrames = 0;
+      hipAngleHistory.length = 0;
+      shoulderLiftHistory.length = 0;
       countEl.textContent = 0; stageEl.textContent = "-";
       feedbackEl.textContent = "Zurückgesetzt!";
+      feedbackEl.style.color = "#374151";
+      debugLog.textContent = "";
     });
 
     document.getElementById("finish-button").addEventListener("click", () => {

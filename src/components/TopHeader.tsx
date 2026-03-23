@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Zap, LogOut, Settings, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import boostLogo from "@/assets/boost-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,38 +49,29 @@ export const TopHeader = () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
+      setProfile(null);
       return;
     }
 
     const demoUser = isDemoEmail(session.user.email);
 
     if (!demoUser) {
-      const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");
-      if (decayError) {
-        console.error("Points decay error:", decayError);
-      } else {
-        const decayedPoints = Number(decayState?.decayed_points || 0);
-        const shouldWarn = Boolean(decayState?.should_warn);
-        const minutesUntilDecay = Number(decayState?.minutes_until_decay || 0);
-
-        if (decayedPoints > 0) {
-          toast.info(`${decayedPoints} ⚡ verfallen nach 36h ohne Aktivität.`);
-        }
-
-        if (shouldWarn) {
-          const hoursUntilDecay = Math.max(1, Math.ceil(minutesUntilDecay / 60));
-          toast.warning(`Achtung: Blitz-Verfall in ca. ${hoursUntilDecay}h`, {
-            description: "Wenn du 36 Stunden nichts machst, verfällt 1 Blitz."
-          });
-        }
-      }
+      void loadDecayState();
     }
 
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("username, school, class, points")
-      .eq("id", session.user.id)
-      .single();
+    const [{ data: profileData }, { data: roleData }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("username, school, class, points")
+        .eq("id", session.user.id)
+        .single(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle(),
+    ]);
 
     if (profileData) {
       setProfile({
@@ -88,15 +80,30 @@ export const TopHeader = () => {
       });
     }
 
-    // Check if admin
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
     setIsAdmin(!!roleData);
+  };
+
+  const loadDecayState = async () => {
+    const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");
+    if (decayError) {
+      console.error("Points decay error:", decayError);
+      return;
+    }
+
+    const decayedPoints = Number(decayState?.decayed_points || 0);
+    const shouldWarn = Boolean(decayState?.should_warn);
+    const minutesUntilDecay = Number(decayState?.minutes_until_decay || 0);
+
+    if (decayedPoints > 0) {
+      toast.info(`${decayedPoints} ⚡ verfallen nach 36h ohne Aktivität.`);
+    }
+
+    if (shouldWarn) {
+      const hoursUntilDecay = Math.max(1, Math.ceil(minutesUntilDecay / 60));
+      toast.warning(`Achtung: Blitz-Verfall in ca. ${hoursUntilDecay}h`, {
+        description: "Wenn du 36 Stunden nichts machst, verfällt 1 Blitz."
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -105,7 +112,20 @@ export const TopHeader = () => {
     navigate("/");
   };
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <div className="bg-card shadow-sm px-4 py-3 mb-6">
+        <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
+          <Skeleton className="h-10 w-28 rounded-lg" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-12 w-20 rounded-lg" />
+            <Skeleton className="h-12 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-9 rounded-md" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card shadow-sm px-4 py-3 mb-6">

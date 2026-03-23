@@ -16,6 +16,8 @@ const Activity = lazy(() => import("./pages/Activity"));
 const Boost = lazy(() => import("./pages/Boost"));
 const Settings = lazy(() => import("./pages/Settings"));
 const FriendQuest = lazy(() => import("./pages/FriendQuest"));
+const WeeklyAthleteChallenge = lazy(() => import("./pages/WeeklyAthleteChallenge"));
+const WeeklyGeoTracking = lazy(() => import("./pages/WeeklyGeoTracking"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -71,6 +73,8 @@ const App = () => (
               <Route path="/boost" element={<Boost />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/challenge/friend" element={<FriendQuest />} />
+              <Route path="/challenge/weekly/athlete" element={<WeeklyAthleteChallenge />} />
+              <Route path="/challenge/weekly/geotracking" element={<WeeklyGeoTracking />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

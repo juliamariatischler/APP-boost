@@ -21,9 +21,9 @@ interface Challenge {
 
 const EXERCISE_GOALS = {
   jumping_jacks: 40,
-  push_ups: 20,
-  squats: 30,
-  planks: 60,
+  push_ups: 10,
+  squats: 10,
+  planks: 10,
   sit_ups: 25,
 };
 const STEP_GOAL = 3000;
@@ -127,21 +127,21 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
   };
 
   const challenges: Challenge[] = [
-    { 
-      id: "daily", 
-      title: "Tägliche Challenge", 
-      description: "Jeden Tag eine kurze Aufgabe – für Bewegung, Fokus oder Ausdauer.",
+    {
+      id: "daily",
+      title: "Tägliche Challenge",
+      description: "Jeden Tag ein kurzer Bewegungsimpuls mit Ausdauer, Kraft und ersten Koordinationsreizen.",
       subInfo: "⏱ 5–10 Minuten",
-      image: dailyImg, 
-      progress: dailyProgress 
+      image: dailyImg,
+      progress: dailyProgress
     },
-    { 
-      id: "weekly", 
-      title: "2-Wochenchallenge", 
-      description: "Hol dir die Challenge eines Spitzensportlers – und wachse über dich hinaus.",
+    {
+      id: "weekly",
+      title: "2-Wochenchallenge",
+      description: "Eine Challenge, zwei Wege: Spitzensportler-Motivation oder Stempelkarte mit echten Offline-Erlebnissen.",
       subInfo: "🏆 14 Tage",
-      image: weeklyImg, 
-      progress: weeklyProgress 
+      image: weeklyImg,
+      progress: weeklyProgress
     },
     { 
       id: "friend", 
@@ -151,13 +151,13 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       image: friendImg, 
       progress: friendProgress 
     },
-    { 
-      id: "tryit", 
-      title: "Try It", 
-      description: "Probiere neue Sportarten & Aktivitäten aus – ganz unverbindlich.",
+    {
+      id: "tryit",
+      title: "Try It",
+      description: "Ein gemeinsames Try-It-System mit klarer Differenzierung nach Verein, Erlebnis und Belohnung.",
       subInfo: "📍 In deiner Nähe",
-      image: tryitImg, 
-      progress: tryItProgress 
+      image: tryitImg,
+      progress: tryItProgress
     },
   ];
 

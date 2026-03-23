@@ -18,12 +18,12 @@ const challengeData: Record<string, { title: string; image: string; description:
   daily: {
     title: "Tägliche Challenge",
     image: dailyImg,
-    description: "Absolviere beide Challenge-Teile und bleib aktiv!",
+    description: "Kurze, kindgerechte Bewegungsimpulse mit reduzierten Wiederholungen und rotierendem Trainingsfokus.",
   },
   weekly: {
     title: "2-Wochenchallenge",
     image: weeklyImg,
-    description: "Bleib 14 Tage aktiv und sammle möglichst viele abgeschlossene Trainingstage.",
+    description: "Die Wochenchallenge bleibt ein Bereich, bietet jetzt aber zwei klar getrennte Wege zur Teilnahme.",
   },
   friend: {
     title: "Friendquest Challenge",
@@ -33,7 +33,7 @@ const challengeData: Record<string, { title: string; image: string; description:
   tryit: {
     title: "Try It Challenge",
     image: tryitImg,
-    description: "Probiere etwas Neues aus und erweitere deine Bewegungsfähigkeiten!",
+    description: "Ein gemeinsames Try-It-System mit emotionalerer Vereinsdarstellung, stärkerem Branding und klarerem Belohnungsgefühl.",
   },
 };
 
@@ -136,13 +136,54 @@ const ChallengeDetail = () => {
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Jeden Tag zählt: Versuche an möglichst vielen Tagen Übungen oder Schritte zu sammeln.
-                  Die Fortschrittsanzeige steigt mit jedem aktiven Tag innerhalb von 14 Tagen.
+                  Strategisch bleibt alles vorerst in einer Kategorie. So bleibt die Navigation schlank, während beide Wege
+                  inhaltlich klar getrennt kommuniziert werden können.
                 </p>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/challenge/weekly/athlete")}
+                    className="rounded-xl border bg-background p-4 text-left transition hover:border-primary hover:shadow-md"
+                  >
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Option A</p>
+                    <h3 className="text-lg font-bold text-foreground">Spitzensportler-Challenge</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Motivationsvideos von Spitzensportler:innen geben den emotionalen Einstieg. Kinder absolvieren danach
+                      eine klar vorgegebene Challenge.
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-foreground">
+                      <p>Inspiration durch Vorbilder und starke Emotionen.</p>
+                      <p>Klare Challenge-Struktur mit hohem Aktivierungsfaktor.</p>
+                      <p>Ideal für Kampagnen, Highlights und Storytelling.</p>
+                    </div>
+                    <p className="mt-4 text-sm font-semibold text-primary">Jetzt öffnen</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/challenge/weekly/geotracking")}
+                    className="rounded-xl border bg-background p-4 text-left transition hover:border-primary hover:shadow-md"
+                  >
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Option B</p>
+                    <h3 className="text-lg font-bold text-foreground">Geocaching x BOOST</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Die Logik orientiert sich an echtem Geocaching: Kinder steuern Orte an, finden physische Verstecke
+                      und loggen den Fund danach digital in BOOST.
+                    </p>
+                    <div className="mt-3 space-y-2 text-sm text-foreground">
+                      <p>Bewegung draussen mit Suchreiz, Orientierung und echten Fundmomenten.</p>
+                      <p>Kein QR-Scan noetig, sondern physischer Cache mit Fundcode oder Logbuch.</p>
+                      <p>Digitale Punktevergabe nach validiertem Fund in der App.</p>
+                    </div>
+                    <p className="mt-4 text-sm font-semibold text-primary">Jetzt öffnen</p>
+                  </button>
+                </div>
+
                 <div className="space-y-2 text-sm text-foreground">
-                  <p>1. Öffne täglich die Tageschallenge und starte mindestens eine Übung.</p>
-                  <p>2. Für volle Tagesleistung: Schritte + alle Übungsziele erreichen.</p>
-                  <p>3. Halte deinen Lauf über 14 Tage aufrecht und verbessere deinen Prozentwert.</p>
+                  <p>1. Öffne die Wochenchallenge und wähle einen der beiden Wege.</p>
+                  <p>2. Sammle über 14 Tage aktive Tage durch Bewegung, Übungen oder validierte Teilnahme.</p>
+                  <p>3. Der Fortschritt steigt weiter über aktive Tage, unabhängig davon, welche Option du nutzt.</p>
                 </div>
               </div>
             )}

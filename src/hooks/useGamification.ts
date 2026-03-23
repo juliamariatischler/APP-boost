@@ -90,9 +90,9 @@ export function useGamification(userId: string | null, userClass?: string, userS
     return (
       (day.steps || 0) >= 3000 &&
       (day.jumping_jacks || 0) >= 20 &&
-      (day.push_ups || 0) >= 20 &&
-      (day.squats || 0) >= 20 &&
-      (day.planks || 0) >= 30 &&
+      (day.push_ups || 0) >= 10 &&
+      (day.squats || 0) >= 10 &&
+      (day.planks || 0) >= 10 &&
       (day.sit_ups || 0) >= 20
     );
   };

@@ -29,7 +29,30 @@ const signupSchema = z.object({
     .min(1, "Passwort erforderlich"),
   school: z.string().trim().min(1, "Schule erforderlich").max(100, "Schulname zu lang"),
   class: z.string().trim().min(1, "Klasse erforderlich").max(20, "Klassenname zu lang"),
+  age: z.string().trim().optional(),
   accountType: z.enum(["student", "teacher"]),
+}).superRefine((data, ctx) => {
+  if (data.accountType !== "student") {
+    return;
+  }
+
+  if (!data.age || data.age.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["age"],
+      message: "Alter erforderlich",
+    });
+    return;
+  }
+
+  const parsedAge = Number(data.age);
+  if (!Number.isInteger(parsedAge) || parsedAge < 6 || parsedAge > 19) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["age"],
+      message: "Bitte ein Alter zwischen 6 und 19 angeben",
+    });
+  }
 });
 
 const Auth = () => {
@@ -52,6 +75,7 @@ const Auth = () => {
     password: "",
     school: "",
     class: "",
+    age: "",
     accountType: "student" as "student" | "teacher",
   });
 
@@ -169,6 +193,7 @@ const Auth = () => {
             username: validatedData.username,
             school: validatedData.school,
             class: validatedData.class,
+            age: validatedData.accountType === "student" ? Number(validatedData.age) : null,
             account_type: validatedData.accountType,
           },
           emailRedirectTo: `${window.location.origin}/`,
@@ -237,6 +262,7 @@ const Auth = () => {
           username: params.username,
           school: DEMO_SCHOOL,
           class: DEMO_CLASS,
+          age: params.accountType === "student" ? 10 : null,
           points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
         })
         .eq("id", signInResult.data.user.id);
@@ -256,6 +282,7 @@ const Auth = () => {
           username: params.username,
           school: DEMO_SCHOOL,
           class: DEMO_CLASS,
+          age: params.accountType === "student" ? 10 : null,
           account_type: params.accountType,
         },
       },
@@ -286,6 +313,7 @@ const Auth = () => {
         username: params.username,
         school: DEMO_SCHOOL,
         class: DEMO_CLASS,
+        age: params.accountType === "student" ? 10 : null,
         points: DEMO_MIN_POINTS,
       })
       .eq("id", signUpResult.data.user.id);
@@ -674,6 +702,24 @@ const Auth = () => {
                   placeholder={signupData.accountType === "teacher" ? "z. B. Sport" : "5a"}
                 />
               </div>
+              {signupData.accountType === "student" && (
+                <div>
+                  <Label htmlFor="signup-age">Alter</Label>
+                  <Input
+                    id="signup-age"
+                    type="number"
+                    min={6}
+                    max={19}
+                    required
+                    value={signupData.age}
+                    onChange={(e) => setSignupData({ ...signupData, age: e.target.value })}
+                    placeholder="z. B. 10"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Das Alter hilft uns, Tageschallenges und Trainingshinweise altersgerechter einzuordnen.
+                  </p>
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Registrieren

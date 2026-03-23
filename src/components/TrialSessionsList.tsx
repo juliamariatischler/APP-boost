@@ -22,6 +22,7 @@ import { isValid, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 
 const POINTS_PER_VISIT = 25;
+const FEATURED_POINTS_PER_VISIT = 40;
 
 type Club = {
   id: string;
@@ -56,6 +57,35 @@ type Registration = {
   status: string;
 };
 
+type TryItFilter = "all" | "probetraining" | "highlight";
+
+const getAssociationInfo = (clubName: string) => {
+  const normalized = clubName.toLowerCase();
+
+  if (normalized.includes("asvö") || normalized.includes("asvoe")) {
+    return { label: "ASVOE", className: "bg-red-600 text-white" };
+  }
+
+  if (normalized.includes("askö") || normalized.includes("askoe")) {
+    return { label: "ASKOE", className: "bg-rose-700 text-white" };
+  }
+
+  if (normalized.includes("sportunion")) {
+    return { label: "Sportunion", className: "bg-blue-700 text-white" };
+  }
+
+  return { label: "Partnerverein", className: "bg-slate-800 text-white" };
+};
+
+const getSessionPoints = (session: TrialSession) => {
+  const hasLongFormat = Boolean(session.end_time) && session.end_time > "17:30:00";
+  return hasLongFormat ? FEATURED_POINTS_PER_VISIT : POINTS_PER_VISIT;
+};
+
+const getExperienceLabel = (session: TrialSession) => {
+  return getSessionPoints(session) > POINTS_PER_VISIT ? "Highlight-Erlebnis" : "Probetraining";
+};
+
 const TrialSessionsList = () => {
   const [sessions, setSessions] = useState<TrialSession[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -63,6 +93,7 @@ const TrialSessionsList = () => {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<TryItFilter>("all");
 
   useEffect(() => {
     loadData();
@@ -135,6 +166,9 @@ const TrialSessionsList = () => {
       return;
     }
 
+    const session = sessions.find((entry) => entry.id === sessionId);
+    const pointsReward = session ? getSessionPoints(session) : POINTS_PER_VISIT;
+
     setRegistering(sessionId);
 
     const { error } = await supabase
@@ -156,9 +190,10 @@ const TrialSessionsList = () => {
       // Award points for registration
       try {
         await (supabase.rpc as any)('increment_points', { 
-          points_to_add: POINTS_PER_VISIT 
+          points_to_add: pointsReward
         });
-        toast.success(`Erfolgreich angemeldet! +${POINTS_PER_VISIT} ⚡ Blitze`);
+        window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: pointsReward } }));
+        toast.success(`Erfolgreich angemeldet! +${pointsReward} ⚡ Blitze`);
       } catch (e) {
         toast.success("Erfolgreich angemeldet!");
       }
@@ -220,6 +255,13 @@ const TrialSessionsList = () => {
     return format(parsedDate, "EEEE, d. MMMM yyyy", { locale: de });
   };
 
+  const filteredSessions = sessions.filter((session) => {
+    if (activeFilter === "all") return true;
+    const isHighlight = getSessionPoints(session) > POINTS_PER_VISIT;
+    if (activeFilter === "highlight") return isHighlight;
+    return !isHighlight;
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -248,15 +290,53 @@ const TrialSessionsList = () => {
     <div className="space-y-6">
       <GrazSportsGallery />
 
+      <Card className="overflow-hidden border-0 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-400 text-white shadow-lg">
+        <div className="p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Try It</p>
+          <h2 className="mt-2 text-2xl font-bold">Ein System, klar differenziert</h2>
+          <p className="mt-3 max-w-3xl text-sm text-white/90">
+            Try It bleibt ein gemeinsames Erlebnis. Die Differenzierung passiert ueber Vereine, Verbandsbranding,
+            Bildwirkung und Punkte pro Erlebnis statt ueber eine harte Trennung in mehrere Produkte.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining</Badge>
+            <Badge className="bg-white/20 text-white hover:bg-white/20">Highlight-Erlebnis</Badge>
+            <Badge className="bg-white/20 text-white hover:bg-white/20">Vereinsbranding</Badge>
+            <Badge className="bg-white/20 text-white hover:bg-white/20">Emotionale Darstellung</Badge>
+          </div>
+        </div>
+      </Card>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={activeFilter === "all" ? "default" : "outline"}
+          onClick={() => setActiveFilter("all")}
+        >
+          Alle
+        </Button>
+        <Button
+          variant={activeFilter === "probetraining" ? "default" : "outline"}
+          onClick={() => setActiveFilter("probetraining")}
+        >
+          Probetraining
+        </Button>
+        <Button
+          variant={activeFilter === "highlight" ? "default" : "outline"}
+          onClick={() => setActiveFilter("highlight")}
+        >
+          Highlight-Erlebnis
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Weitere verfügbare Schnuppertermine</h2>
         <Badge variant="secondary" className="flex items-center gap-1">
           <Zap className="h-3 w-3 text-yellow-500" />
-          +{POINTS_PER_VISIT} pro Anmeldung
+          +{POINTS_PER_VISIT} bis +{FEATURED_POINTS_PER_VISIT} pro Anmeldung
         </Badge>
       </div>
       
-      {sessions.map((session) => {
+      {filteredSessions.map((session) => {
         const availableSpots = getAvailableSpots(session);
         const isFull = availableSpots <= 0;
         const registered = isRegistered(session.id);
@@ -264,9 +344,26 @@ const TrialSessionsList = () => {
         const clubName = club?.name || "Verein";
         const clubSportType = club?.sport_type || "Sport";
         const clubInitial = clubName.charAt(0).toUpperCase();
+        const association = getAssociationInfo(clubName);
+        const pointsReward = getSessionPoints(session);
+        const experienceLabel = getExperienceLabel(session);
 
         return (
-          <Card key={session.id} className="p-6 bg-card">
+          <Card key={session.id} className="overflow-hidden bg-card p-0">
+            <div className="relative border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-6 py-5 text-white">
+              <div className="absolute bottom-4 right-4">
+                <Badge className={`${association.className} shadow-sm`}>
+                  {association.label}
+                </Badge>
+              </div>
+              <div className="pr-28">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">{experienceLabel}</p>
+                <h3 className="mt-1 text-2xl font-bold">{session.title}</h3>
+                <p className="mt-1 text-sm text-white/80">{clubName}</p>
+              </div>
+            </div>
+
+            <div className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Club Info */}
               <div className="flex-shrink-0">
@@ -289,12 +386,19 @@ const TrialSessionsList = () => {
               <div className="flex-grow space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h3 className="text-xl font-bold text-foreground">{session.title}</h3>
                     <p className="text-primary font-medium">{clubName}</p>
                   </div>
-                  <Badge variant="secondary" className="text-sm">
-                    {clubSportType}
-                  </Badge>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-sm">
+                      {clubSportType}
+                    </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      {experienceLabel}
+                    </Badge>
+                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                      +{pointsReward} Punkte
+                    </Badge>
+                  </div>
                 </div>
 
                 {session.description && (
@@ -390,7 +494,7 @@ const TrialSessionsList = () => {
                     </div>
                     <div className="flex items-center gap-1 text-yellow-600">
                       <Zap className="h-4 w-4" />
-                      <span className="text-sm font-medium">+{POINTS_PER_VISIT} Blitze</span>
+                      <span className="text-sm font-medium">+{pointsReward} Blitze</span>
                     </div>
                     <Button
                       variant="outline"
@@ -423,16 +527,25 @@ const TrialSessionsList = () => {
                     {!isFull && (
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Zap className="h-3 w-3 text-yellow-500" />
-                        <span className="text-xs">+{POINTS_PER_VISIT} Blitze</span>
+                        <span className="text-xs">+{pointsReward} Blitze</span>
                       </div>
                     )}
                   </div>
                 )}
               </div>
             </div>
+            </div>
           </Card>
         );
       })}
+
+      {filteredSessions.length === 0 && (
+        <Card className="p-8 text-center">
+          <p className="text-lg text-muted-foreground">
+            Für diesen Filter sind aktuell keine Termine verfügbar.
+          </p>
+        </Card>
+      )}
     </div>
   );
 };

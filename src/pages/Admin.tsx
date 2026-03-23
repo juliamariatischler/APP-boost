@@ -77,9 +77,9 @@ type MilestoneAdmin = {
 };
 
 const EXERCISE_GOALS = {
-  push_ups: 20,
-  squats: 30,
-  planks: 60,
+  push_ups: 10,
+  squats: 10,
+  planks: 10,
   sit_ups: 25,
   jumping_jacks: 40,
 } as const;

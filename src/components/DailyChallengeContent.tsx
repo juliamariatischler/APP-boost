@@ -29,14 +29,51 @@ const STEP_REWARDS = [
 ];
 
 const exercises: Exercise[] = [
-  { name: "Push-ups", goal: 20, dbKey: "push_ups", icon: <PushUpIcon className="h-6 w-6" /> },
-  { name: "Squats", goal: 30, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" /> },
-  { name: "Planks", goal: 60, dbKey: "planks", icon: <PlankIcon className="h-6 w-6" /> },
+  { name: "Push-ups", goal: 10, dbKey: "push_ups", icon: <PushUpIcon className="h-6 w-6" /> },
+  { name: "Squats", goal: 10, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" /> },
+  { name: "Planks", goal: 10, dbKey: "planks", icon: <PlankIcon className="h-6 w-6" /> },
   { name: "Sit-ups", goal: 25, dbKey: "sit_ups", icon: <SitUpIcon className="h-6 w-6" /> },
   { name: "Jumping Jacks", goal: 40, dbKey: "jumping_jacks", icon: <JumpingJacksIcon className="h-6 w-6" /> },
 ];
 
+const TRAINING_FOCUS = [
+  {
+    title: "Ausdauer",
+    accent: "text-sky-700",
+    bg: "bg-sky-50",
+    border: "border-sky-200",
+    tips: [
+      "3000 Schritte oder 2 aktive Blöcke mit Jumping Jacks sammeln.",
+      "Zwischen den Übungen nur kurze Pausen machen.",
+      "Ziel: in Bewegung bleiben statt auf maximale Intensität gehen.",
+    ],
+  },
+  {
+    title: "Kraft",
+    accent: "text-emerald-700",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    tips: [
+      "10 Squats, 10 Push-ups und 10 Sekunden Plank sauber ausführen.",
+      "Technik vor Tempo: ruhig und kontrolliert arbeiten.",
+      "Wenn es leicht wird, einen zweiten kurzen Durchgang ergänzen.",
+    ],
+  },
+  {
+    title: "Koordination",
+    accent: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    tips: [
+      "20 Sekunden Einbeinstand pro Seite halten.",
+      "10 Linien-Sprünge vor und zurück oder seitlich absolvieren.",
+      "5 Würfe pro Hand gegen eine Wand oder zu einer Partnerperson.",
+    ],
+  },
+] as const;
+
 export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) => {
+  const [userAge, setUserAge] = useState<number | null>(null);
   const [steps, setSteps] = useState(0);
   const [stepsActive, setStepsActive] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,15 +81,33 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const [loading, setLoading] = useState(true);
   const isHealthSupported = HealthService.isHealthPlatformSupported();
   const healthSourceLabel = HealthService.getHealthSourceLabel();
+  const trainingFocus = TRAINING_FOCUS[new Date().getDay() % TRAINING_FOCUS.length];
+  const muscleTrainingInfo =
+    userAge !== null && userAge <= 11
+      ? "Muskeltraining ist auch fuer Kinder in Ordnung, wenn eine erwachsene Person auf saubere Technik achtet."
+      : "Muskeltraining ist auch fuer Jugendliche sinnvoll, wenn sie gut angeleitet werden und kontrolliert trainieren.";
+  const boneTrainingInfo =
+    "Huepfen, Springen, Volleyball, Basketball, Tennis, Parcours und Turnen staerken neben der Muskulatur auch die Knochen.";
 
   useEffect(() => {
     initializeDailyState();
   }, [userId]);
 
   const initializeDailyState = async () => {
+    await loadProfileMeta();
     const currentResults = await loadTodayData();
     const mergedResults = await checkLocalStorageResults(currentResults);
     await reconcileExerciseActivityFlashes(mergedResults);
+  };
+
+  const loadProfileMeta = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("age")
+      .eq("id", userId)
+      .maybeSingle();
+
+    setUserAge(data?.age ?? null);
   };
 
   const loadTodayData = async (): Promise<Record<string, number>> => {
@@ -371,6 +426,21 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
         </div>
       </Card>
 
+      <Card className={`p-5 border ${trainingFocus.border} ${trainingFocus.bg}`}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Heutiger Trainingsfokus</span>
+          <span className={`text-sm font-bold ${trainingFocus.accent}`}>{trainingFocus.title}</span>
+        </div>
+        <div className="space-y-1.5 text-sm text-foreground">
+          {trainingFocus.tips.map((tip) => (
+            <p key={tip}>{tip}</p>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          So bringen wir Koordination direkt in den Tagesrhythmus, ohne das aktuelle Tracking sofort umbauen zu muessen.
+        </p>
+      </Card>
+
       {/* PART 1: Steps */}
       <Card className={`p-5 ${isStepsComplete ? 'border-green-500 bg-green-500/5' : ''}`}>
         <div className="flex items-center gap-2 mb-4">
@@ -514,6 +584,27 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               </button>
             );
           })}
+        </div>
+      </Card>
+
+      <Card className="border-primary/20 bg-primary/5 p-5">
+        <div className="flex items-start gap-3">
+          <Zap className="mt-0.5 h-5 w-5 text-primary" />
+          <div className="space-y-2">
+            <h3 className="font-semibold text-foreground">
+              Info zu Kraft und Knochen
+              {userAge !== null ? ` fuer ${userAge}-Jaehrige` : ""}
+            </h3>
+            <p className="text-sm text-muted-foreground">{muscleTrainingInfo}</p>
+            <p className="text-sm text-muted-foreground">
+              Wichtig ist eine mittlere bis hohe Anstrengung mit Uebungen fuer Beine, Gesaess, Huefte, Brust, Ruecken,
+              Bauch, Schultern und Arme.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Auch Sportkurse mit Baendern, Koerpergewicht oder einfachen Kraftformen koennen dazu beitragen.
+            </p>
+            <p className="text-sm text-muted-foreground">{boneTrainingInfo}</p>
+          </div>
         </div>
       </Card>
 

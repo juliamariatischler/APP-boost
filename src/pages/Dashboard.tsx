@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { de } from "date-fns/locale";
 import { LevelCard } from "@/components/boost/LevelCard";
@@ -23,6 +24,7 @@ const Dashboard = () => {
   const [isTeacher, setIsTeacher] = useState(false);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
   const [weeklyTotal] = useState(28); // 4 challenges * 7 days
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkAuthAndLoadProfile();
@@ -43,49 +45,61 @@ const Dashboard = () => {
   }, []);
 
   const checkAuthAndLoadProfile = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      navigate("/");
-      return;
-    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/");
+        return;
+      }
 
-    setUserId(session.user.id);
+      setUserId(session.user.id);
 
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-    const metaAccountType = String(session.user.user_metadata?.account_type || "").toLowerCase();
-    setIsTeacher(!!roleData || metaAccountType === "teacher");
+      const [{ data: roleData }, { data: profileData, error: profileError }] = await Promise.all([
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("username, points, school, class")
+          .eq("id", session.user.id)
+          .single(),
+      ]);
 
-    // Load profile
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("username, points, school, class")
-      .eq("id", session.user.id)
-      .single();
+      const metaAccountType = String(session.user.user_metadata?.account_type || "").toLowerCase();
+      setIsTeacher(!!roleData || metaAccountType === "teacher");
 
-    if (profileError) {
-      console.error("Error loading profile:", profileError);
-      navigate("/");
-      return;
-    }
+      if (profileError) {
+        console.error("Error loading profile:", profileError);
+        navigate("/");
+        return;
+      }
 
-    if (profileData) {
-      setUsername(profileData.username);
+      if (!profileData) {
+        console.error("No profile found for user:", session.user.id);
+        navigate("/");
+        return;
+      }
+
+      setUsername(profileData.username || "Spieler");
       setPoints(getDemoAwarePoints(profileData.points, session.user.email));
       setUserSchool(profileData.school || "");
       setUserClass(profileData.class || "");
-    } else {
-      console.error("No profile found for user:", session.user.id);
-      navigate("/");
-      return;
-    }
+      setLoading(false);
 
-    // Load weekly progress
+      void loadWeeklyProgress(session.user.id);
+    } catch (error) {
+      console.error("Error loading dashboard:", error);
+      navigate("/");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadWeeklyProgress = async (currentUserId: string) => {
     const today = new Date();
     const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
     const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
@@ -93,12 +107,11 @@ const Dashboard = () => {
     const { data: weeklyData } = await supabase
       .from("daily_results")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", currentUserId)
       .gte("date", format(weekStart, "yyyy-MM-dd"))
       .lte("date", format(weekEnd, "yyyy-MM-dd"));
 
     if (weeklyData) {
-      // Count days with any activity as "completed challenges"
       const daysWithActivity = weeklyData.filter(day => 
         (day.jumping_jacks || 0) > 0 || 
         (day.push_ups || 0) > 0 || 
@@ -109,6 +122,30 @@ const Dashboard = () => {
       setWeeklyCompleted(daysWithActivity);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background pb-16">
+        <TopHeader />
+        <div className="max-w-screen-xl mx-auto px-4 space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-6 w-36" />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-56 w-full rounded-xl" />
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
   if (!username) return null;
 
