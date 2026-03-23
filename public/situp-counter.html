@@ -23,6 +23,15 @@
     .subtitle{ text-align:center; color:var(--muted); font-size:.95rem; margin-bottom:16px; }
 
     .card{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+    .tips{
+      margin-bottom:14px; border-radius:12px; padding:12px 14px;
+      background:#ecfdf5; border:1px solid #a7f3d0;
+    }
+    .tips h2{
+      font-size:1rem; font-weight:800; color:#065f46; margin-bottom:8px;
+    }
+    .tips ul{ padding-left:18px; color:#065f46; }
+    .tips li{ margin:4px 0; font-size:.92rem; }
 
     .loader-wrap{ display:flex; align-items:center; justify-content:center; height:200px; gap:10px; color:var(--muted); }
     .loader{ width:36px;height:36px;border-radius:50%;border:5px solid #e5e7eb;border-top-color:var(--green);animation:spin 1s linear infinite;}
@@ -59,6 +68,16 @@
     <p class="subtitle">Leg dich seitlich zur Kamera. Oberkoerper, Huefte und Knie sollten moeglichst sichtbar sein.</p>
 
     <div class="card">
+      <div class="tips">
+        <h2>So klappt die Erkennung besser</h2>
+        <ul>
+          <li>Leg dich seitlich zur Kamera.</li>
+          <li>Oberkoerper, Huefte und mindestens ein Knie sollten im Bild sein.</li>
+          <li>Geh lieber einen kleinen Schritt weiter weg, statt zu nah an der Kamera zu sein.</li>
+          <li>Wenn die Kamera dich nicht gut sieht, wird nicht sauber gezaehlt.</li>
+        </ul>
+      </div>
+
       <!-- Loading -->
       <div id="loading" class="loader-wrap">
         <div class="loader"></div>
@@ -281,7 +300,7 @@
       if(!(shoulderVisible && hipVisible)){
         missingPoseFrames++;
         if(missingPoseFrames >= 6){
-          feedbackEl.textContent = "Rueck etwas weiter weg oder dreh dich seitlicher zur Kamera.";
+          feedbackEl.textContent = "Geh etwas weiter weg und leg dich mehr seitlich zur Kamera.";
           feedbackEl.style.color = "#b45309";
           stageEl.textContent = stage.toUpperCase();
         }
@@ -329,7 +348,7 @@
         } else {
           missingPoseFrames++;
           if(missingPoseFrames >= 6){
-            feedbackEl.textContent = "Ich sehe dich gerade nicht gut genug. Versuch es seitlich und etwas weiter weg.";
+            feedbackEl.textContent = "Ich sehe dich gerade nicht gut genug. Bitte seitlich hinlegen und etwas weiter weg gehen.";
             feedbackEl.style.color = "#b45309";
           }
         }
