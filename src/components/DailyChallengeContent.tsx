@@ -8,6 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
 import { WalkingIcon, PushUpIcon, SquatIcon, PlankIcon, SitUpIcon, JumpingJacksIcon } from "@/components/ExerciseIcons";
+import {
+  BOOST_POINT_RULES,
+  DAILY_STEP_GOAL,
+  DAILY_EXERCISE_GOALS,
+  countCompletedDailyExercises,
+  isDailyGoalComplete,
+} from "@/lib/gamification";
 
 interface DailyChallengeContentProps {
   userId: string;
@@ -20,20 +27,12 @@ type Exercise = {
   icon: React.ReactNode;
 };
 
-const STEP_GOAL = 3000;
-
-const STEP_REWARDS = [
-  { steps: 3000, flashes: 1 },
-  { steps: 4000, flashes: 2 },
-  { steps: 5000, flashes: 3 },
-];
-
 const exercises: Exercise[] = [
-  { name: "Push-ups", goal: 10, dbKey: "push_ups", icon: <PushUpIcon className="h-6 w-6" /> },
-  { name: "Squats", goal: 10, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" /> },
-  { name: "Planks", goal: 10, dbKey: "planks", icon: <PlankIcon className="h-6 w-6" /> },
-  { name: "Sit-ups", goal: 25, dbKey: "sit_ups", icon: <SitUpIcon className="h-6 w-6" /> },
-  { name: "Jumping Jacks", goal: 40, dbKey: "jumping_jacks", icon: <JumpingJacksIcon className="h-6 w-6" /> },
+  { name: "Push-ups", goal: DAILY_EXERCISE_GOALS.push_ups, dbKey: "push_ups", icon: <PushUpIcon className="h-6 w-6" /> },
+  { name: "Squats", goal: DAILY_EXERCISE_GOALS.squats, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" /> },
+  { name: "Planks", goal: DAILY_EXERCISE_GOALS.planks, dbKey: "planks", icon: <PlankIcon className="h-6 w-6" /> },
+  { name: "Sit-ups", goal: DAILY_EXERCISE_GOALS.sit_ups, dbKey: "sit_ups", icon: <SitUpIcon className="h-6 w-6" /> },
+  { name: "Jumping Jacks", goal: DAILY_EXERCISE_GOALS.jumping_jacks, dbKey: "jumping_jacks", icon: <JumpingJacksIcon className="h-6 w-6" /> },
 ];
 
 const TRAINING_FOCUS = [
@@ -65,7 +64,7 @@ const TRAINING_FOCUS = [
     bg: "bg-amber-50",
     border: "border-amber-200",
     tips: [
-      "20 Sekunden Einbeinstand pro Seite halten.",
+      "Einbeinstände 20-30 Sek. pro Seite halten.",
       "10 Linien-Sprünge vor und zurück oder seitlich absolvieren.",
       "5 Würfe pro Hand gegen eine Wand oder zu einer Partnerperson.",
     ],
@@ -84,10 +83,10 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const trainingFocus = TRAINING_FOCUS[new Date().getDay() % TRAINING_FOCUS.length];
   const muscleTrainingInfo =
     userAge !== null && userAge <= 11
-      ? "Muskeltraining ist auch fuer Kinder in Ordnung, wenn eine erwachsene Person auf saubere Technik achtet."
-      : "Muskeltraining ist auch fuer Jugendliche sinnvoll, wenn sie gut angeleitet werden und kontrolliert trainieren.";
+      ? "Muskeltraining ist auch für Kinder in Ordnung, wenn eine erwachsene Person auf saubere Technik achtet."
+      : "Muskeltraining ist auch für Jugendliche sinnvoll, wenn sie gut angeleitet werden und kontrolliert trainieren.";
   const boneTrainingInfo =
-    "Huepfen, Springen, Volleyball, Basketball, Tennis, Parcours und Turnen staerken neben der Muskulatur auch die Knochen.";
+    "Hüpfen, Springen, Volleyball, Basketball, Tennis, Parcours und Turnen stärken neben der Muskulatur auch die Knochen.";
 
   useEffect(() => {
     initializeDailyState();
@@ -96,8 +95,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const initializeDailyState = async () => {
     await loadProfileMeta();
     const currentResults = await loadTodayData();
-    const mergedResults = await checkLocalStorageResults(currentResults);
-    await reconcileExerciseActivityFlashes(mergedResults);
+    await checkLocalStorageResults(currentResults);
   };
 
   const loadProfileMeta = async () => {
@@ -147,16 +145,13 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   };
 
   const countCompletedExercises = (exerciseResults: Record<string, number>) => {
-    return exercises.filter((exercise) => (exerciseResults[exercise.name] || 0) >= exercise.goal).length;
-  };
-
-  const countStartedExercises = (exerciseResults: Record<string, number>) => {
-    return exercises.filter((exercise) => (exerciseResults[exercise.name] || 0) > 0).length;
-  };
-
-  const getTodayKey = () => {
-    const today = new Date().toISOString().split("T")[0];
-    return `daily_started_exercises_awarded_${userId}_${today}`;
+    return countCompletedDailyExercises({
+      push_ups: exerciseResults["Push-ups"],
+      squats: exerciseResults["Squats"],
+      planks: exerciseResults["Planks"],
+      sit_ups: exerciseResults["Sit-ups"],
+      jumping_jacks: exerciseResults["Jumping Jacks"],
+    });
   };
 
   const awardFlashes = async (delta: number) => {
@@ -173,18 +168,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
 
     window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta } }));
     toast.success(`+${delta} ⚡ gutgeschrieben!`);
-  };
-
-  const reconcileExerciseActivityFlashes = async (exerciseResults: Record<string, number>) => {
-    const startedExercises = countStartedExercises(exerciseResults);
-    const awardKey = getTodayKey();
-    const alreadyAwarded = parseInt(localStorage.getItem(awardKey) || "0", 10) || 0;
-    const delta = Math.max(0, startedExercises - alreadyAwarded);
-
-    if (delta > 0) {
-      await awardFlashes(delta);
-      localStorage.setItem(awardKey, String(startedExercises));
-    }
   };
 
   const checkLocalStorageResults = async (baseResults: Record<string, number>) => {
@@ -245,7 +228,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
 
     const { data: existingRow } = await supabase
       .from("daily_results")
-      .select("push_ups, squats, planks, sit_ups, jumping_jacks")
+      .select("push_ups, squats, planks, sit_ups, jumping_jacks, steps")
       .eq("user_id", userId)
       .eq("date", today)
       .maybeSingle();
@@ -276,15 +259,71 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       console.error("Error saving results:", error);
       toast.error("Fehler beim Speichern der Ergebnisse");
     } else {
+      const previousSteps = Number(existingRow?.steps || 0);
       const previouslyCompleted = countCompletedExercises(previousResults);
       const currentlyCompleted = countCompletedExercises(currentResults);
       const completionDelta = Math.max(0, currentlyCompleted - previouslyCompleted);
+      const previouslyCompletedDailyGoal = isDailyGoalComplete(previousSteps, {
+        push_ups: previousResults["Push-ups"],
+        squats: previousResults["Squats"],
+        planks: previousResults["Planks"],
+        sit_ups: previousResults["Sit-ups"],
+        jumping_jacks: previousResults["Jumping Jacks"],
+      });
+      const currentlyCompletedDailyGoal = isDailyGoalComplete(steps, {
+        push_ups: currentResults["Push-ups"],
+        squats: currentResults["Squats"],
+        planks: currentResults["Planks"],
+        sit_ups: currentResults["Sit-ups"],
+        jumping_jacks: currentResults["Jumping Jacks"],
+      });
 
       if (completionDelta > 0) {
-        await awardFlashes(completionDelta);
+        await awardFlashes(completionDelta * BOOST_POINT_RULES.exerciseCompleted);
+      }
+
+      if (!previouslyCompletedDailyGoal && currentlyCompletedDailyGoal) {
+        await awardFlashes(BOOST_POINT_RULES.dailyGoalCompleted);
       }
 
       toast.success("Ergebnisse gespeichert!");
+    }
+  };
+
+  const saveSteps = async (realSteps: number) => {
+    const today = new Date().toISOString().split("T")[0];
+    const { data: existingRow } = await supabase
+      .from("daily_results")
+      .select("push_ups, squats, planks, sit_ups, jumping_jacks, steps")
+      .eq("user_id", userId)
+      .eq("date", today)
+      .maybeSingle();
+
+    const previousResults = {
+      push_ups: Number(existingRow?.push_ups || 0),
+      squats: Number(existingRow?.squats || 0),
+      planks: Number(existingRow?.planks || 0),
+      sit_ups: Number(existingRow?.sit_ups || 0),
+      jumping_jacks: Number(existingRow?.jumping_jacks || 0),
+    };
+    const previousSteps = Number(existingRow?.steps || 0);
+
+    await supabase
+      .from("daily_results")
+      .upsert(
+        {
+          user_id: userId,
+          date: today,
+          steps: realSteps,
+        },
+        { onConflict: "user_id,date" }
+      );
+
+    const dailyGoalWasComplete = isDailyGoalComplete(previousSteps, previousResults);
+    const dailyGoalIsComplete = isDailyGoalComplete(realSteps, previousResults);
+
+    if (!dailyGoalWasComplete && dailyGoalIsComplete) {
+      await awardFlashes(BOOST_POINT_RULES.dailyGoalCompleted);
     }
   };
 
@@ -348,15 +387,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
     try {
       const realSteps = await HealthService.getTodaySteps();
       setSteps(realSteps);
-      
-      const today = new Date().toISOString().split('T')[0];
-      await supabase
-        .from("daily_results")
-        .upsert({
-          user_id: userId,
-          date: today,
-          steps: realSteps,
-        }, { onConflict: "user_id,date" });
+      await saveSteps(realSteps);
     } catch (error) {
       console.error("Error fetching steps:", error);
       toast.error("Fehler beim Abrufen der Schritte");
@@ -384,17 +415,12 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
     return (results[name] || 0) >= exercise.goal;
   };
 
-  const isStepsComplete = steps >= STEP_GOAL;
+  const isStepsComplete = steps >= DAILY_STEP_GOAL;
   const completedExercises = exercises.filter(e => isExerciseComplete(e.name)).length;
   const allExercisesComplete = completedExercises === exercises.length;
   const isDailyChallengeComplete = isStepsComplete && allExercisesComplete;
 
-  const stepsProgress = Math.min((steps / STEP_GOAL) * 100, 100);
-  
-  // Calculate earned flashes based on steps
-  const earnedFlashes = STEP_REWARDS.reduce((acc, reward) => 
-    steps >= reward.steps ? reward.flashes : acc, 0
-  );
+  const stepsProgress = Math.min((steps / DAILY_STEP_GOAL) * 100, 100);
   if (loading) {
     return <div className="animate-pulse h-64 bg-muted rounded-lg" />;
   }
@@ -409,7 +435,9 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               <Trophy className="h-8 w-8 text-green-600" />
               <div>
                 <h2 className="text-lg font-bold text-green-600">🎉 Tageschallenge geschafft!</h2>
-                <p className="text-sm text-green-600/80">Du hast beide Challenge-Teile abgeschlossen.</p>
+                <p className="text-sm text-green-600/80">
+                  Du hast dein Tagesziel erreicht und dir +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze gesichert.
+                </p>
               </div>
             </>
           ) : (
@@ -418,7 +446,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               <div>
                 <h2 className="text-lg font-bold text-foreground">Tageschallenge</h2>
                 <p className="text-sm text-muted-foreground">
-                  Erledige beide Challenge-Teile, um die Challenge abzuschließen.
+                  Schließe Übungen ab und knacke dein Tagesziel für +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze.
                 </p>
               </div>
             </>
@@ -436,9 +464,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             <p key={tip}>{tip}</p>
           ))}
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          So bringen wir Koordination direkt in den Tagesrhythmus, ohne das aktuelle Tracking sofort umbauen zu muessen.
-        </p>
       </Card>
 
       {/* PART 1: Steps */}
@@ -451,7 +476,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-foreground">Challenge 1: Gehen</h3>
-            <p className="text-xs text-muted-foreground">Mindestens {STEP_GOAL.toLocaleString()} Schritte sammeln</p>
+            <p className="text-xs text-muted-foreground">Mindestens {DAILY_STEP_GOAL.toLocaleString()} Schritte sammeln</p>
           </div>
           {isStepsComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
         </div>
@@ -470,7 +495,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
                   {steps.toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  von {STEP_GOAL.toLocaleString()} Schritten
+                  von {DAILY_STEP_GOAL.toLocaleString()} Schritten
                 </div>
               </div>
               <Button
@@ -485,45 +510,18 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             <Progress value={stepsProgress} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{steps.toLocaleString()}</span>
-              <span>{STEP_GOAL.toLocaleString()}</span>
+              <span>{DAILY_STEP_GOAL.toLocaleString()}</span>
             </div>
 
-            {/* Step Reward Tiers */}
             <div className="mt-4 pt-4 border-t border-border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">Bonus-Flashes für Schritte</span>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3].map((flash) => (
-                    <Zap 
-                      key={flash}
-                      className={`h-5 w-5 transition-all ${
-                        flash <= earnedFlashes 
-                          ? "text-yellow-500 fill-yellow-500" 
-                          : "text-muted-foreground/30"
-                      }`}
-                    />
-                  ))}
-                </div>
+                <span className="text-sm font-medium text-foreground">Warum Schritte wichtig sind</span>
+                <Zap className={`h-5 w-5 ${isStepsComplete ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/30"}`} />
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                {STEP_REWARDS.map((reward) => (
-                  <div 
-                    key={reward.steps}
-                    className={`p-2 rounded-lg ${
-                      steps >= reward.steps 
-                        ? "bg-yellow-500/20 text-yellow-700" 
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    <div className="font-bold">{reward.steps.toLocaleString()}</div>
-                    <div className="flex items-center justify-center gap-0.5">
-                      {Array.from({ length: reward.flashes }).map((_, i) => (
-                        <Zap key={i} className="h-3 w-3" />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Die Schritte sind Teil deines Tagesziels. Sobald Schritte und alle Übungen geschafft sind, bekommst du
+                einmalig +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze.
+              </p>
             </div>
           </div>
         )}
@@ -540,7 +538,9 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
           <div className="flex-1">
             <h3 className="font-bold text-foreground">Challenge 2: Übungen</h3>
             <p className="text-xs text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
-            <p className="text-xs text-muted-foreground/80">Für jede begonnene Übung gibt es 1 Blitz.</p>
+            <p className="text-xs text-muted-foreground/80">
+              Für jede abgeschlossene Übung gibt es +{BOOST_POINT_RULES.exerciseCompleted} Blitze.
+            </p>
           </div>
           {allExercisesComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
         </div>
@@ -593,15 +593,19 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground">
               Info zu Kraft und Knochen
-              {userAge !== null ? ` fuer ${userAge}-Jaehrige` : ""}
+              {userAge !== null ? ` für ${userAge}-Jährige` : ""}
             </h3>
             <p className="text-sm text-muted-foreground">{muscleTrainingInfo}</p>
             <p className="text-sm text-muted-foreground">
-              Wichtig ist eine mittlere bis hohe Anstrengung mit Uebungen fuer Beine, Gesaess, Huefte, Brust, Ruecken,
+              Wichtig ist eine mittlere bis hohe Anstrengung mit Übungen für Beine, Gesäß, Hüfte, Brust, Rücken,
               Bauch, Schultern und Arme.
             </p>
             <p className="text-sm text-muted-foreground">
-              Auch Sportkurse mit Baendern, Koerpergewicht oder einfachen Kraftformen koennen dazu beitragen.
+              Auch Sportkurse mit Bändern, Körpergewicht oder einfachen Kraftformen können dazu beitragen.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Unsere Übungen basieren auf internationalen Trainingsrichtlinien für Kinder und sind speziell auf
+              Sicherheit, Einfachheit und Skalierbarkeit ausgelegt.
             </p>
             <p className="text-sm text-muted-foreground">{boneTrainingInfo}</p>
           </div>

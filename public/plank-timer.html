@@ -251,7 +251,7 @@
               <p id="feedback" class="feedback">Kamera: seitlich aufstellen.</p>
             </div>
 
-            <button id="reset-button" class="btn">Zuruecksetzen</button>
+            <button id="reset-button" class="btn">Zurücksetzen</button>
             <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <div class="debug" id="debug-log"></div>
@@ -264,7 +264,7 @@
     <div class="reward-card">
       <p class="reward-title">Ziel erreicht!</p>
       <p id="rewardPoints" class="reward-points">+0 Blitze</p>
-      <p id="rewardText" class="reward-text">Deine Punkte werden ins Konto gebucht.</p>
+      <p id="rewardText" class="reward-text">Deine Blitze werden ins Konto gebucht.</p>
     </div>
   </div>
   <div id="fxLayer" class="fx-layer"></div>
@@ -403,7 +403,7 @@
         throw new Error('Kamera auf iPhone/Safari braucht HTTPS. Nutze https:// oder localhost.');
       }
       if(!modernGetUserMedia && !legacyGetUserMedia){
-        throw new Error('Kamera-API in diesem Browser nicht verfuegbar.');
+        throw new Error('Kamera-API in diesem Browser nicht verfügbar.');
       }
 
       const stream=modernGetUserMedia
@@ -502,7 +502,7 @@
         const result = await submitWorkoutToAccount('ex_plank', time);
         const points = Number(result.calculated_points || 0);
         showReward(points, points > 0
-          ? 'Stark! Die Blitze wurden auf dein Punktekonto gebucht.'
+          ? 'Stark! Die Blitze wurden auf dein Blitzekonto gebucht.'
           : 'Workout gespeichert. Heute wurden keine zusätzlichen Blitze gutgeschrieben.');
       }catch(err){
         showReward(0, `Konnte nicht buchen: ${err.message}`);

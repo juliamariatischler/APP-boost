@@ -60,7 +60,7 @@ const Index = () => {
               Body Boost
             </h2>
             <p className="text-muted-foreground mb-4">
-              Bewege dich, sammle Punkte und fordere deine Freunde heraus!
+              Bewege dich, sammle Blitze und fordere deine Freunde heraus!
             </p>
             <Button size="lg" className="w-full">
               Starten

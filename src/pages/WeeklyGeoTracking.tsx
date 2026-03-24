@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Compass, MapPin, NotebookPen, Search, Zap } from "lucide-react";
 
-const POINTS_PER_FIND = 5;
+const POINTS_PER_FIND = 50;
 const STORAGE_KEY = "weekly_geocaching_finds";
 
 const caches = [
@@ -22,7 +22,7 @@ const caches = [
     code: "GT-GRAZ-02",
     name: "Augarten Riverside Cache",
     area: "Augarten",
-    hint: "Bleib am Weg, aber schau auf Bankhoehe und in Griffnaehe.",
+    hint: "Bleib am Weg, aber schau auf Bankhöhe und in Griffnähe.",
   },
   {
     code: "GT-GRAZ-03",
@@ -82,7 +82,7 @@ const WeeklyGeoTracking = () => {
     const cache = caches.find((entry) => entry.code === code);
 
     if (!cache) {
-      toast.error("Dieser Fundcode gehoert aktuell nicht zu unserer Geocaching-Challenge.");
+      toast.error("Dieser Fundcode gehört aktuell nicht zu unserer Geocaching-Challenge.");
       return;
     }
 
@@ -92,10 +92,17 @@ const WeeklyGeoTracking = () => {
     }
 
     try {
-      await awardPoints();
+      const isFirstFind = foundCodes.length === 0;
+      if (isFirstFind) {
+        await awardPoints();
+      }
       const nextCodes = [...foundCodes, code];
       persistFinds(nextCodes);
-      toast.success(`Cache geloggt! +${POINTS_PER_FIND} Blitze`);
+      toast.success(
+        isFirstFind
+          ? `Wochenchallenge geloggt! +${POINTS_PER_FIND} Blitze`
+          : "Cache geloggt! Fortschritt in der Wochenchallenge aktualisiert."
+      );
     } catch (error) {
       console.error("Geocaching award failed", error);
       toast.error("Fund erkannt, aber die Blitze konnten nicht gutgeschrieben werden.");
@@ -108,23 +115,34 @@ const WeeklyGeoTracking = () => {
     setManualCode("");
   };
 
+  const RewardPill = ({ points }: { points: number }) => (
+    <div className="inline-flex items-center gap-2 rounded-2xl bg-primary/10 px-3 py-2 text-primary">
+      <Zap className="h-4 w-4 fill-primary text-primary" />
+      <span className="text-2xl font-black leading-none">{points}</span>
+      <span className="text-base font-semibold">Blitze</span>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background pb-16">
       <TopHeader />
 
       <div className="mx-auto max-w-screen-xl px-4 pb-8">
-        <Card className="overflow-hidden border-0 bg-gradient-to-br from-emerald-700 via-teal-700 to-cyan-700 text-white shadow-lg">
+        <Card className="overflow-hidden border-0 bg-gradient-to-br from-primary via-emerald-600 to-teal-600 text-white shadow-lg">
           <div className="p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Option B</p>
             <h1 className="mt-2 text-3xl font-bold">Geocaching x BOOST</h1>
             <p className="mt-3 max-w-3xl text-sm text-white/85">
               Das Modell ist jetzt an klassisches Geocaching angelehnt: Kinder suchen echte Verstecke vor Ort,
-              orientieren sich ueber Ort und Hinweis, finden einen Cache und loggen danach den Fund in BOOST.
+              orientieren sich über Ort und Hinweis, finden einen Cache und loggen danach den Fund in BOOST.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">GPS- / Ortsnavigation</span>
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Physischer Cache</span>
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">+{POINTS_PER_FIND} Blitze pro Fund</span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold inline-flex items-center gap-1">
+                <Zap className="h-3 w-3 fill-white text-white" />
+                Erster Fund = {POINTS_PER_FIND} Blitze
+              </span>
             </div>
           </div>
         </Card>
@@ -137,8 +155,8 @@ const WeeklyGeoTracking = () => {
             </div>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Statt QR-Codes arbeitet diese Challenge mit echten Verstecken. Vor Ort findest du einen Cache, traegst dich
-              ins Logbuch ein oder entdeckst einen Fundcode und loest ihn danach hier ein.
+              Statt QR-Codes arbeitet diese Challenge mit echten Verstecken. Vor Ort findest du einen Cache, trägst dich
+              ins Logbuch ein oder entdeckst einen Fundcode und löst ihn danach hier ein.
             </p>
 
             <div className="mt-5 grid gap-3">
@@ -168,13 +186,16 @@ const WeeklyGeoTracking = () => {
                   <p className="text-sm font-semibold text-foreground">3. Fund eintragen</p>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Danach wird der Fundcode in BOOST eingetragen und mit Blitzen belohnt.
+                  Danach wird der Fundcode in BOOST eingetragen. Der erste validierte Fund schließt die Wochenchallenge ab.
                 </p>
               </div>
             </div>
 
             <div className="mt-5 rounded-xl border bg-muted/30 p-4">
-              <p className="text-sm font-semibold text-foreground">Fundcode eingeben</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">Fundcode eingeben</p>
+                <RewardPill points={POINTS_PER_FIND} />
+              </div>
               <div className="mt-3 flex gap-2">
                 <Input
                   value={manualCode}
@@ -192,10 +213,7 @@ const WeeklyGeoTracking = () => {
                 <MapPin className="h-5 w-5 text-primary" />
                 <h2 className="text-xl font-bold text-foreground">Challenge-Caches</h2>
               </div>
-              <div className="flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
-                <Zap className="h-4 w-4" />
-                {foundCodes.length * POINTS_PER_FIND} Blitze
-              </div>
+              <RewardPill points={foundCodes.length > 0 ? POINTS_PER_FIND : 0} />
             </div>
 
             <div className="mt-4 space-y-3">

@@ -1,4 +1,4 @@
-// === Level System (50 Stufen) ===
+// === BOOST Core Rules ===
 export interface LevelInfo {
   level: number;
   name: string;
@@ -9,55 +9,31 @@ export interface LevelInfo {
   tier: string; // tier grouping for visual effects
 }
 
-// Generate 50 levels across 10 tiers
-const TIERS = [
-  { name: "Rookie", emoji: "🌱", color: "text-muted-foreground", tier: "rookie" },
-  { name: "Starter", emoji: "⭐", color: "text-blue-500", tier: "starter" },
-  { name: "Bronze", emoji: "🥉", color: "text-amber-700", tier: "bronze" },
-  { name: "Silber", emoji: "🥈", color: "text-gray-400", tier: "silver" },
-  { name: "Gold", emoji: "🥇", color: "text-yellow-500", tier: "gold" },
-  { name: "Platin", emoji: "💎", color: "text-cyan-400", tier: "platinum" },
-  { name: "Diamant", emoji: "👑", color: "text-purple-500", tier: "diamond" },
-  { name: "Champion", emoji: "🏆", color: "text-orange-500", tier: "champion" },
-  { name: "Legende", emoji: "🔥", color: "text-red-500", tier: "legend" },
-  { name: "GOAT", emoji: "🐐", color: "text-primary", tier: "goat" },
+export const DAILY_STEP_GOAL = 3000;
+export const DAILY_EXERCISE_GOALS = {
+  push_ups: 10,
+  squats: 10,
+  planks: 10,
+  sit_ups: 25,
+  jumping_jacks: 40,
+} as const;
+
+export const BOOST_POINT_RULES = {
+  exerciseCompleted: 10,
+  dailyGoalCompleted: 20,
+  weeklyChallengeCompleted: 100,
+  tryItCompleted: 50,
+  streak3DaysBonus: 30,
+  streak7DaysBonus: 100,
+} as const;
+
+export const LEVELS: LevelInfo[] = [
+  { level: 1, name: "Anfänger", emoji: "🌱", minPoints: 0, maxPoints: 99, color: "text-lime-600", tier: "Start" },
+  { level: 2, name: "Aktivstarter", emoji: "⚡", minPoints: 100, maxPoints: 249, color: "text-sky-600", tier: "Aktiv" },
+  { level: 3, name: "Booster", emoji: "🚀", minPoints: 250, maxPoints: 499, color: "text-indigo-600", tier: "Boost" },
+  { level: 4, name: "Champion", emoji: "🏆", minPoints: 500, maxPoints: 899, color: "text-orange-600", tier: "Top" },
+  { level: 5, name: "Legende", emoji: "👑", minPoints: 900, maxPoints: -1, color: "text-rose-600", tier: "Elite" },
 ];
-
-function generateLevels(): LevelInfo[] {
-  const levels: LevelInfo[] = [];
-  // Points thresholds per tier (5 levels each)
-  const tierThresholds = [
-    0, 50, 150, 300, 500, 800, 1200, 1800, 2600, 4000
-  ];
-  
-  for (let tierIdx = 0; tierIdx < 10; tierIdx++) {
-    const t = TIERS[tierIdx];
-    const tierStart = tierThresholds[tierIdx];
-    const tierEnd = tierIdx < 9 ? tierThresholds[tierIdx + 1] : -1;
-    const tierRange = tierEnd === -1 ? 2000 : tierEnd - tierStart;
-    const stepSize = Math.floor(tierRange / 5);
-
-    for (let sub = 0; sub < 5; sub++) {
-      const lvl = tierIdx * 5 + sub + 1;
-      const minPts = tierStart + sub * stepSize;
-      const maxPts = lvl === 50 ? -1 : tierStart + (sub + 1) * stepSize - 1;
-      const suffix = sub > 0 ? ` ${["I", "II", "III", "IV", "V"][sub]}` : "";
-      
-      levels.push({
-        level: lvl,
-        name: `${t.name}${suffix}`,
-        emoji: t.emoji,
-        minPoints: minPts,
-        maxPoints: maxPts,
-        color: t.color,
-        tier: t.tier,
-      });
-    }
-  }
-  return levels;
-}
-
-export const LEVELS: LevelInfo[] = generateLevels();
 
 export function getLevelForPoints(points: number): LevelInfo {
   for (let i = LEVELS.length - 1; i >= 0; i--) {
@@ -82,7 +58,7 @@ export function getPointsToNextLevel(points: number): number {
 
 export function getNextLevel(points: number): LevelInfo | null {
   const current = getLevelForPoints(points);
-  if (current.level >= 50) return null;
+  if (current.level >= LEVELS.length) return null;
   return LEVELS[current.level]; // next index
 }
 
@@ -118,6 +94,12 @@ export function canUseRescueDay(rescueDaysUsed: number): boolean {
 export interface StreakInfo {
   currentStreak: number;
   longestStreak: number;
+}
+
+export function getStreakBonusForLength(streak: number): number {
+  if (streak >= 7) return BOOST_POINT_RULES.streak7DaysBonus;
+  if (streak >= 3) return BOOST_POINT_RULES.streak3DaysBonus;
+  return 0;
 }
 
 export function calculateStreak(dates: string[]): StreakInfo {
@@ -175,6 +157,17 @@ export const WEEKLY_GOAL_DAYS = 5;
 
 export function getWeeklyGoalProgress(completedDays: number): number {
   return Math.min(Math.round((completedDays / WEEKLY_GOAL_DAYS) * 100), 100);
+}
+
+export function countCompletedDailyExercises(values: Partial<Record<keyof typeof DAILY_EXERCISE_GOALS, number>>): number {
+  return Object.entries(DAILY_EXERCISE_GOALS).filter(([key, goal]) => Number(values[key as keyof typeof DAILY_EXERCISE_GOALS] || 0) >= goal).length;
+}
+
+export function isDailyGoalComplete(
+  steps: number,
+  values: Partial<Record<keyof typeof DAILY_EXERCISE_GOALS, number>>
+): boolean {
+  return steps >= DAILY_STEP_GOAL && countCompletedDailyExercises(values) === Object.keys(DAILY_EXERCISE_GOALS).length;
 }
 
 // === Class Participation ===

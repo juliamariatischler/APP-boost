@@ -1,15 +1,16 @@
 import { Zap, Calendar, Swords, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 export const ChallengeButtons = () => {
   const navigate = useNavigate();
 
   const challenges = [
-    { label: "Tageschallenge", reward: "+1-3 ⚡", icon: Zap, path: "/challenge/daily", colorClass: "bg-primary/10 hover:bg-primary/20 border-primary/30", iconBg: "bg-primary/20", iconColor: "text-primary fill-primary", rewardBg: "bg-primary/20 text-primary" },
-    { label: "2-Wochen", reward: "+50 ⚡", icon: Calendar, path: "/challenge/weekly", colorClass: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30", iconBg: "bg-blue-500/20", iconColor: "text-blue-500", rewardBg: "bg-blue-500/20 text-blue-600" },
+    { label: "Tageschallenge", reward: `+${BOOST_POINT_RULES.exerciseCompleted} / +${BOOST_POINT_RULES.dailyGoalCompleted} ⚡`, icon: Zap, path: "/challenge/daily", colorClass: "bg-primary/10 hover:bg-primary/20 border-primary/30", iconBg: "bg-primary/20", iconColor: "text-primary fill-primary", rewardBg: "bg-primary/20 text-primary" },
+    { label: "Wochenchallenge", reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡`, icon: Calendar, path: "/challenge/weekly", colorClass: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30", iconBg: "bg-blue-500/20", iconColor: "text-blue-500", rewardBg: "bg-blue-500/20 text-blue-600" },
     { label: "Friendquest", reward: "+20-50 ⚡", icon: Swords, path: "/challenge/friend", colorClass: "bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30", iconBg: "bg-purple-500/20", iconColor: "text-purple-500", rewardBg: "bg-purple-500/20 text-purple-600" },
-    { label: "Try It", reward: "+25 ⚡", icon: MapPin, path: "/challenge/tryit", colorClass: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30", iconBg: "bg-orange-500/20", iconColor: "text-orange-500", rewardBg: "bg-orange-500/20 text-orange-600" },
+    { label: "Try It", reward: `+${BOOST_POINT_RULES.tryItCompleted} ⚡`, icon: MapPin, path: "/challenge/tryit", colorClass: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30", iconBg: "bg-orange-500/20", iconColor: "text-orange-500", rewardBg: "bg-orange-500/20 text-orange-600" },
   ];
 
   return (

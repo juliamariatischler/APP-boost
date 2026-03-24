@@ -31,7 +31,7 @@ export const LevelCard = ({ points, level }: Props) => {
         <span className="text-3xl font-black text-foreground">Lv.{level.level}</span>
         <div>
           <span className={`text-lg font-bold ${level.color}`}>{level.name}</span>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{level.tier}</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{level.tier}-Level</p>
         </div>
       </div>
 
@@ -49,12 +49,12 @@ export const LevelCard = ({ points, level }: Props) => {
           </div>
           <Progress value={progress} className="h-2.5" />
           <p className="text-xs text-center text-muted-foreground">
-            Noch <span className="font-bold text-primary">{toNext} ⚡</span> bis Lv.{nextLevel.level}
+            Noch <span className="font-bold text-primary">{toNext} ⚡</span> bis {nextLevel.name}
           </p>
         </div>
       )}
       {!nextLevel && (
-        <p className="text-sm text-center font-bold text-primary">🐐 Maximales Level erreicht!</p>
+        <p className="text-sm text-center font-bold text-primary">Legendenstatus erreicht!</p>
       )}
     </Card>
   );

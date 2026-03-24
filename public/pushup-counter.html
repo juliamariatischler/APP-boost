@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Push-up Counter</title>
+  <title>KI-Liegestütz-Zähler</title>
 
   <style>
     :root {
@@ -126,8 +126,8 @@
 
 <body>
   <div class="container">
-    <h1 class="title">AI Push-up Counter</h1>
-    <p class="subtitle">Get into a push-up position in front of the camera.</p>
+    <h1 class="title">KI-Liegestütz-Zähler</h1>
+    <p class="subtitle">Geh in die Liegestütz-Position vor die Kamera.</p>
 
     <div class="card">
       <!-- Loading -->
@@ -153,21 +153,21 @@
             <h2>Status</h2>
 
             <div class="stat">
-              <p class="label">Count</p>
+              <p class="label">Anzahl</p>
               <p id="count" class="value">0</p>
             </div>
 
             <div class="stat">
-              <p class="label">Stage</p>
+              <p class="label">Phase</p>
               <p id="stage" class="value-stage">-</p>
             </div>
 
             <div class="stat">
-              <p class="label">Feedback</p>
-              <p id="feedback" class="feedback">Preparing camera...</p>
+              <p class="label">Hinweis</p>
+              <p id="feedback" class="feedback">Kamera wird vorbereitet...</p>
             </div>
 
-            <button id="reset-button" class="btn">Reset</button>
+            <button id="reset-button" class="btn">Zurücksetzen</button>
             <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <p id="backend-info" class="debug"></p>
@@ -218,7 +218,7 @@
 
     async function setupCamera() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Camera not supported by this browser.');
+        throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
       }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
       video.srcObject = stream;
@@ -234,8 +234,8 @@
         await tf.setBackend('cpu');
         await tf.ready();
       }
-      backendInfo.textContent = 'TFJS Backend: ' + tf.getBackend();
-      console.log('TFJS Backend:', tf.getBackend());
+      backendInfo.textContent = 'TFJS-Backend: ' + tf.getBackend();
+      console.log('TFJS-Backend:', tf.getBackend());
     }
 
     async function loadModel() {
@@ -251,7 +251,7 @@
           poses = await detector.estimatePoses(video);
         } catch (error) {
           console.error(error);
-          feedbackEl.textContent = 'Model error: ' + error.message;
+          feedbackEl.textContent = 'Modellfehler: ' + error.message;
           feedbackEl.style.color = 'crimson';
           requestAnimationFrame(detectPose);
           return;
@@ -383,7 +383,7 @@
       stage = 'up';
       countEl.textContent = counter;
       stageEl.textContent = '-';
-      feedbackEl.textContent = 'Counter has been reset.';
+      feedbackEl.textContent = 'Zurückgesetzt.';
       feedbackEl.style.color = '#374151';
     });
 
@@ -420,7 +420,7 @@
 
       loadingEl.style.display = 'none';
       mainContentEl.style.display = 'block';
-      feedbackEl.textContent = 'Ready!';
+      feedbackEl.textContent = 'Bereit!';
       feedbackEl.style.color = '#059669';
 
       resizeCanvas();

@@ -1,7 +1,7 @@
 import { Award } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { WEEKLY_GOAL_DAYS, getWeeklyGoalProgress, getStreakIntensity, STREAK_VISUALS, type StreakInfo } from "@/lib/gamification";
+import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS, getWeeklyGoalProgress, getStreakIntensity, getStreakBonusForLength, STREAK_VISUALS, type StreakInfo } from "@/lib/gamification";
 import { StreakFireVisual } from "./StreakFireVisual";
 
 interface Props {
@@ -14,6 +14,7 @@ export const StreakCard = ({ streak, weeklyCompletedDays }: Props) => {
   const weeklyGoalMet = weeklyCompletedDays >= WEEKLY_GOAL_DAYS;
   const intensity = getStreakIntensity(streak.currentStreak);
   const visual = STREAK_VISUALS[intensity];
+  const nextStreakBonus = getStreakBonusForLength(streak.currentStreak + 1);
 
   return (
     <Card className="p-4 bg-card shadow-lg">
@@ -51,10 +52,17 @@ export const StreakCard = ({ streak, weeklyCompletedDays }: Props) => {
         </div>
         <Progress value={weeklyProgress} className="h-2" />
         {weeklyGoalMet ? (
-          <p className="text-xs text-center font-bold text-primary">✅ Wochenziel erreicht!</p>
+          <p className="text-xs text-center font-bold text-primary">
+            ✅ Wochenziel erreicht: +{BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡
+          </p>
         ) : (
           <p className="text-xs text-center text-muted-foreground">
             Noch <span className="font-bold text-primary">{WEEKLY_GOAL_DAYS - weeklyCompletedDays}</span> Tage diese Woche
+          </p>
+        )}
+        {nextStreakBonus > 0 && (
+          <p className="text-xs text-center text-muted-foreground">
+            Nächster Serienbonus morgen: <span className="font-bold text-primary">+{nextStreakBonus} ⚡</span>
           </p>
         )}
       </div>

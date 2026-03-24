@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { de } from "date-fns/locale";
 import { LevelCard } from "@/components/boost/LevelCard";
-import { getLevelForPoints } from "@/lib/gamification";
+import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS, getLevelForPoints } from "@/lib/gamification";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
 import { getDemoAwarePoints } from "@/lib/demo";
 
@@ -23,7 +23,7 @@ const Dashboard = () => {
   const [userClass, setUserClass] = useState("");
   const [isTeacher, setIsTeacher] = useState(false);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
-  const [weeklyTotal] = useState(28); // 4 challenges * 7 days
+  const [weeklyTotal] = useState(WEEKLY_GOAL_DAYS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -185,13 +185,16 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-muted-foreground">
-              {weeklyCompleted} von {weeklyTotal} Challenges erledigt
+              {weeklyCompleted} von {weeklyTotal} aktiven Tagen erledigt
             </span>
             <span className="text-xs font-bold text-primary">
               {Math.round((weeklyCompleted / weeklyTotal) * 100)}%
             </span>
           </div>
           <Progress value={(weeklyCompleted / weeklyTotal) * 100} className="h-2" />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Wochenchallenge bei {WEEKLY_GOAL_DAYS} aktiven Tagen: <span className="font-bold text-primary">+{BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡</span>
+          </p>
         </div>
 
         <h2 className="text-lg font-bold mb-3 text-foreground">

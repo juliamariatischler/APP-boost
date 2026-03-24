@@ -10,6 +10,7 @@ import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getDemoAwarePoints } from "@/lib/demo";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 type RewardItem = {
   id: string;
@@ -42,7 +43,7 @@ const fallbackMilestones: ClassMilestone[] = [
     id: "fallback-class-2500",
     threshold: 2500,
     title: "Klassen-Equipment",
-    description: "Baelle, Seile und mehr fuer eure Klasse.",
+    description: "Bälle, Seile und mehr für eure Klasse.",
     icon: "⚽",
     sort_order: 1,
   },
@@ -50,7 +51,7 @@ const fallbackMilestones: ClassMilestone[] = [
     id: "fallback-class-4000",
     threshold: 4000,
     title: "Klassen-Event",
-    description: "Ein gemeinsames Sport-Event als naechstes grosses Ziel.",
+    description: "Ein gemeinsames Sport-Event als nächstes großes Ziel.",
     icon: "🎉",
     sort_order: 2,
   },
@@ -58,7 +59,7 @@ const fallbackMilestones: ClassMilestone[] = [
     id: "fallback-class-6000",
     threshold: 6000,
     title: "Partner-Paket",
-    description: "Ein Ueberraschungspaket fuer die ganze Klasse.",
+    description: "Ein Überraschungspaket für die ganze Klasse.",
     icon: "🎁",
     sort_order: 3,
   },
@@ -319,7 +320,9 @@ const Rewards = () => {
                     <Zap className="h-6 w-6 text-primary fill-primary" />
                   </div>
                   <span className="font-bold text-foreground text-sm">Tageschallenge</span>
-                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">+1-3 ⚡</span>
+                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                    +{BOOST_POINT_RULES.exerciseCompleted} / +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
+                  </span>
                 </button>
 
                 {/* 2-Wochen Challenge */}
@@ -330,8 +333,10 @@ const Rewards = () => {
                   <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-blue-500" />
                   </div>
-                  <span className="font-bold text-foreground text-sm">2-Wochen</span>
-                  <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">+50 ⚡</span>
+                  <span className="font-bold text-foreground text-sm">Wochenchallenge</span>
+                  <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                    +{BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡
+                  </span>
                 </button>
 
                 {/* Friendquest */}
@@ -355,7 +360,9 @@ const Rewards = () => {
                     <MapPin className="h-6 w-6 text-orange-500" />
                   </div>
                   <span className="font-bold text-foreground text-sm">Try It</span>
-                  <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">+25 ⚡</span>
+                  <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">
+                    +{BOOST_POINT_RULES.tryItCompleted} ⚡
+                  </span>
                 </button>
               </div>
             </Card>
@@ -462,7 +469,9 @@ const Rewards = () => {
                     <Zap className="h-6 w-6 text-primary fill-primary" />
                   </div>
                   <span className="font-bold text-foreground text-sm">Tageschallenge</span>
-                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">+1-3 ⚡</span>
+                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                    +{BOOST_POINT_RULES.exerciseCompleted} / +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
+                  </span>
                 </button>
 
                 {/* 2-Wochen Challenge */}
@@ -473,8 +482,10 @@ const Rewards = () => {
                   <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-blue-500" />
                   </div>
-                  <span className="font-bold text-foreground text-sm">2-Wochen</span>
-                  <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">+50 ⚡</span>
+                  <span className="font-bold text-foreground text-sm">Wochenchallenge</span>
+                  <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                    +{BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡
+                  </span>
                 </button>
 
                 {/* Friendquest */}
@@ -498,7 +509,9 @@ const Rewards = () => {
                     <MapPin className="h-6 w-6 text-orange-500" />
                   </div>
                   <span className="font-bold text-foreground text-sm">Try It</span>
-                  <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">+25 ⚡</span>
+                  <span className="text-xs bg-orange-500/20 text-orange-600 px-2 py-0.5 rounded-full font-bold">
+                    +{BOOST_POINT_RULES.tryItCompleted} ⚡
+                  </span>
                 </button>
               </div>
             </Card>

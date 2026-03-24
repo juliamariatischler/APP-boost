@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getLevelForPoints, calculateStreak, getEnergyRank, type LevelInfo, type StreakInfo, type EnergyRank } from "@/lib/gamification";
+import {
+  BOOST_POINT_RULES,
+  DAILY_EXERCISE_GOALS,
+  DAILY_STEP_GOAL,
+  getLevelForPoints,
+  calculateStreak,
+  getEnergyRank,
+  type LevelInfo,
+  type StreakInfo,
+  type EnergyRank,
+} from "@/lib/gamification";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { getDemoAwarePoints } from "@/lib/demo";
@@ -88,12 +98,12 @@ export function useGamification(userId: string | null, userClass?: string, userS
 
   const isCompletedDay = (day: any): boolean => {
     return (
-      (day.steps || 0) >= 3000 &&
-      (day.jumping_jacks || 0) >= 20 &&
-      (day.push_ups || 0) >= 10 &&
-      (day.squats || 0) >= 10 &&
-      (day.planks || 0) >= 10 &&
-      (day.sit_ups || 0) >= 20
+      (day.steps || 0) >= DAILY_STEP_GOAL &&
+      (day.jumping_jacks || 0) >= DAILY_EXERCISE_GOALS.jumping_jacks &&
+      (day.push_ups || 0) >= DAILY_EXERCISE_GOALS.push_ups &&
+      (day.squats || 0) >= DAILY_EXERCISE_GOALS.squats &&
+      (day.planks || 0) >= DAILY_EXERCISE_GOALS.planks &&
+      (day.sit_ups || 0) >= DAILY_EXERCISE_GOALS.sit_ups
     );
   };
 
@@ -166,6 +176,7 @@ export function useGamification(userId: string | null, userClass?: string, userS
       });
 
       await checkAndAwardBadges(uid, allBadges, userBadges, points, streak, totalCompletedDays);
+      await checkAndAwardStreakBonus(uid, streak, completedDates);
     } catch (err) {
       console.error("Gamification load error:", err);
       setData((prev) => ({ ...prev, loading: false }));
@@ -210,6 +221,31 @@ export function useGamification(userId: string | null, userClass?: string, userS
         earnedBadgeIds: [...prev.earnedBadgeIds, ...toAward],
       }));
     }
+  };
+
+  const checkAndAwardStreakBonus = async (uid: string, streak: StreakInfo, completedDates: string[]) => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    if (!completedDates.includes(today)) return;
+
+    const streakRewards: Record<number, number> = {
+      3: BOOST_POINT_RULES.streak3DaysBonus,
+      7: BOOST_POINT_RULES.streak7DaysBonus,
+    };
+
+    const reward = streakRewards[streak.currentStreak];
+    if (!reward) return;
+
+    const bonusKey = `boost_streak_bonus_${uid}_${today}_${streak.currentStreak}`;
+    if (localStorage.getItem(bonusKey) === "awarded") return;
+
+    const { error } = await supabase.rpc("increment_points", { points_to_add: reward });
+    if (error) {
+      console.error("Streak bonus error:", error);
+      return;
+    }
+
+    localStorage.setItem(bonusKey, "awarded");
+    window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: reward } }));
   };
 
   return data;

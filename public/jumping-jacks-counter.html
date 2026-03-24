@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Jumping Jacks Counter</title>
+  <title>KI-Hampelmann-Zähler</title>
 
   <style>
     :root{
@@ -54,7 +54,7 @@
 
 <body>
   <div class="container">
-    <h1 class="title">AI Jumping Jacks Counter</h1>
+    <h1 class="title">KI-Hampelmann-Zähler</h1>
     <p class="subtitle">Stell dich zur Kamera, Füße zusammen, Arme seitlich – und los!</p>
 
     <div class="card">
@@ -81,7 +81,7 @@
             <h2>Status</h2>
 
             <div class="stat">
-              <p class="label">Count</p>
+              <p class="label">Anzahl</p>
               <p id="count" class="value">0</p>
             </div>
 
@@ -91,11 +91,11 @@
             </div>
 
             <div class="stat">
-              <p class="label">Feedback</p>
+              <p class="label">Hinweis</p>
               <p id="feedback" class="feedback">Initialisiere…</p>
             </div>
 
-            <button id="reset-button" class="btn">Reset</button>
+            <button id="reset-button" class="btn">Zurücksetzen</button>
             <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <div id="debug-log" class="debug"></div>
@@ -144,11 +144,11 @@
     async function initBackend(){
       try{ await tf.setBackend('webgl'); await tf.ready(); }
       catch(e){ await tf.setBackend('cpu'); await tf.ready(); }
-      backendInfo.textContent = 'TFJS Backend: ' + tf.getBackend();
+      backendInfo.textContent = 'TFJS-Backend: ' + tf.getBackend();
     }
 
     async function setupCamera(){
-      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Camera not supported by this browser.');
+      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
       const stream = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480}});
       video.srcObject = stream;
       return new Promise(res => video.onloadedmetadata = () => res());

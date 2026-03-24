@@ -171,7 +171,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       {/* Class summary */}
       <Card className="p-4 bg-card shadow-lg">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-muted-foreground">Unsere Klasse</span>
+          <span className="text-sm font-medium text-muted-foreground">Unsere Klasse diese Woche</span>
           <Users className="h-5 w-5 text-primary" />
         </div>
         <div className="flex items-center gap-3 mb-2">
@@ -190,19 +190,19 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
         </div>
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Klassen-Geschenk</span>
+            <span>Klassenziel</span>
             <span className="font-bold">{classMilestone} ⚡</span>
           </div>
           <Progress value={classProgress} className="h-2" />
           {classFlashes < classMilestone && (
             <p className="text-xs text-center text-muted-foreground">
-              Noch <span className="font-bold text-primary">{classMilestone - classFlashes} ⚡</span> bis zum Geschenk 🎁
+              Noch <span className="font-bold text-primary">{classMilestone - classFlashes} ⚡</span> bis zum nächsten gemeinsamen Klassenziel
             </p>
           )}
           {classStudentCount > 0 ? (
             <>
               <p className="text-[11px] text-muted-foreground text-center">
-                Info: Das Klassenziel wird pro Schüler berechnet.
+                Das Klassenziel wird pro Schüler berechnet und macht den Teamfortschritt sichtbar.
               </p>
               <p className="text-[11px] text-muted-foreground text-center">
                 • {CLASS_MILESTONE_PER_STUDENT} ⚡ pro Schüler ({classStudentCount} Schüler = {classMilestone} ⚡ Klassenziel)
@@ -224,7 +224,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       {/* Leaderboard */}
       <Card className="p-4 bg-card shadow-lg">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">Top 5 Klassen</span>
+          <span className="text-sm font-medium text-muted-foreground">Top 5 Klassen diese Woche</span>
           <Trophy className="h-5 w-5 text-yellow-500" />
         </div>
 

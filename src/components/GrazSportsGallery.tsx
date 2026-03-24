@@ -9,8 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, Clock, ExternalLink, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, ExternalLink, MapPin, Users, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 type SportOffer = {
   id: string;
@@ -50,14 +51,14 @@ const offers: SportOffer[] = [
     timeLabel: "15:30 bis 17:00 Uhr",
     ageLabel: "8 bis 12 Jahre",
     meetingPoint: "Treffpunkt 15 Minuten vorher beim Vereinsheim",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Probetraining",
     summary: "Fußball-Probetraining mit echtem Teamgefühl, Tempo und viel Ballkontakt.",
     details:
       "Du lernst Passspiel, Ballkontrolle und bekommst einen direkten Einblick in das Vereinsleben. Die ASKÖ-Vereinszuordnung von ESK Graz ist über die ASKÖ-Steiermark-Vereinssuche belegt. Sportschuhe und Trinkflasche mitnehmen.",
-    imageHeadline: "Spuer den Teamspirit",
-    imageSubline: "Offenes Probetraining mit echtem Stadiongefuehl.",
+    imageHeadline: "Spür den Teamspirit",
+    imageSubline: "Offenes Probetraining mit echtem Stadiongefühl.",
     websiteUrl: "http://www.eskgraz.at",
     bookingUrl: "http://www.eskgraz.at",
   },
@@ -73,12 +74,12 @@ const offers: SportOffer[] = [
     timeLabel: "18:00 bis 19:30 Uhr",
     ageLabel: "7 bis 15 Jahre",
     meetingPoint: "Treffpunkt im Eingangsbereich 10 Minuten vorher",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Kurs",
     summary: "Bewegung, Koordination und mutige erste Elemente in einer starken Gruppe.",
     details:
-      "Die SPORTUNION Graz fuehrt laut offiziellem Vereinsprofil ein breites Kinder- und Kursprogramm. Dieses Angebot setzt auf Koordination, Haltung und ein starkes Gemeinschaftsgefuehl. Sportkleidung und Wasser reichen fuer den Einstieg.",
+      "Die SPORTUNION Graz führt laut offiziellem Vereinsprofil ein breites Kinder- und Kursprogramm. Dieses Angebot setzt auf Koordination, Haltung und ein starkes Gemeinschaftsgefühl. Sportkleidung und Wasser reichen für den Einstieg.",
     imageHeadline: "Mut trifft Bewegung",
     imageSubline: "Kursstart mit Fokus auf Koordination und Selbstvertrauen.",
     websiteUrl: "https://graz.sportunion.at/",
@@ -96,14 +97,14 @@ const offers: SportOffer[] = [
     timeLabel: "18:00 bis 19:30 Uhr",
     ageLabel: "9 bis 13 Jahre",
     meetingPoint: "Treffpunkt direkt beim Halleneingang links",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Probetraining",
     summary: "Schnuppertraining mit Tempo, Wurfkraft und echtem Hallenfeeling.",
     details:
       "Das Angebot orientiert sich an ASKÖ-nahen Hallensportstrukturen in Graz und setzt auf einen direkten Einstieg in Technik und Spielpraxis. Hallenschuhe mit heller Sohle empfohlen.",
     imageHeadline: "Volle Halle, voller Fokus",
-    imageSubline: "Probetraining fuer schnelle Entscheidungen und starke Wuerfe.",
+    imageSubline: "Probetraining für schnelle Entscheidungen und starke Würfe.",
     websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
     bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
   },
@@ -119,8 +120,8 @@ const offers: SportOffer[] = [
     timeLabel: "17:15 bis 18:45 Uhr",
     ageLabel: "10 bis 14 Jahre",
     meetingPoint: "Treffpunkt vor Court 2",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Kurs",
     summary: "Volleyball-Kurs mit sichtbarem Leistungsumfeld und starkem Nachwuchscharakter.",
     details:
@@ -142,12 +143,12 @@ const offers: SportOffer[] = [
     timeLabel: "10:00 bis 11:30 Uhr",
     ageLabel: "8 bis 14 Jahre",
     meetingPoint: "Treffpunkt am Clubhaus beim Platzplan",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Probetraining",
-    summary: "Tennis-Probetraining mit Clubatmosphaere, Tempo und klaren Erfolgsmomenten.",
+    summary: "Tennis-Probetraining mit Clubatmosphäre, Tempo und klaren Erfolgsmomenten.",
     details:
-      "GAK Tennis wird in einem aktuellen ASVÖ-Steiermark-Beitrag als ASVÖ-Verein im Vereinscoaching-Kontext genannt. Das Probetraining setzt auf Schlagtechnik, Bewegung am Platz und schnelle Matchformen. Schlaeger koennen vor Ort ausgeliehen werden.",
+      "GAK Tennis wird in einem aktuellen ASVÖ-Steiermark-Beitrag als ASVÖ-Verein im Vereinscoaching-Kontext genannt. Das Probetraining setzt auf Schlagtechnik, Bewegung am Platz und schnelle Matchformen. Schläger können vor Ort ausgeliehen werden.",
     imageHeadline: "Dein erster sauberer Treffer",
     imageSubline: "Probetraining mit Clubfeeling auf rotem Sand.",
     websiteUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
@@ -165,14 +166,14 @@ const offers: SportOffer[] = [
     timeLabel: "17:00 bis 18:15 Uhr",
     ageLabel: "7 bis 12 Jahre",
     meetingPoint: "Treffpunkt vor dem Dojo, barfuß erst in der Halle",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Probetraining",
     summary: "Judo-Probetraining mit Respekt, Balance und sichtbarem Fortschritt.",
     details:
-      "Der ASKÖ-Judo-Club-Graz ist in der ASKÖ-Steiermark-Vereinssuche als Grazer Judo-Verein aufgefuehrt. Im Schnuppertraining lernen Kinder kontrollierte Bewegungen, Respekt im Dojo und erste Techniken. Lange Jogginghose und T-Shirt reichen fuer den Einstieg.",
-    imageHeadline: "Staerke mit Haltung",
-    imageSubline: "Probetraining mit Respekt, Mut und Koerperkontrolle.",
+      "Der ASKÖ-Judo-Club-Graz ist in der ASKÖ-Steiermark-Vereinssuche als Grazer Judo-Verein aufgeführt. Im Schnuppertraining lernen Kinder kontrollierte Bewegungen, Respekt im Dojo und erste Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
+    imageHeadline: "Stärke mit Haltung",
+    imageSubline: "Probetraining mit Respekt, Mut und Körperkontrolle.",
     websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
     bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
   },
@@ -188,14 +189,14 @@ const offers: SportOffer[] = [
     timeLabel: "16:45 bis 18:00 Uhr",
     ageLabel: "10 bis 13 Jahre",
     meetingPoint: "Treffpunkt im Foyer beim Court A",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Kurs",
     summary: "Basketball-Kurs mit Energie, Teamplay und klarer Nachwuchsorientierung.",
     details:
-      "Der Damen-Basketballclub Graz ist laut ASKÖ-Steiermark-Vereinssuche ein Grazer ASKÖ-Basketballverein. Der Kurs verbindet Dribbling, Wurf und kleine Spielformen mit klarer Trainerstruktur. Hallenschuhe und Trinkflasche genuegen.",
+      "Der Damen-Basketballclub Graz ist laut ASKÖ-Steiermark-Vereinssuche ein Grazer ASKÖ-Basketballverein. Der Kurs verbindet Dribbling, Wurf und kleine Spielformen mit klarer Trainerstruktur. Hallenschuhe und Trinkflasche genügen.",
     imageHeadline: "Volle Energie auf dem Court",
-    imageSubline: "Kurs mit Tempo, Teamplay und starker Clubidentitaet.",
+    imageSubline: "Kurs mit Tempo, Teamplay und starker Clubidentität.",
     websiteUrl: "http://www.dbbc.at",
     bookingUrl: "http://www.dbbc.at",
   },
@@ -211,8 +212,8 @@ const offers: SportOffer[] = [
     timeLabel: "09:00 bis 10:15 Uhr",
     ageLabel: "9 bis 14 Jahre",
     meetingPoint: "Treffpunkt beim Drehkreuz im Eingangsbereich",
-    rewardLabel: "Nimm teil und sichere dir 3 Blitze",
-    rewardPoints: 3,
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
     formatLabel: "Kurs",
     summary: "Fechtkurs mit Fokus, Reaktion und einem starken ersten Aha-Moment.",
     details:
@@ -252,6 +253,14 @@ const GrazSportsGallery = () => {
     if (federation === "ASVÖ") return "bg-blue-600 text-white";
     return "bg-emerald-600 text-white";
   };
+
+  const RewardPill = ({ points, label = "gesamt" }: { points: number; label?: string }) => (
+    <div className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2 text-emerald-500">
+      <Zap className="h-4 w-4 fill-emerald-500 text-emerald-500" />
+      <span className="text-2xl font-black leading-none">{points}</span>
+      <span className="text-base font-semibold">{label}</span>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -337,9 +346,9 @@ const GrazSportsGallery = () => {
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Badge className={getFormatBadgeClassName(offer.formatLabel)}>{offer.formatLabel}</Badge>
                 <Badge className={getFederationBadgeClassName(offer.federation)}>{offer.federation}</Badge>
-                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
-                  +{offer.rewardPoints} Blitze
-                </Badge>
+              </div>
+              <div className="mb-3">
+                <RewardPill points={offer.rewardPoints} />
               </div>
               <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 text-primary" />
@@ -447,13 +456,10 @@ const GrazSportsGallery = () => {
                     {selectedOffer.timeLabel.split(" bis ")[0]} Uhr in {selectedOffer.location}
                     {" "}bei {selectedOffer.club}.
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <p className="text-sm text-primary">{selectedOffer.rewardLabel}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <RewardPill points={selectedOffer.rewardPoints} />
                     <Badge className={getFormatBadgeClassName(selectedOffer.formatLabel)}>{selectedOffer.formatLabel}</Badge>
                     <Badge className={getFederationBadgeClassName(selectedOffer.federation)}>{selectedOffer.federation}</Badge>
-                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
-                      +{selectedOffer.rewardPoints} Blitze
-                    </Badge>
                   </div>
                 </Card>
 
@@ -474,8 +480,10 @@ const GrazSportsGallery = () => {
                       href={selectedOffer.bookingUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2"
                     >
-                      Nimm teil und sichere dir 3 Blitze
+                      <Zap className="h-4 w-4 fill-current" />
+                      {selectedOffer.rewardPoints} Blitze sichern
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
                   </Button>

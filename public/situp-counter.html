@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Sit-up Counter</title>
+  <title>KI-Sit-up-Zähler</title>
 
   <style>
     :root {
@@ -64,17 +64,17 @@
 
 <body>
   <div class="container">
-    <h1 class="title">AI Sit-up Counter</h1>
-    <p class="subtitle">Leg dich seitlich zur Kamera. Oberkoerper, Huefte und Knie sollten moeglichst sichtbar sein.</p>
+    <h1 class="title">KI-Sit-up-Zähler</h1>
+    <p class="subtitle">Leg dich seitlich zur Kamera. Oberkörper, Hüfte und Knie sollten möglichst sichtbar sein.</p>
 
     <div class="card">
       <div class="tips">
         <h2>So klappt die Erkennung besser</h2>
         <ul>
           <li>Leg dich seitlich zur Kamera.</li>
-          <li>Oberkoerper, Huefte und mindestens ein Knie sollten im Bild sein.</li>
+          <li>Oberkörper, Hüfte und mindestens ein Knie sollten im Bild sein.</li>
           <li>Geh lieber einen kleinen Schritt weiter weg, statt zu nah an der Kamera zu sein.</li>
-          <li>Wenn die Kamera dich nicht gut sieht, wird nicht sauber gezaehlt.</li>
+          <li>Wenn die Kamera dich nicht gut sieht, wird nicht sauber gezählt.</li>
         </ul>
       </div>
 
@@ -101,21 +101,21 @@
             <h2>Status</h2>
 
             <div class="stat">
-              <p class="label">Count</p>
+              <p class="label">Anzahl</p>
               <p id="count" class="value">0</p>
             </div>
 
             <div class="stat">
-              <p class="label">Stage</p>
+              <p class="label">Phase</p>
               <p id="stage" class="value-stage">-</p>
             </div>
 
             <div class="stat">
-              <p class="label">Feedback</p>
+              <p class="label">Hinweis</p>
               <p id="feedback" class="feedback">Initialisiere…</p>
             </div>
 
-            <button id="reset-button" class="btn">Reset</button>
+            <button id="reset-button" class="btn">Zurücksetzen</button>
             <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <div id="debug-log" class="debug"></div>
@@ -189,11 +189,11 @@
     async function initBackend(){
       try{ await tf.setBackend('webgl'); await tf.ready(); }
       catch(e){ await tf.setBackend('cpu'); await tf.ready(); }
-      backendInfo.textContent = 'TFJS Backend: ' + tf.getBackend();
+      backendInfo.textContent = 'TFJS-Backend: ' + tf.getBackend();
     }
 
     async function setupCamera(){
-      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Camera not supported by this browser.');
+      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
       const stream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}});
       video.srcObject = stream;
       return new Promise(res => video.onloadedmetadata = () => res());
@@ -328,7 +328,7 @@
       evaluateStage(smoothedHipAngle, smoothedShoulderLift);
       const angleText = smoothedHipAngle === null ? "--" : Math.round(smoothedHipAngle);
       const liftText = smoothedShoulderLift === null ? "--" : smoothedShoulderLift.toFixed(2);
-      debugLog.textContent = `Winkel: ${angleText} | Oberkoerper: ${liftText}`;
+      debugLog.textContent = `Winkel: ${angleText} | Oberkörper: ${liftText}`;
       countEl.textContent = counter;
     }
 

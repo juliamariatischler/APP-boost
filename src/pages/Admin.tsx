@@ -84,6 +84,21 @@ const EXERCISE_GOALS = {
   jumping_jacks: 40,
 } as const;
 
+const SCHOOL_FLOW_STEPS = [
+  {
+    title: "1. Einstieg",
+    description: "Schule melden, Klassen anlegen, Lehrkraft-Zugang aktivieren. Der Aufwand bleibt minimal.",
+  },
+  {
+    title: "2. Nutzung durch Schüler",
+    description: "Schüler bewegen sich zuhause oder 5 bis 10 Minuten in der Schule und tragen ihren Fortschritt ein.",
+  },
+  {
+    title: "3. Klassenintegration",
+    description: "Lehrkräfte sehen Aktivität, Fortschritt und Klassenstand ohne zusätzlichen Kontrollaufwand.",
+  },
+] as const;
+
 const getCompletedGoalsCount = (result?: DailyResult | null) => {
   if (!result) return 0;
   let done = 0;
@@ -726,6 +741,31 @@ const Admin = () => {
       </div>
 
       <div className="max-w-screen-xl mx-auto px-4 space-y-8">
+        <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-background to-emerald-50 p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Schul-Standard-Flow</p>
+              <h2 className="mt-2 text-2xl font-black text-foreground">Einfach für Lehrkräfte, klar für Sales</h2>
+              <p className="mt-3 text-sm text-muted-foreground">
+                BOOST funktioniert im Schulalltag ohne Zusatzaufwand: Zugang anlegen, Klasse aktivieren, Aktivität im
+                Blick behalten. Die Lehrkraft muss nicht kontrollieren, sondern nur freischalten und begleiten.
+              </p>
+            </div>
+            <div className="rounded-xl border bg-background px-4 py-3 text-sm text-muted-foreground">
+              Lehrerfokus: einfache Einrichtung, kurze Bewegungsfenster, sichtbarer Klassenfortschritt.
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {SCHOOL_FLOW_STEPS.map((step) => (
+              <div key={step.title} className="rounded-xl border bg-background p-4">
+                <p className="text-sm font-bold text-foreground">{step.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
         <Card className="p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>

@@ -7,8 +7,10 @@ import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
-import { format, subDays } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
+import { de } from "date-fns/locale";
 import { isDemoEmail } from "@/lib/demo";
+import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS } from "@/lib/gamification";
 
 interface Challenge {
   id: string;
@@ -45,7 +47,8 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
 
   const loadChallengeProgress = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const fourteenDaysAgo = format(subDays(new Date(), 13), "yyyy-MM-dd");
+    const weekStart = format(startOfWeek(new Date(), { locale: de, weekStartsOn: 1 }), "yyyy-MM-dd");
+    const weekEnd = format(endOfWeek(new Date(), { locale: de, weekStartsOn: 1 }), "yyyy-MM-dd");
     const { data: sessionData } = await supabase.auth.getSession();
     const demoUser = isDemoEmail(sessionData.session?.user?.email);
 
@@ -65,8 +68,8 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
         .from("daily_results")
         .select("jumping_jacks, push_ups, squats, planks, sit_ups")
         .eq("user_id", userId)
-        .gte("date", fourteenDaysAgo)
-        .lte("date", today),
+        .gte("date", weekStart)
+        .lte("date", weekEnd),
       supabase
         .from("challenge_invitations")
         .select("status")
@@ -104,7 +107,7 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
         (day.planks || 0) > 0 ||
         (day.sit_ups || 0) > 0
       ).length;
-      setWeeklyProgress(Math.round((activeDays / 14) * 100));
+      setWeeklyProgress(Math.min(Math.round((activeDays / WEEKLY_GOAL_DAYS) * 100), 100));
     } else {
       setWeeklyProgress(0);
     }
@@ -118,9 +121,8 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
     }
 
     if (!tryItRegistrationsRes.error) {
-      // 3 Anmeldungen entsprechen 100% der Try-It-Challenge.
       const registeredCount = tryItRegistrationsRes.count || 0;
-      setTryItProgress(Math.min(Math.round((registeredCount / 3) * 100), 100));
+      setTryItProgress(registeredCount > 0 ? 100 : 0);
     } else {
       setTryItProgress(0);
     }
@@ -130,16 +132,16 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
     {
       id: "daily",
       title: "Tägliche Challenge",
-      description: "Jeden Tag ein kurzer Bewegungsimpuls mit Ausdauer, Kraft und ersten Koordinationsreizen.",
+      description: `Jeden Tag Übungen abschließen, Fortschritt sehen und mit Tagesziel plus Übungen schnell Blitze sammeln.`,
       subInfo: "⏱ 5–10 Minuten",
       image: dailyImg,
       progress: dailyProgress
     },
     {
       id: "weekly",
-      title: "2-Wochenchallenge",
-      description: "Eine Challenge, zwei Wege: Spitzensportler-Motivation oder Stempelkarte mit echten Offline-Erlebnissen.",
-      subInfo: "🏆 14 Tage",
+      title: "Wochenchallenge",
+      description: `5 aktive Tage schaffen, sichtbar vorankommen und ${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze plus Badge holen.`,
+      subInfo: "🏆 5 Tage Ziel",
       image: weeklyImg,
       progress: weeklyProgress
     },
@@ -154,7 +156,7 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
     {
       id: "tryit",
       title: "Try It",
-      description: "Ein gemeinsames Try-It-System mit klarer Differenzierung nach Verein, Erlebnis und Belohnung.",
+      description: `Neue Sportarten, Trainings oder Vereine testen und pro Try-It ${BOOST_POINT_RULES.tryItCompleted} Blitze sammeln.`,
       subInfo: "📍 In deiner Nähe",
       image: tryitImg,
       progress: tryItProgress

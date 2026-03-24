@@ -13,17 +13,18 @@ import { TopHeader } from "@/components/TopHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { format, subDays } from "date-fns";
 import { isDemoEmail } from "@/lib/demo";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 const challengeData: Record<string, { title: string; image: string; description: string }> = {
   daily: {
     title: "Tägliche Challenge",
     image: dailyImg,
-    description: "Kurze, kindgerechte Bewegungsimpulse mit reduzierten Wiederholungen und rotierendem Trainingsfokus.",
+    description: "Kurze, kindgerechte Bewegungsimpulse mit reduzierten Wiederholungen und rotierendem Trainingsfokus. Unsere Übungen basieren auf internationalen Trainingsrichtlinien für Kinder und sind speziell auf Sicherheit, Einfachheit und Skalierbarkeit ausgelegt.",
   },
   weekly: {
-    title: "2-Wochenchallenge",
+    title: "Wochenchallenge",
     image: weeklyImg,
-    description: "Die Wochenchallenge bleibt ein Bereich, bietet jetzt aber zwei klar getrennte Wege zur Teilnahme.",
+    description: `Die Wochenchallenge bringt Rückkehr in die App: 5 aktive Tage oder ein klarer Wochenmodus für +${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze.`,
   },
   friend: {
     title: "Friendquest Challenge",
@@ -33,7 +34,7 @@ const challengeData: Record<string, { title: string; image: string; description:
   tryit: {
     title: "Try It Challenge",
     image: tryitImg,
-    description: "Ein gemeinsames Try-It-System mit emotionalerer Vereinsdarstellung, stärkerem Branding und klarerem Belohnungsgefühl.",
+    description: `Ein gemeinsames Try-It-System mit echten Sportarten, Vereinsnähe und +${BOOST_POINT_RULES.tryItCompleted} Blitzen pro neuem Erlebnis.`,
   },
 };
 
@@ -123,68 +124,44 @@ const ChallengeDetail = () => {
             </p>
 
             {id === "weekly" && (
-              <div className="mb-8 rounded-lg border bg-muted/30 p-4 space-y-3">
-                <h2 className="text-xl font-bold text-foreground">So funktioniert die 2-Wochenchallenge</h2>
-                <div className="rounded-lg border bg-background p-4">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">Dein Fortschritt</span>
-                    <span className="font-bold text-primary">{weeklyProgress}%</span>
-                  </div>
-                  <Progress value={weeklyProgress} className="h-2.5" />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Gezählt werden aktive Tage in den letzten 14 Tagen.
+              <div className="mb-8 grid gap-4 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/challenge/weekly/athlete")}
+                  className="rounded-xl border bg-background p-4 text-left transition hover:border-primary hover:shadow-md"
+                >
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Option A</p>
+                  <h3 className="text-lg font-bold text-foreground">Spitzensportler-Challenge</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Motivationsvideos von Spitzensportler:innen geben den emotionalen Einstieg. Kinder absolvieren danach
+                    eine klar vorgegebene Challenge.
                   </p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Strategisch bleibt alles vorerst in einer Kategorie. So bleibt die Navigation schlank, während beide Wege
-                  inhaltlich klar getrennt kommuniziert werden können.
-                </p>
+                  <div className="mt-3 space-y-2 text-sm text-foreground">
+                    <p>Inspiration durch Vorbilder und starke Emotionen.</p>
+                    <p>Klare Challenge-Struktur mit hohem Aktivierungsfaktor.</p>
+                    <p>Ideal für Kampagnen, Highlights und Storytelling.</p>
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-primary">Jetzt öffnen</p>
+                </button>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/challenge/weekly/athlete")}
-                    className="rounded-xl border bg-background p-4 text-left transition hover:border-primary hover:shadow-md"
-                  >
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Option A</p>
-                    <h3 className="text-lg font-bold text-foreground">Spitzensportler-Challenge</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Motivationsvideos von Spitzensportler:innen geben den emotionalen Einstieg. Kinder absolvieren danach
-                      eine klar vorgegebene Challenge.
-                    </p>
-                    <div className="mt-3 space-y-2 text-sm text-foreground">
-                      <p>Inspiration durch Vorbilder und starke Emotionen.</p>
-                      <p>Klare Challenge-Struktur mit hohem Aktivierungsfaktor.</p>
-                      <p>Ideal für Kampagnen, Highlights und Storytelling.</p>
-                    </div>
-                    <p className="mt-4 text-sm font-semibold text-primary">Jetzt öffnen</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate("/challenge/weekly/geotracking")}
-                    className="rounded-xl border bg-background p-4 text-left transition hover:border-primary hover:shadow-md"
-                  >
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Option B</p>
-                    <h3 className="text-lg font-bold text-foreground">Geocaching x BOOST</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Die Logik orientiert sich an echtem Geocaching: Kinder steuern Orte an, finden physische Verstecke
-                      und loggen den Fund danach digital in BOOST.
-                    </p>
-                    <div className="mt-3 space-y-2 text-sm text-foreground">
-                      <p>Bewegung draussen mit Suchreiz, Orientierung und echten Fundmomenten.</p>
-                      <p>Kein QR-Scan noetig, sondern physischer Cache mit Fundcode oder Logbuch.</p>
-                      <p>Digitale Punktevergabe nach validiertem Fund in der App.</p>
-                    </div>
-                    <p className="mt-4 text-sm font-semibold text-primary">Jetzt öffnen</p>
-                  </button>
-                </div>
-
-                <div className="space-y-2 text-sm text-foreground">
-                  <p>1. Öffne die Wochenchallenge und wähle einen der beiden Wege.</p>
-                  <p>2. Sammle über 14 Tage aktive Tage durch Bewegung, Übungen oder validierte Teilnahme.</p>
-                  <p>3. Der Fortschritt steigt weiter über aktive Tage, unabhängig davon, welche Option du nutzt.</p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/challenge/weekly/geotracking")}
+                  className="rounded-xl border bg-background p-4 text-left transition hover:border-primary hover:shadow-md"
+                >
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">Option B</p>
+                  <h3 className="text-lg font-bold text-foreground">Geocaching x BOOST</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Die Logik orientiert sich an echtem Geocaching: Kinder steuern Orte an, finden physische Verstecke
+                    und loggen den Fund danach digital in BOOST.
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm text-foreground">
+                    <p>Bewegung draussen mit Suchreiz, Orientierung und echten Fundmomenten.</p>
+                    <p>Kein QR-Scan nötig, sondern physischer Cache mit Fundcode oder Logbuch.</p>
+                    <p>Digitale Blitzevergabe nach validiertem Fund in der App.</p>
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-primary">Jetzt öffnen</p>
+                </button>
               </div>
             )}
 

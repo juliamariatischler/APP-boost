@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, subWeeks } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import { Zap } from "lucide-react";
+import { BOOST_POINT_RULES, DAILY_STEP_GOAL, DAILY_EXERCISE_GOALS, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
 
 interface DailyResult {
   date: string;
@@ -12,15 +13,8 @@ interface DailyResult {
   planks: number;
   sit_ups: number;
   jumping_jacks: number;
+  steps: number;
 }
-
-const EXERCISE_GOALS = {
-  jumping_jacks: 40,
-  push_ups: 10,
-  squats: 10,
-  planks: 10,
-  sit_ups: 25,
-};
 
 interface WeekOverviewProps {
   userId: string;
@@ -53,14 +47,29 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
     setLoading(false);
   };
 
-  const calculateDailyPoints = (day: DailyResult) => {
-    let points = 0;
-    if (day.jumping_jacks >= EXERCISE_GOALS.jumping_jacks) points++;
-    if (day.push_ups >= EXERCISE_GOALS.push_ups) points++;
-    if (day.squats >= EXERCISE_GOALS.squats) points++;
-    if (day.planks >= EXERCISE_GOALS.planks) points++;
-    if (day.sit_ups >= EXERCISE_GOALS.sit_ups) points++;
-    return points;
+  const calculateDailyBlitze = (day: DailyResult) => {
+    const completedExercises = countCompletedDailyExercises({
+      jumping_jacks: day.jumping_jacks,
+      push_ups: day.push_ups,
+      squats: day.squats,
+      planks: day.planks,
+      sit_ups: day.sit_ups,
+    });
+
+    let blitze = completedExercises * BOOST_POINT_RULES.exerciseCompleted;
+    if (
+      isDailyGoalComplete(day.steps || 0, {
+        jumping_jacks: day.jumping_jacks,
+        push_ups: day.push_ups,
+        squats: day.squats,
+        planks: day.planks,
+        sit_ups: day.sit_ups,
+      })
+    ) {
+      blitze += BOOST_POINT_RULES.dailyGoalCompleted;
+    }
+
+    return blitze;
   };
 
   const getDaysOfWeek = () => {
@@ -75,7 +84,7 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
     return weeklyData.find(d => d.date === dateStr);
   };
 
-  const totalWeeklyPoints = weeklyData.reduce((sum, day) => sum + calculateDailyPoints(day), 0);
+  const totalWeeklyBlitze = weeklyData.reduce((sum, day) => sum + calculateDailyBlitze(day), 0);
   const daysOfWeek = getDaysOfWeek();
 
   if (loading) {
@@ -88,15 +97,15 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
         <h2 className="text-2xl font-bold text-foreground">Diese Woche</h2>
         <div className="flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-lg">
           <Zap className="h-5 w-5 text-primary fill-primary" />
-          <span className="font-bold text-primary text-lg">{totalWeeklyPoints}</span>
-          <span className="text-sm text-muted-foreground">/ 35</span>
+          <span className="font-bold text-primary text-lg">{totalWeeklyBlitze}</span>
+          <span className="text-sm text-muted-foreground">Blitze</span>
         </div>
       </div>
       
       <div className="grid grid-cols-7 gap-2">
         {daysOfWeek.map((day) => {
           const data = getDataForDate(day);
-          const points = data ? calculateDailyPoints(data) : 0;
+          const blitze = data ? calculateDailyBlitze(data) : 0;
           const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
           const isPast = day < new Date() && !isToday;
           
@@ -106,7 +115,7 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
               className={`flex flex-col items-center p-3 rounded-lg border-2 ${
                 isToday
                   ? "border-primary bg-primary/5"
-                  : isPast && points === 0
+                  : isPast && blitze === 0
                   ? "border-muted bg-muted/30"
                   : "border-border bg-card"
               }`}
@@ -121,12 +130,12 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
               </div>
               <div className="flex items-center gap-1">
                 <Zap className={`h-4 w-4 ${
-                  points > 0 ? "text-primary fill-primary" : "text-muted-foreground"
+                  blitze > 0 ? "text-primary fill-primary" : "text-muted-foreground"
                 }`} />
                 <span className={`text-sm font-bold ${
-                  points > 0 ? "text-primary" : "text-muted-foreground"
+                  blitze > 0 ? "text-primary" : "text-muted-foreground"
                 }`}>
-                  {points}
+                  {blitze}
                 </span>
               </div>
             </div>
@@ -166,6 +175,11 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
           </div>
         </div>
       </div>
+
+      <p className="mt-4 text-xs text-muted-foreground">
+        Pro abgeschlossener Übung: +{BOOST_POINT_RULES.exerciseCompleted} ⚡. Tagesziel mit {DAILY_STEP_GOAL} Schritten und allen Übungen:
+        +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡ extra.
+      </p>
     </Card>
   );
 };

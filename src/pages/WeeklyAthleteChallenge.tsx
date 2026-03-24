@@ -14,8 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import { CheckCircle2, Play, Trophy, Zap } from "lucide-react";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
-const REWARD_POINTS = 15;
+const REWARD_POINTS = BOOST_POINT_RULES.weeklyChallengeCompleted;
 const VIDEO_REWARD_STORAGE_KEY = "weekly_athlete_video_rewards";
 
 const athletes = [
@@ -25,7 +26,7 @@ const athletes = [
     sport: "Leichtathletik",
     message: "Schnell werden heißt nicht nur rennen. Es heißt mutig starten und jeden Tag dranbleiben.",
     challenge: "3 Runden: 10 Squats, 10 Sekunden Plank, 20 Jumping Jacks",
-    reward: `+${REWARD_POINTS} Blitze bei Abschluss`,
+    reward: `+${REWARD_POINTS} Blitze + Wochenbadge bei Abschluss`,
     videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
   },
   {
@@ -34,7 +35,7 @@ const athletes = [
     sport: "Fußball",
     message: "Große Spiele gewinnst du mit Energie, Fokus und Wiederholung.",
     challenge: "2 Aktivblöcke: 10 Push-ups, 10 Squats, 3000 Schritte",
-    reward: `+${REWARD_POINTS} Blitze bei Abschluss`,
+    reward: `+${REWARD_POINTS} Blitze + Wochenbadge bei Abschluss`,
     videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
   },
   {
@@ -43,7 +44,7 @@ const athletes = [
     sport: "Turnen",
     message: "Koordination macht dich stark. Fang klein an und werde jeden Tag sicherer.",
     challenge: "Einbeinstand, Linien-Sprünge und danach 10 Sekunden Plank",
-    reward: `+${REWARD_POINTS} Blitze bei Abschluss`,
+    reward: `+${REWARD_POINTS} Blitze + Wochenbadge bei Abschluss`,
     videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
   },
 ];

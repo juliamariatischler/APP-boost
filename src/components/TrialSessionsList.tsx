@@ -20,9 +20,9 @@ import {
 import { format } from "date-fns";
 import { isValid, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
-const POINTS_PER_VISIT = 25;
-const FEATURED_POINTS_PER_VISIT = 40;
+const POINTS_PER_VISIT = BOOST_POINT_RULES.tryItCompleted;
 
 type Club = {
   id: string;
@@ -78,12 +78,11 @@ const getAssociationInfo = (clubName: string) => {
 };
 
 const getSessionPoints = (session: TrialSession) => {
-  const hasLongFormat = Boolean(session.end_time) && session.end_time > "17:30:00";
-  return hasLongFormat ? FEATURED_POINTS_PER_VISIT : POINTS_PER_VISIT;
+  return POINTS_PER_VISIT;
 };
 
 const getExperienceLabel = (session: TrialSession) => {
-  return getSessionPoints(session) > POINTS_PER_VISIT ? "Highlight-Erlebnis" : "Probetraining";
+  return session.end_time && session.end_time > "17:30:00" ? "Highlight-Erlebnis" : "Probetraining";
 };
 
 const TrialSessionsList = () => {
@@ -257,7 +256,7 @@ const TrialSessionsList = () => {
 
   const filteredSessions = sessions.filter((session) => {
     if (activeFilter === "all") return true;
-    const isHighlight = getSessionPoints(session) > POINTS_PER_VISIT;
+    const isHighlight = getExperienceLabel(session) === "Highlight-Erlebnis";
     if (activeFilter === "highlight") return isHighlight;
     return !isHighlight;
   });
@@ -274,14 +273,6 @@ const TrialSessionsList = () => {
     return (
       <div className="space-y-6">
         <GrazSportsGallery />
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground text-lg">
-            Aktuell sind keine zusätzlichen Schnuppertermine verfügbar.
-          </p>
-          <p className="text-muted-foreground mt-2">
-            Schau bald wieder vorbei!
-          </p>
-        </Card>
       </div>
     );
   }
@@ -295,8 +286,8 @@ const TrialSessionsList = () => {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Try It</p>
           <h2 className="mt-2 text-2xl font-bold">Ein System, klar differenziert</h2>
           <p className="mt-3 max-w-3xl text-sm text-white/90">
-            Try It bleibt ein gemeinsames Erlebnis. Die Differenzierung passiert ueber Vereine, Verbandsbranding,
-            Bildwirkung und Punkte pro Erlebnis statt ueber eine harte Trennung in mehrere Produkte.
+            Try It bleibt ein gemeinsames Erlebnis. Die Differenzierung passiert über Vereine, Verbandsbranding
+            und Bildwirkung, die Belohnung bleibt bewusst klar: jedes neue Try-It bringt {POINTS_PER_VISIT} Blitze.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining</Badge>
@@ -332,7 +323,7 @@ const TrialSessionsList = () => {
         <h2 className="text-2xl font-bold text-foreground">Weitere verfügbare Schnuppertermine</h2>
         <Badge variant="secondary" className="flex items-center gap-1">
           <Zap className="h-3 w-3 text-yellow-500" />
-          +{POINTS_PER_VISIT} bis +{FEATURED_POINTS_PER_VISIT} pro Anmeldung
+          +{POINTS_PER_VISIT} pro Anmeldung
         </Badge>
       </div>
       
@@ -396,7 +387,7 @@ const TrialSessionsList = () => {
                       {experienceLabel}
                     </Badge>
                     <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-                      +{pointsReward} Punkte
+                      +{pointsReward} Blitze
                     </Badge>
                   </div>
                 </div>
