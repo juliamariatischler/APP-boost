@@ -13,6 +13,8 @@ import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
 import { DEMO_MIN_POINTS } from "@/lib/demo";
 
+const REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY = "boost:get_registered_schools_unavailable";
+
 // Input validation schemas
 const loginSchema = z.object({
   email: z.string().trim().email("Ungültige E-Mail-Adresse").max(255, "E-Mail zu lang"),
@@ -92,6 +94,44 @@ const Auth = () => {
     username: "DemoLehrkraft",
   };
 
+  const isMissingInfraError = (error: any) => {
+    const code = error?.code ?? "";
+    const text = `${error?.message ?? ""} ${error?.details ?? ""} ${error?.hint ?? ""}`.toLowerCase();
+    return (
+      code === "PGRST202" ||
+      code === "PGRST204" ||
+      code === "PGRST205" ||
+      code === "42P01" ||
+      text.includes("schema cache") ||
+      text.includes("could not find the function") ||
+      text.includes("could not find the table") ||
+      text.includes("could not find the 'age' column")
+    );
+  };
+
+  const getProfilePayload = (params: {
+    username: string;
+    accountType: "student" | "teacher";
+    points: number;
+    includeAge?: boolean;
+  }) => {
+    const basePayload = {
+      username: params.username,
+      school: DEMO_SCHOOL,
+      class: DEMO_CLASS,
+      points: params.points,
+    };
+
+    if (!params.includeAge) {
+      return basePayload;
+    }
+
+    return {
+      ...basePayload,
+      age: params.accountType === "student" ? 10 : null,
+    };
+  };
+
   useEffect(() => {
     // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -105,11 +145,30 @@ const Auth = () => {
   useEffect(() => {
     const loadRegisteredSchools = async () => {
       setSchoolsLoading(true);
-      const { data, error } = await (supabase.rpc as any)("get_registered_schools");
+      const rpcUnavailable = sessionStorage.getItem(REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY) === "1";
+      const { data, error } = rpcUnavailable
+        ? { data: null, error: { code: "PGRST205", message: "cached unavailable rpc" } }
+        : await (supabase.rpc as any)("get_registered_schools");
 
       if (error) {
-        console.error("Error loading registered schools:", error);
-        setRegisteredSchools([]);
+        if (isMissingInfraError(error)) {
+          sessionStorage.setItem(REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY, "1");
+          const { data: fallbackSchools } = await supabase
+            .from("profiles")
+            .select("school")
+            .not("school", "is", null);
+
+          const schools = Array.isArray(fallbackSchools)
+            ? fallbackSchools
+                .map((row: { school?: string | null }) => row.school?.trim() || "")
+                .filter((school: string) => school.length > 0)
+            : [];
+
+          setRegisteredSchools([...new Set(schools)]);
+        } else {
+          console.error("Error loading registered schools:", error);
+          setRegisteredSchools([]);
+        }
       } else {
         const schools = Array.isArray(data)
           ? data
@@ -256,16 +315,33 @@ const Auth = () => {
         .eq("id", signInResult.data.user.id)
         .maybeSingle();
 
-      const { error: profileUpdateError } = await (supabase as any)
+      let { error: profileUpdateError } = await (supabase as any)
         .from("profiles")
-        .update({
-          username: params.username,
-          school: DEMO_SCHOOL,
-          class: DEMO_CLASS,
-          age: params.accountType === "student" ? 10 : null,
-          points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
-        })
+        .update(
+          getProfilePayload({
+            username: params.username,
+            accountType: params.accountType,
+            points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
+            includeAge: true,
+          })
+        )
         .eq("id", signInResult.data.user.id);
+
+      if (profileUpdateError && isMissingInfraError(profileUpdateError)) {
+        const retry = await (supabase as any)
+          .from("profiles")
+          .update(
+            getProfilePayload({
+              username: params.username,
+              accountType: params.accountType,
+              points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
+              includeAge: false,
+            })
+          )
+          .eq("id", signInResult.data.user.id);
+
+        profileUpdateError = retry.error;
+      }
 
       if (profileUpdateError) {
         throw profileUpdateError;
@@ -307,16 +383,33 @@ const Auth = () => {
       }
     }
 
-    const { error: profileUpdateError } = await (supabase as any)
+    let { error: profileUpdateError } = await (supabase as any)
       .from("profiles")
-      .update({
-        username: params.username,
-        school: DEMO_SCHOOL,
-        class: DEMO_CLASS,
-        age: params.accountType === "student" ? 10 : null,
-        points: DEMO_MIN_POINTS,
-      })
+      .update(
+        getProfilePayload({
+          username: params.username,
+          accountType: params.accountType,
+          points: DEMO_MIN_POINTS,
+          includeAge: true,
+        })
+      )
       .eq("id", signUpResult.data.user.id);
+
+    if (profileUpdateError && isMissingInfraError(profileUpdateError)) {
+      const retry = await (supabase as any)
+        .from("profiles")
+        .update(
+          getProfilePayload({
+            username: params.username,
+            accountType: params.accountType,
+            points: DEMO_MIN_POINTS,
+            includeAge: false,
+          })
+        )
+        .eq("id", signUpResult.data.user.id);
+
+      profileUpdateError = retry.error;
+    }
 
     if (profileUpdateError) {
       throw profileUpdateError;

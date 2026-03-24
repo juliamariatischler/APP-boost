@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getDemoAwarePoints, isDemoEmail } from "@/lib/demo";
 
+const POINTS_DECAY_UNAVAILABLE_KEY = "boost:apply_daily_points_decay_unavailable";
+
 interface Profile {
   username: string;
   school: string;
@@ -84,9 +86,25 @@ export const TopHeader = () => {
   };
 
   const loadDecayState = async () => {
+    if (sessionStorage.getItem(POINTS_DECAY_UNAVAILABLE_KEY) === "1") {
+      return;
+    }
+
     const { data: decayState, error: decayError } = await (supabase.rpc as any)("apply_daily_points_decay");
     if (decayError) {
-      console.error("Points decay error:", decayError);
+      const errorText = `${decayError.message ?? ""} ${decayError.details ?? ""} ${decayError.hint ?? ""}`.toLowerCase();
+      const isMissingInfra =
+        decayError.code === "PGRST202" ||
+        decayError.code === "PGRST205" ||
+        decayError.code === "404" ||
+        errorText.includes("schema cache") ||
+        errorText.includes("could not find the function");
+
+      if (!isMissingInfra) {
+        console.error("Points decay error:", decayError);
+      } else {
+        sessionStorage.setItem(POINTS_DECAY_UNAVAILABLE_KEY, "1");
+      }
       return;
     }
 

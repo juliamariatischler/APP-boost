@@ -24,6 +24,7 @@ interface Props {
 
 const CLASS_MILESTONE_PER_STUDENT = 300;
 const PUBLIC_STUDENT_LIMIT = 10;
+const PRESENTATION_RANKINGS_UNAVAILABLE_KEY = "boost:presentation_class_rankings_unavailable";
 const PRESENTATION_CLASS_RANKINGS: ClassRanking[] = [
   { className: "3b", school: "NMS Klusemann", totalFlashes: 2840, studentCount: 30 },
   { className: "4a", school: "NMS Straden", totalFlashes: 2635, studentCount: 30 },
@@ -87,12 +88,35 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       }
 
       // Aggregate points by class+school from profiles
-      const { data: presentationData } = await (supabase as any)
-        .from("presentation_class_rankings")
-        .select("school, class, total_flashes, student_count, sort_order")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .order("total_flashes", { ascending: false });
+      let presentationData: Array<{ school: string; class: string; total_flashes: number; student_count: number }> | null = null;
+      let presentationError: any = null;
+
+      if (sessionStorage.getItem(PRESENTATION_RANKINGS_UNAVAILABLE_KEY) !== "1") {
+        const response = await (supabase as any)
+          .from("presentation_class_rankings")
+          .select("school, class, total_flashes, student_count, sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("total_flashes", { ascending: false });
+
+        presentationData = response.data;
+        presentationError = response.error;
+      }
+
+      const presentationErrorText =
+        `${presentationError?.message ?? ""} ${presentationError?.details ?? ""} ${presentationError?.hint ?? ""}`.toLowerCase();
+      const missingPresentationInfra =
+        presentationError?.code === "PGRST202" ||
+        presentationError?.code === "PGRST205" ||
+        presentationError?.code === "42P01" ||
+        presentationErrorText.includes("schema cache") ||
+        presentationErrorText.includes("could not find the table");
+
+      if (presentationError && !missingPresentationInfra) {
+        console.error("Error loading presentation class rankings:", presentationError);
+      } else if (missingPresentationInfra) {
+        sessionStorage.setItem(PRESENTATION_RANKINGS_UNAVAILABLE_KEY, "1");
+      }
 
       if (presentationData && presentationData.length > 0) {
         setRankings(

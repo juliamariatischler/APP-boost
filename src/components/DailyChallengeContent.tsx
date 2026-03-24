@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
 import { WalkingIcon, PushUpIcon, SquatIcon, PlankIcon, SitUpIcon, JumpingJacksIcon } from "@/components/ExerciseIcons";
+import { isDemoEmail } from "@/lib/demo";
 import {
   BOOST_POINT_RULES,
   DAILY_STEP_GOAL,
@@ -15,6 +16,8 @@ import {
   countCompletedDailyExercises,
   isDailyGoalComplete,
 } from "@/lib/gamification";
+
+const PROFILE_AGE_UNAVAILABLE_KEY = "boost:profiles_age_unavailable";
 
 interface DailyChallengeContentProps {
   userId: string;
@@ -99,11 +102,38 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   };
 
   const loadProfileMeta = async () => {
-    const { data } = await supabase
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentEmail = sessionData.session?.user?.email;
+
+    if (isDemoEmail(currentEmail)) {
+      setUserAge(10);
+      return;
+    }
+
+    if (sessionStorage.getItem(PROFILE_AGE_UNAVAILABLE_KEY) === "1") {
+      setUserAge(null);
+      return;
+    }
+
+    const { data, error } = await (supabase as any)
       .from("profiles")
       .select("age")
       .eq("id", userId)
       .maybeSingle();
+
+    if (error) {
+      const errorText = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+      if (
+        error.code === "PGRST204" ||
+        error.code === "PGRST205" ||
+        errorText.includes("schema cache") ||
+        errorText.includes("could not find the 'age' column")
+      ) {
+        sessionStorage.setItem(PROFILE_AGE_UNAVAILABLE_KEY, "1");
+        setUserAge(null);
+        return;
+      }
+    }
 
     setUserAge(data?.age ?? null);
   };
