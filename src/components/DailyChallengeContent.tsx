@@ -38,42 +38,6 @@ const exercises: Exercise[] = [
   { name: "Jumping Jacks", goal: DAILY_EXERCISE_GOALS.jumping_jacks, dbKey: "jumping_jacks", icon: <JumpingJacksIcon className="h-6 w-6" /> },
 ];
 
-const TRAINING_FOCUS = [
-  {
-    title: "Ausdauer",
-    accent: "text-sky-700",
-    bg: "bg-sky-50",
-    border: "border-sky-200",
-    tips: [
-      "3000 Schritte oder 2 aktive Blöcke mit Jumping Jacks sammeln.",
-      "Zwischen den Übungen nur kurze Pausen machen.",
-      "Ziel: in Bewegung bleiben statt auf maximale Intensität gehen.",
-    ],
-  },
-  {
-    title: "Kraft",
-    accent: "text-emerald-700",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    tips: [
-      "10 Squats, 10 Push-ups und 10 Sekunden Plank sauber ausführen.",
-      "Technik vor Tempo: ruhig und kontrolliert arbeiten.",
-      "Wenn es leicht wird, einen zweiten kurzen Durchgang ergänzen.",
-    ],
-  },
-  {
-    title: "Koordination",
-    accent: "text-amber-700",
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    tips: [
-      "Einbeinstände 20-30 Sek. pro Seite halten.",
-      "10 Linien-Sprünge vor und zurück oder seitlich absolvieren.",
-      "5 Würfe pro Hand gegen eine Wand oder zu einer Partnerperson.",
-    ],
-  },
-] as const;
-
 export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) => {
   const [userAge, setUserAge] = useState<number | null>(null);
   const [steps, setSteps] = useState(0);
@@ -83,7 +47,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const [loading, setLoading] = useState(true);
   const isHealthSupported = HealthService.isHealthPlatformSupported();
   const healthSourceLabel = HealthService.getHealthSourceLabel();
-  const trainingFocus = TRAINING_FOCUS[new Date().getDay() % TRAINING_FOCUS.length];
   const muscleTrainingInfo =
     userAge !== null && userAge <= 11
       ? "Muskeltraining ist auch für Kinder in Ordnung, wenn eine erwachsene Person auf saubere Technik achtet."
@@ -481,18 +444,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               </div>
             </>
           )}
-        </div>
-      </Card>
-
-      <Card className={`p-5 border ${trainingFocus.border} ${trainingFocus.bg}`}>
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Heutiger Trainingsfokus</span>
-          <span className={`text-sm font-bold ${trainingFocus.accent}`}>{trainingFocus.title}</span>
-        </div>
-        <div className="space-y-1.5 text-sm text-foreground">
-          {trainingFocus.tips.map((tip) => (
-            <p key={tip}>{tip}</p>
-          ))}
         </div>
       </Card>
 
