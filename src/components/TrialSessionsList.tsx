@@ -63,11 +63,11 @@ const getAssociationInfo = (clubName: string) => {
   const normalized = clubName.toLowerCase();
 
   if (normalized.includes("asvö") || normalized.includes("asvoe")) {
-    return { label: "ASVOE", className: "bg-red-600 text-white" };
+    return { label: "ASVÖ", className: "bg-red-600 text-white" };
   }
 
   if (normalized.includes("askö") || normalized.includes("askoe")) {
-    return { label: "ASKOE", className: "bg-rose-700 text-white" };
+    return { label: "ASKÖ", className: "bg-rose-700 text-white" };
   }
 
   if (normalized.includes("sportunion")) {

@@ -66,14 +66,9 @@ const Boost = () => {
             Blitze sind die zentrale Währung in BOOST. Sie machen Fortschritt sichtbar, bringen Kinder täglich zurück
             und verbinden persönliche Motivation mit dem Erfolg der ganzen Klasse.
           </p>
-          <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-            <p>Übung fertig: +{BOOST_POINT_RULES.exerciseCompleted} ⚡</p>
-            <p>Tagesziel geschafft: +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡</p>
-            <p>Wochenchallenge: +{BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡</p>
-            <p>Try-It ausprobiert: +{BOOST_POINT_RULES.tryItCompleted} ⚡</p>
-            <p>3 Tage aktiv in Folge: +{BOOST_POINT_RULES.streak3DaysBonus} ⚡ Bonus</p>
-            <p>7 Tage Streak: +{BOOST_POINT_RULES.streak7DaysBonus} ⚡ Bonus</p>
-          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Die genaue Übersicht, wie viele Blitze es pro Aktion gibt, findest du unten bei „Mehr Blitze gefällig?“.
+          </p>
         </Card>
 
         <Card className="p-4 bg-card shadow-lg">

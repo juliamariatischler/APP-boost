@@ -5,6 +5,14 @@ import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 export const ChallengeButtons = () => {
   const navigate = useNavigate();
+  const flashOverview = [
+    { label: "Übung fertig", reward: `+${BOOST_POINT_RULES.exerciseCompleted} ⚡` },
+    { label: "Tagesziel geschafft", reward: `+${BOOST_POINT_RULES.dailyGoalCompleted} ⚡` },
+    { label: "Wochenchallenge", reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡` },
+    { label: "Try It ausprobiert", reward: `+${BOOST_POINT_RULES.tryItCompleted} ⚡` },
+    { label: "3 Tage aktiv in Folge", reward: `+${BOOST_POINT_RULES.streak3DaysBonus} ⚡ Bonus` },
+    { label: "7 Tage Streak", reward: `+${BOOST_POINT_RULES.streak7DaysBonus} ⚡ Bonus` },
+  ];
 
   const challenges = [
     { label: "Tageschallenge", reward: `+${BOOST_POINT_RULES.exerciseCompleted} / +${BOOST_POINT_RULES.dailyGoalCompleted} ⚡`, icon: Zap, path: "/challenge/daily", colorClass: "bg-primary/10 hover:bg-primary/20 border-primary/30", iconBg: "bg-primary/20", iconColor: "text-primary fill-primary", rewardBg: "bg-primary/20 text-primary" },
@@ -36,6 +44,23 @@ export const ChallengeButtons = () => {
             </button>
           );
         })}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          So sammelst du Blitze
+        </p>
+        <div className="mt-3 grid gap-2">
+          {flashOverview.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center justify-between gap-3 rounded-lg bg-background px-3 py-2 text-sm"
+            >
+              <span className="text-foreground">{item.label}</span>
+              <span className="whitespace-nowrap font-bold text-primary">{item.reward}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </Card>
   );

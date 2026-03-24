@@ -1,16 +1,10 @@
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/challenge-friend.jpg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
-import { format, startOfWeek, endOfWeek } from "date-fns";
-import { de } from "date-fns/locale";
-import { isDemoEmail } from "@/lib/demo";
-import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS } from "@/lib/gamification";
+import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 interface Challenge {
   id: string;
@@ -18,115 +12,14 @@ interface Challenge {
   description: string;
   subInfo: string;
   image: string;
-  progress: number;
 }
-
-const EXERCISE_GOALS = {
-  jumping_jacks: 40,
-  push_ups: 10,
-  squats: 10,
-  planks: 10,
-  sit_ups: 25,
-};
-const STEP_GOAL = 3000;
 
 interface ChallengeScrollProps {
   userId: string;
 }
 
-export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
+export const ChallengeScroll = ({ userId: _userId }: ChallengeScrollProps) => {
   const navigate = useNavigate();
-  const [dailyProgress, setDailyProgress] = useState(0);
-  const [weeklyProgress, setWeeklyProgress] = useState(0);
-  const [friendProgress, setFriendProgress] = useState(0);
-  const [tryItProgress, setTryItProgress] = useState(0);
-
-  useEffect(() => {
-    loadChallengeProgress();
-  }, [userId]);
-
-  const loadChallengeProgress = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekStart = format(startOfWeek(new Date(), { locale: de, weekStartsOn: 1 }), "yyyy-MM-dd");
-    const weekEnd = format(endOfWeek(new Date(), { locale: de, weekStartsOn: 1 }), "yyyy-MM-dd");
-    const { data: sessionData } = await supabase.auth.getSession();
-    const demoUser = isDemoEmail(sessionData.session?.user?.email);
-
-    const [
-      todayResultRes,
-      twoWeekResultsRes,
-      friendInvitationsRes,
-      tryItRegistrationsRes,
-    ] = await Promise.all([
-      supabase
-        .from("daily_results")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("date", today)
-        .maybeSingle(),
-      supabase
-        .from("daily_results")
-        .select("jumping_jacks, push_ups, squats, planks, sit_ups")
-        .eq("user_id", userId)
-        .gte("date", weekStart)
-        .lte("date", weekEnd),
-      supabase
-        .from("challenge_invitations")
-        .select("status")
-        .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`),
-      supabase
-        .from("trial_registrations")
-        .select("id", { count: "exact" })
-        .eq("user_id", userId)
-        .eq("status", "registered"),
-    ]);
-
-    const todayData = todayResultRes.data;
-    if (!todayResultRes.error && todayData) {
-      const stepsProgress = Math.min((todayData.steps || 0) / STEP_GOAL, 1) * 50;
-      const completedExercises = [
-        (todayData.jumping_jacks || 0) >= EXERCISE_GOALS.jumping_jacks,
-        (todayData.push_ups || 0) >= EXERCISE_GOALS.push_ups,
-        (todayData.squats || 0) >= EXERCISE_GOALS.squats,
-        (todayData.planks || 0) >= EXERCISE_GOALS.planks,
-        (todayData.sit_ups || 0) >= EXERCISE_GOALS.sit_ups,
-      ].filter(Boolean).length;
-      const exercisesProgress = Math.min(completedExercises / 5, 1) * 50;
-      const computedDailyProgress = Math.round(stepsProgress + exercisesProgress);
-      setDailyProgress(demoUser ? Math.max(26, computedDailyProgress) : computedDailyProgress);
-    } else {
-      setDailyProgress(demoUser ? 26 : 0);
-    }
-
-    const twoWeekData = twoWeekResultsRes.data || [];
-    if (!twoWeekResultsRes.error && twoWeekData.length > 0) {
-      const activeDays = twoWeekData.filter((day) =>
-        (day.jumping_jacks || 0) > 0 ||
-        (day.push_ups || 0) > 0 ||
-        (day.squats || 0) > 0 ||
-        (day.planks || 0) > 0 ||
-        (day.sit_ups || 0) > 0
-      ).length;
-      setWeeklyProgress(Math.min(Math.round((activeDays / WEEKLY_GOAL_DAYS) * 100), 100));
-    } else {
-      setWeeklyProgress(0);
-    }
-
-    const invitationData = friendInvitationsRes.data || [];
-    if (!friendInvitationsRes.error && invitationData.length > 0) {
-      const completedCount = invitationData.filter((inv) => inv.status === "completed").length;
-      setFriendProgress(Math.round((completedCount / invitationData.length) * 100));
-    } else {
-      setFriendProgress(0);
-    }
-
-    if (!tryItRegistrationsRes.error) {
-      const registeredCount = tryItRegistrationsRes.count || 0;
-      setTryItProgress(registeredCount > 0 ? 100 : 0);
-    } else {
-      setTryItProgress(0);
-    }
-  };
 
   const challenges: Challenge[] = [
     {
@@ -135,7 +28,6 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: `Jeden Tag Übungen abschließen, Fortschritt sehen und mit Tagesziel plus Übungen schnell Blitze sammeln.`,
       subInfo: "⏱ 5–10 Minuten",
       image: dailyImg,
-      progress: dailyProgress
     },
     {
       id: "weekly",
@@ -143,7 +35,6 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: `5 aktive Tage schaffen, sichtbar vorankommen und ${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze plus Badge holen.`,
       subInfo: "🏆 5 Tage Ziel",
       image: weeklyImg,
-      progress: weeklyProgress
     },
     { 
       id: "friend", 
@@ -151,7 +42,6 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: "Gemeinsam stärker: Erfülle Challenges mit Freund:innen.",
       subInfo: "👥 Gemeinsam spielen",
       image: friendImg, 
-      progress: friendProgress 
     },
     {
       id: "tryit",
@@ -159,7 +49,6 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
       description: `Neue Sportarten, Trainings oder Vereine testen und pro Try-It ${BOOST_POINT_RULES.tryItCompleted} Blitze sammeln.`,
       subInfo: "📍 In deiner Nähe",
       image: tryitImg,
-      progress: tryItProgress
     },
   ];
 
@@ -192,13 +81,6 @@ export const ChallengeScroll = ({ userId }: ChallengeScrollProps) => {
                   alt={challenge.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-white text-sm font-semibold">Fortschritt</span>
-                    <span className="text-white text-sm font-bold">{challenge.progress}%</span>
-                  </div>
-                  <Progress value={challenge.progress} className="h-2" />
-                </div>
               </div>
             </Card>
           </div>
