@@ -23,6 +23,7 @@ export const BOOST_POINT_RULES = {
   dailyGoalCompleted: 20,
   weeklyChallengeCompleted: 100,
   tryItCompleted: 50,
+  tryItProbetraining: 5,
   streak3DaysBonus: 30,
   streak7DaysBonus: 100,
 } as const;

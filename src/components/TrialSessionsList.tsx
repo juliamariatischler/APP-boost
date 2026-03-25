@@ -22,7 +22,8 @@ import { isValid, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 
-const POINTS_PER_VISIT = BOOST_POINT_RULES.tryItCompleted;
+const POINTS_PROBETRAINING = BOOST_POINT_RULES.tryItProbetraining;
+const POINTS_KURS = BOOST_POINT_RULES.tryItCompleted;
 
 type Club = {
   id: string;
@@ -78,7 +79,8 @@ const getAssociationInfo = (clubName: string) => {
 };
 
 const getSessionPoints = (session: TrialSession) => {
-  return POINTS_PER_VISIT;
+  const label = getExperienceLabel(session);
+  return label === "Highlight-Erlebnis" ? POINTS_KURS : POINTS_PROBETRAINING;
 };
 
 const getExperienceLabel = (session: TrialSession) => {
@@ -293,7 +295,8 @@ const TrialSessionsList = () => {
             <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining</Badge>
             <Badge className="bg-white/20 text-white hover:bg-white/20">Highlight-Erlebnis</Badge>
             <Badge className="bg-white/20 text-white hover:bg-white/20">Vereinsbranding</Badge>
-            <Badge className="bg-white/20 text-white hover:bg-white/20">Emotionale Darstellung</Badge>
+          <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining: {POINTS_PROBETRAINING}⚡</Badge>
+            <Badge className="bg-white/20 text-white hover:bg-white/20">Kurs: {POINTS_KURS}⚡</Badge>
           </div>
         </div>
       </Card>
@@ -323,7 +326,7 @@ const TrialSessionsList = () => {
         <h2 className="text-2xl font-bold text-foreground">Weitere verfügbare Schnuppertermine</h2>
         <Badge variant="secondary" className="flex items-center gap-1">
           <Zap className="h-3 w-3 text-yellow-500" />
-          +{POINTS_PER_VISIT} pro Anmeldung
+          {POINTS_PROBETRAINING}–{POINTS_KURS} ⚡
         </Badge>
       </div>
       
