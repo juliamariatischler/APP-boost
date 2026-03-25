@@ -168,7 +168,7 @@ const TrialSessionsList = () => {
     }
 
     const session = sessions.find((entry) => entry.id === sessionId);
-    const pointsReward = session ? getSessionPoints(session) : POINTS_PER_VISIT;
+    const pointsReward = session ? getSessionPoints(session) : POINTS_PROBETRAINING;
 
     setRegistering(sessionId);
 
@@ -289,7 +289,7 @@ const TrialSessionsList = () => {
           <h2 className="mt-2 text-2xl font-bold">Ein System, klar differenziert</h2>
           <p className="mt-3 max-w-3xl text-sm text-white/90">
             Try It bleibt ein gemeinsames Erlebnis. Die Differenzierung passiert über Vereine, Verbandsbranding
-            und Bildwirkung, die Belohnung bleibt bewusst klar: jedes neue Try-It bringt {POINTS_PER_VISIT} Blitze.
+            und Bildwirkung. Probetrainings bringen {POINTS_PROBETRAINING} Blitze, Kurse {POINTS_KURS} Blitze.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining</Badge>
