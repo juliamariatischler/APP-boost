@@ -263,7 +263,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          age: number | null
           class: string
           created_at: string
           current_streak: number
@@ -278,7 +277,6 @@ export type Database = {
           username: string
         }
         Insert: {
-          age?: number | null
           class: string
           created_at?: string
           current_streak?: number
@@ -293,7 +291,6 @@ export type Database = {
           username: string
         }
         Update: {
-          age?: number | null
           class?: string
           created_at?: string
           current_streak?: number
