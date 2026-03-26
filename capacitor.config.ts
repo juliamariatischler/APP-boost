@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'at.boostschule.app',
+  appId: 'de.boostschule',
   appName: 'BoostSchule',
   webDir: 'dist',
   plugins: {

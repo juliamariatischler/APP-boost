@@ -75,6 +75,7 @@ const Settings = () => {
 
           <p className="text-sm text-muted-foreground mb-4">
             Verbinde Apple Health (iOS) oder Health Connect (Android), um echte Schrittzahlen zu synchronisieren.
+            Apple Health bleibt in lokalen iPhone-Builds ohne Apple-Developer-Setup vorerst deaktiviert.
           </p>
 
           <div className="flex items-center justify-between gap-2 mb-4">
@@ -90,7 +91,7 @@ const Settings = () => {
               <span className="text-sm text-muted-foreground">
                 {isHealthSupported
                   ? "Nicht verfügbar"
-                  : "Nur auf iPhone/Android verfügbar"}
+                  : "Derzeit nur auf Android oder mit spaeter aktiviertem Apple Health verfuegbar"}
               </span>
             )}
           </div>
