@@ -201,7 +201,7 @@ const Dashboard = () => {
           Deine Challenges
         </h2>
         
-        {userId && <ChallengeScroll userId={userId} />}
+        {userId && <ChallengeScroll />}
       </div>
 
       <BottomNav />

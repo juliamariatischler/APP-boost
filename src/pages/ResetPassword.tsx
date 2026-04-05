@@ -25,10 +25,6 @@ const ResetPassword = () => {
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
       }
-      // Prevent redirect to dashboard during recovery flow
-      if (isRecovery && event === "SIGNED_IN") {
-        // Stay on this page, don't navigate away
-      }
     });
 
     // Also re-check hash in case it changed

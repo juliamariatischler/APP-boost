@@ -84,13 +84,6 @@ export const STREAK_VISUALS: Record<StreakIntensity, { label: string; emoji: str
   supernova: { label: "Supernova", emoji: "💥", glowColor: "hsla(280, 90%, 60%, 0.7)", scale: 1.4 },
 };
 
-// === Rescue Day Logic ===
-export const RESCUE_DAYS_PER_WEEK = 1;
-
-export function canUseRescueDay(rescueDaysUsed: number): boolean {
-  return rescueDaysUsed < RESCUE_DAYS_PER_WEEK;
-}
-
 // === Streak Calculation ===
 export interface StreakInfo {
   currentStreak: number;

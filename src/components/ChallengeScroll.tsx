@@ -14,11 +14,7 @@ interface Challenge {
   image: string;
 }
 
-interface ChallengeScrollProps {
-  userId: string;
-}
-
-export const ChallengeScroll = ({ userId: _userId }: ChallengeScrollProps) => {
+export const ChallengeScroll = () => {
   const navigate = useNavigate();
 
   const challenges: Challenge[] = [

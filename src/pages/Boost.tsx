@@ -13,7 +13,7 @@ import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
-import { Zap, Trophy, Users, School } from "lucide-react";
+import { Zap, Trophy, School } from "lucide-react";
 
 const Boost = () => {
   const navigate = useNavigate();
