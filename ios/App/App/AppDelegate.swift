@@ -1,14 +1,29 @@
 import UIKit
 import Capacitor
+import HealthKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    let healthStore = HKHealthStore()
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        requestHealthKitAuthorization()
         return true
+    }
+
+    private func requestHealthKitAuthorization() {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else {
+            return
+        }
+
+        let readTypes: Set<HKObjectType> = [stepType]
+        let shareTypes: Set<HKSampleType> = []
+
+        healthStore.requestAuthorization(toShare: shareTypes, read: readTypes) { _, _ in }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
