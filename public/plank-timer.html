@@ -346,12 +346,14 @@
 
     async function submitWorkoutToAccount(exerciseId, achievedValue){
       const userId = localStorage.getItem('boost_user_id');
-      if(!userId) throw new Error('Kein aktiver Login gefunden.');
+      const sessionToken = localStorage.getItem('boost_session_token');
+      if(!userId || !sessionToken) throw new Error('Kein aktiver Login gefunden.');
       const apiBase = await resolveApiBase();
+      const authHeaders = { 'Content-Type': 'application/json', 'x-user-id': userId, 'x-session-token': sessionToken };
 
       const startRes = await fetch(`${apiBase}/student/workout-sessions/start`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        headers: authHeaders,
         body: JSON.stringify({ template_id: 'tpl_fitness_m1' }),
       });
       const startJson = await startRes.json().catch(() => ({}));
@@ -359,7 +361,7 @@
 
       const submitRes = await fetch(`${apiBase}/student/workout-sessions/${startJson.id}/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        headers: authHeaders,
         body: JSON.stringify({
           results: [
             {

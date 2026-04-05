@@ -33,6 +33,8 @@ const SESSION_STATUS = {
   CANCELLED: "CANCELLED",
 };
 
+const SESSION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 Stunden
+
 const MAX_POINTS_PER_DAY = 300;
 const MAX_SCORING_WORKOUTS_PER_DAY = 2;
 const STREAK_BONUS = 20;
@@ -98,20 +100,6 @@ function buildMvpApi() {
     });
   });
 
-  router.get("/auth/demo-users", (_req, res) => {
-    const db = readDb();
-    res.json(
-      db.users.map((u) => ({
-        id: u.id,
-        role: u.role,
-        display_name: u.display_name,
-        email: u.email || null,
-        school_id: u.school_id || null,
-        class_id: u.class_id || null,
-      }))
-    );
-  });
-
   router.post("/auth/student/login", (req, res) => {
     const joinCodeRaw = String(req.body?.join_code || "").trim();
     const nicknameRaw = String(req.body?.nickname || "").trim();
@@ -163,14 +151,26 @@ function buildMvpApi() {
         class_id: cls.id,
         meta: { via: "join_code" },
       });
-      writeDb(db);
     }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    db.session_tokens = (db.session_tokens || []).filter(
+      (t) => t.user_id !== student.id && new Date(t.expires_at) > new Date()
+    );
+    db.session_tokens.push({
+      token,
+      user_id: student.id,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + SESSION_TOKEN_EXPIRY_MS).toISOString(),
+    });
+    writeDb(db);
 
     res.json({
       auth: {
         user_id: student.id,
+        session_token: token,
         role: ROLE.STUDENT,
-        auth_header_hint: "x-user-id",
+        auth_header_hint: "x-user-id + x-session-token",
       },
       student: pick(student, ["id", "display_name", "avatar_config", "class_id", "school_id"]),
       class: cls,
@@ -181,8 +181,12 @@ function buildMvpApi() {
   router.post("/auth/teacher/login", (req, res) => {
     const email = String(req.body?.email || "").trim().toLowerCase();
     const schoolId = String(req.body?.school_id || "school_1").trim();
+    const password = String(req.body?.password || "");
     if (!email || !email.includes("@")) {
       return res.status(400).json({ error: "Gueltige E-Mail ist erforderlich." });
+    }
+    if (!password) {
+      return res.status(400).json({ error: "Passwort ist erforderlich." });
     }
 
     const db = readDb();
@@ -190,7 +194,12 @@ function buildMvpApi() {
     if (!school) return res.status(404).json({ error: "Schule nicht gefunden." });
 
     let teacher = db.users.find((u) => u.role === ROLE.TEACHER && String(u.email || "").toLowerCase() === email);
+    const creds = db.teacher_credentials || [];
+
     if (!teacher) {
+      // Neues Lehrerkonto: Passwort-Hash speichern
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hash = crypto.scryptSync(password, salt, 32).toString("hex");
       teacher = {
         id: makeId("teacher"),
         role: ROLE.TEACHER,
@@ -200,6 +209,8 @@ function buildMvpApi() {
         class_id: null,
       };
       db.users.push(teacher);
+      db.teacher_credentials = creds;
+      db.teacher_credentials.push({ user_id: teacher.id, hash: `${salt}:${hash}` });
       trackEvent(db, {
         type: "teacher_registered",
         actor_id: teacher.id,
@@ -208,15 +219,39 @@ function buildMvpApi() {
         class_id: null,
         meta: { email },
       });
-      writeDb(db);
+    } else {
+      // Bestehendes Konto: Passwort verifizieren
+      const existingCred = creds.find((c) => c.user_id === teacher.id);
+      if (!existingCred) {
+        return res.status(401).json({ error: "Konto nicht eingerichtet. Bitte Administrator kontaktieren." });
+      }
+      const [salt, storedHash] = existingCred.hash.split(":");
+      const derived = crypto.scryptSync(password, salt, 32);
+      const expected = Buffer.from(storedHash, "hex");
+      if (derived.length !== expected.length || !crypto.timingSafeEqual(derived, expected)) {
+        return res.status(401).json({ error: "Falsches Passwort." });
+      }
     }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    db.session_tokens = (db.session_tokens || []).filter(
+      (t) => t.user_id !== teacher.id && new Date(t.expires_at) > new Date()
+    );
+    db.session_tokens.push({
+      token,
+      user_id: teacher.id,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + SESSION_TOKEN_EXPIRY_MS).toISOString(),
+    });
+    writeDb(db);
 
     const classes = db.classes.filter((c) => canManageClass(teacher, c));
     res.json({
       auth: {
         user_id: teacher.id,
+        session_token: token,
         role: teacher.role,
-        auth_header_hint: "x-user-id",
+        auth_header_hint: "x-user-id + x-session-token",
       },
       teacher: pick(teacher, ["id", "display_name", "email", "school_id"]),
       classes,
@@ -227,6 +262,30 @@ function buildMvpApi() {
 
   router.get("/me", (req, res) => {
     res.json(req.user);
+  });
+
+  router.post("/auth/logout", (req, res) => {
+    const db = readDb();
+    const sessionToken = req.header("x-session-token");
+    db.session_tokens = (db.session_tokens || []).filter(
+      (t) => !(t.user_id === req.user.id && t.token === sessionToken)
+    );
+    writeDb(db);
+    res.json({ ok: true });
+  });
+
+  router.get("/auth/demo-users", allow(ROLE.SYSTEM_ADMIN), (_req, res) => {
+    const db = readDb();
+    res.json(
+      db.users.map((u) => ({
+        id: u.id,
+        role: u.role,
+        display_name: u.display_name,
+        email: u.email || null,
+        school_id: u.school_id || null,
+        class_id: u.class_id || null,
+      }))
+    );
   });
 
   router.delete("/me", (req, res) => {
@@ -960,10 +1019,20 @@ function buildMvpApi() {
 
   function requireAuth(req, res, next) {
     const userId = req.header("x-user-id");
-    if (!userId) return res.status(401).json({ error: "x-user-id Header fehlt." });
+    const sessionToken = req.header("x-session-token");
+    if (!userId || !sessionToken) {
+      return res.status(401).json({ error: "x-user-id und x-session-token Header erforderlich." });
+    }
     const db = readDb();
     const user = db.users.find((u) => u.id === userId);
     if (!user) return res.status(401).json({ error: "Unbekannter Benutzer." });
+    const now = new Date();
+    const tokenEntry = (db.session_tokens || []).find(
+      (t) => t.token === sessionToken && t.user_id === userId && new Date(t.expires_at) > now
+    );
+    if (!tokenEntry) {
+      return res.status(401).json({ error: "Ungültige oder abgelaufene Session. Bitte neu anmelden." });
+    }
     req.user = user;
     next();
   }
@@ -1455,6 +1524,8 @@ function normalizeDb(db) {
     "points_ledger",
     "kpi_events",
     "goal_rewards",
+    "session_tokens",
+    "teacher_credentials",
   ];
 
   for (const key of arrayKeys) {

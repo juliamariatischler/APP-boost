@@ -1,0 +1,25 @@
+{
+  "name": "BOOST - Fitness-App für Schüler",
+  "short_name": "BOOST",
+  "description": "Meistere tägliche Challenges und entwickle einen aktiven Lebensstil!",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#22c55e",
+  "background_color": "#080514",
+  "icons": [
+    {
+      "src": "/boost-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/boost-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
