@@ -43,6 +43,8 @@ CREATE TRIGGER trg_touch_profile_activity
   FOR EACH ROW
   EXECUTE FUNCTION public.touch_profile_activity_from_daily_results();
 
+DROP FUNCTION IF EXISTS public.apply_daily_points_decay();
+
 CREATE OR REPLACE FUNCTION public.apply_daily_points_decay()
 RETURNS jsonb
 LANGUAGE plpgsql

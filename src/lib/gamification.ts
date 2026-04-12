@@ -100,7 +100,7 @@ export function calculateStreak(dates: string[]): StreakInfo {
   if (dates.length === 0) return { currentStreak: 0, longestStreak: 0 };
 
   const sorted = [...dates].sort((a, b) => b.localeCompare(a));
-  
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
