@@ -32,12 +32,12 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Die App benötigt Camera für die Kontrolle der Ausführung</string>
+	<key>NSHandsTrackingUsageDescription</key>
+	<string></string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>BOOST liest deine Schrittzahl aus Apple Health, um deinen täglichen Fortschritt zu berechnen.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>BOOST schreibt keine Gesundheitsdaten in Apple Health.</string>
-	<key>NSHandsTrackingUsageDescription</key>
-	<string></string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
 	<key>UILaunchStoryboardName</key>
