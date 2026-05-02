@@ -178,7 +178,7 @@ const Rewards = () => {
     : rewards.filter(r => r.category === activeCategory);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <TopHeader />
 
       <div className="max-w-screen-xl mx-auto px-4 -mt-4">

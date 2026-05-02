@@ -23,7 +23,7 @@ const Activity = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <TopHeader />
 
       <div className="max-w-screen-xl mx-auto px-4 space-y-6">

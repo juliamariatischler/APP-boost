@@ -124,7 +124,7 @@ const WeeklyGeoTracking = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <TopHeader />
 
       <div className="mx-auto max-w-screen-xl px-4 pb-8">
