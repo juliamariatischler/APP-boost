@@ -1,13 +1,14 @@
-import { Capacitor } from '@capacitor/core';
 import { Health } from '@awesome-cordova-plugins/health';
+import { getHealthPlatformContext } from '../platform';
 import type { HealthProvider } from '../types';
 
 export class IOSHealthProvider implements HealthProvider {
   source = 'apple_health' as const;
   label = 'Apple Health';
+  platform = 'ios' as const;
 
   isSupported(): boolean {
-    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+    return getHealthPlatformContext().source === this.source;
   }
 
   async isAvailable(): Promise<boolean> {
@@ -31,6 +32,7 @@ export class IOSHealthProvider implements HealthProvider {
 
   async getTodaySteps(): Promise<number> {
     if (!this.isSupported()) return 0;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const now = new Date();

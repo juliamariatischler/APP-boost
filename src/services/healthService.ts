@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { getPlatformRuntime } from './platform/runtime';
 import { createHealthProvider } from './health/providerFactory';
 
 export interface StepData {
@@ -12,11 +12,11 @@ export class HealthService {
   }
 
   static isNativeIOS(): boolean {
-    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+    return getPlatformRuntime().platform === 'ios';
   }
 
   static isNativeAndroid(): boolean {
-    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+    return getPlatformRuntime().platform === 'android';
   }
 
   static isAppleHealthSupported(): boolean {
@@ -33,6 +33,17 @@ export class HealthService {
 
   static getHealthSourceLabel(): string {
     return this.provider.label;
+  }
+
+  static getPlatformLabel(): string {
+    switch (this.provider.platform) {
+      case 'ios':
+        return 'iOS';
+      case 'android':
+        return 'Android';
+      default:
+        return 'Web';
+    }
   }
 
   static async requestAuthorization(): Promise<boolean> {
