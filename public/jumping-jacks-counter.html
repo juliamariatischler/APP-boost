@@ -33,7 +33,7 @@
 
     .stage{ position:relative; width:100%; aspect-ratio:4/3; background:#1f2937; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); }
     #webcam{ width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
-    #canvas{ position:absolute; inset:0; width:100%; height:100%; transform:scaleX(-1); }
+    #canvas{ position:absolute; inset:0; width:100%; height:100%; }
 
     .panel{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; }
     .panel h2{ font-size:1.1rem; font-weight:700; color:var(--gray-dark); margin-bottom:10px; text-align:center; }
@@ -149,7 +149,7 @@
 
     async function setupCamera(){
       if(!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
-      const stream = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480}});
+      const stream = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480, facingMode:'user'}});
       video.srcObject = stream;
       return new Promise(res => video.onloadedmetadata = () => res());
     }
@@ -160,10 +160,12 @@
       detector = await poseDetection.createDetector(model, cfg);
     }
 
+    function mirrorX(x){ return canvas.width - x; }
+
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
         if(kp.score > KEYPOINT_CONFIDENCE){
-          ctx.beginPath(); ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
+          ctx.beginPath(); ctx.arc(mirrorX(kp.x),kp.y,4,0,2*Math.PI);
           ctx.fillStyle = "#10b981"; ctx.fill();
         }
       }
@@ -174,7 +176,7 @@
       pairs.forEach(([a,b])=>{
         const k1 = pose.keypoints[a], k2 = pose.keypoints[b];
         if(k1.score>KEYPOINT_CONFIDENCE && k2.score>KEYPOINT_CONFIDENCE){
-          ctx.beginPath(); ctx.moveTo(k1.x,k1.y); ctx.lineTo(k2.x,k2.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(mirrorX(k1.x),k1.y); ctx.lineTo(mirrorX(k2.x),k2.y); ctx.stroke();
         }
       });
     }

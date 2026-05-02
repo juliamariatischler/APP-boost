@@ -90,7 +90,7 @@
       box-shadow: var(--shadow);
     }
     #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-    #canvas  { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+    #canvas  { position: absolute; inset: 0; width: 100%; height: 100%; }
 
     .panel {
       background: var(--card);
@@ -220,7 +220,7 @@
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
       video.srcObject = stream;
       return new Promise(resolve => video.onloadedmetadata = () => resolve(video));
     }
@@ -272,11 +272,13 @@
       canvas.height = video.videoHeight;
     }
 
+    function mirrorX(x) { return canvas.width - x; }
+
     function drawKeypoints(pose) {
       for (const k of pose.keypoints) {
         if (k.score > KEYPOINT_CONFIDENCE) {
           ctx.beginPath();
-          ctx.arc(k.x, k.y, 4, 0, 2 * Math.PI);
+          ctx.arc(mirrorX(k.x), k.y, 4, 0, 2 * Math.PI);
           ctx.fillStyle = '#6b7280';
           ctx.fill();
         }
@@ -291,8 +293,8 @@
         const a = pose.keypoints[i], b = pose.keypoints[j];
         if (a.score > KEYPOINT_CONFIDENCE && b.score > KEYPOINT_CONFIDENCE) {
           ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
+          ctx.moveTo(mirrorX(a.x), a.y);
+          ctx.lineTo(mirrorX(b.x), b.y);
           ctx.stroke();
         }
       });

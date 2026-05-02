@@ -90,7 +90,6 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      transform: scaleX(-1);
     }
 
     /* Status Panel */
@@ -422,13 +421,15 @@
       detector=await poseDetection.createDetector(model,cfg);
     }
 
+    function mirrorX(x){ return canvas.width - x; }
+
     function drawSkeleton(pose){
       const pairs=poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
       ctx.strokeStyle="#6b7280"; ctx.lineWidth=2;
       pairs.forEach(([a,b])=>{
         const k1=pose.keypoints[a],k2=pose.keypoints[b];
         if(k1.score>0.5&&k2.score>0.5){
-          ctx.beginPath();ctx.moveTo(k1.x,k1.y);ctx.lineTo(k2.x,k2.y);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(mirrorX(k1.x),k1.y);ctx.lineTo(mirrorX(k2.x),k2.y);ctx.stroke();
         }
       });
     }
@@ -437,7 +438,7 @@
       for(const kp of pose.keypoints){
         if(kp.score>0.5){
           ctx.beginPath();
-          ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
+          ctx.arc(mirrorX(kp.x),kp.y,4,0,2*Math.PI);
           ctx.fillStyle="#6b7280";
           ctx.fill();
         }
