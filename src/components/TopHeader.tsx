@@ -132,7 +132,7 @@ export const TopHeader = () => {
 
   if (!profile) {
     return (
-      <div className="bg-card shadow-sm px-4 pt-safe pb-3 mb-6">
+      <div className="bg-card shadow-sm px-4 pb-3 mb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
         <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
           <Skeleton className="h-10 w-28 rounded-lg" />
           <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export const TopHeader = () => {
   }
 
   return (
-    <div className="bg-card shadow-sm px-4 pt-safe pb-3 mb-6">
+    <div className="bg-card shadow-sm px-4 pb-3 mb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {!isDashboard && (
