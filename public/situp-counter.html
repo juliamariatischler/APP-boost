@@ -83,7 +83,7 @@
         <div class="loader"></div>
         <div>
           <div id="loading-message"><strong>Modell wird geladen…</strong></div>
-          <div id="backend-info" class="debug"></div>
+          <div id="backend-info" class="debug" style="display:none"></div>
         </div>
       </div>
 
@@ -387,9 +387,8 @@
       try{
         await initBackend();
         loadingMsg.textContent = "Bitte Kamera erlauben…";
-        await setupCamera();
+        await Promise.all([setupCamera(), loadModel()]);
         loadingMsg.textContent = "Modell lädt…";
-        await loadModel();
       }catch(e){
         loadingMsg.textContent = "Fehler: " + e.message;
         loadingMsg.style.color = "crimson";

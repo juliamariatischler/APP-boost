@@ -10,6 +10,13 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [react()],
+  optimizeDeps: {
+    exclude: [
+      "cordova-plugin-health",
+      "@awesome-cordova-plugins/core",
+      "@awesome-cordova-plugins/health",
+    ],
+  },
   build: {
     rollupOptions: {
       output: {

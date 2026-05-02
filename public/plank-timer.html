@@ -219,7 +219,7 @@
         <div class="loader"></div>
         <div>
           <div id="loading-message"><strong>Initialisiere Modell…</strong></div>
-          <div class="debug" id="backend-info"></div>
+          <div class="debug" id="backend-info" style="display:none"></div>
         </div>
       </div>
 
@@ -387,7 +387,7 @@
     async function initBackend(){
       try{await tf.setBackend('webgl');await tf.ready();}
       catch(e){await tf.setBackend('cpu');await tf.ready();}
-      backendInfo.textContent='TFJS Backend: '+tf.getBackend();
+      console.log('TFJS Backend:', tf.getBackend());
     }
 
     function isLocalhostHost(hostname){
@@ -518,10 +518,8 @@
     async function main(){
       try{
         await initBackend();
-        loadingMsg.textContent='Bitte Kamera erlauben…';
-        await setupCamera();
-        loadingMsg.textContent='Lade Modell…';
-        await loadModel();
+        loadingMsg.textContent='Kamera & Modell werden geladen…';
+        await Promise.all([setupCamera(), loadModel()]);
       }catch(e){
         loadingMsg.textContent='Fehler: '+e.message;
         loadingMsg.style.color='red';
