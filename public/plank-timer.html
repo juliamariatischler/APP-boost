@@ -299,8 +299,6 @@
       const candidates = [
         stored,
         `${window.location.origin}/api/v1`,
-        'http://localhost:3000/api/v1',
-        'http://127.0.0.1:3000/api/v1',
       ].filter(Boolean).map((x) => x.replace(/\/$/, ''));
       for(const base of [...new Set(candidates)]){
         try{
