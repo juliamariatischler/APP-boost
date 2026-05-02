@@ -1,30 +1,134 @@
-import { useState, useRef, type KeyboardEvent, type ClipboardEvent } from "react";
+import { useState, useRef, useEffect, type KeyboardEvent, type ClipboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 
-// 8 segments, each one character
 const CODE_LENGTH = 8;
-
-// Valid chars: uppercase A-Z and 2-9 (no O, 0, I, 1)
 const VALID = /^[A-HJ-NP-Z2-9]$/;
+const CONSENT_KEY = "boost:consent_given";
+const CONSENT_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
 
 function normalise(char: string): string {
   const c = char.toUpperCase();
-  // Replace ambiguous characters
   if (c === "O" || c === "0") return "";
   if (c === "I" || c === "1") return "";
   return VALID.test(c) ? c : "";
 }
 
+function hasValidConsent(): boolean {
+  try {
+    const raw = localStorage.getItem(CONSENT_KEY);
+    if (!raw) return false;
+    const ts = Number(raw);
+    return Date.now() - ts < CONSENT_MAX_AGE_MS;
+  } catch {
+    return false;
+  }
+}
+
+function ConsentScreen({ onAccept }: { onAccept: () => void }) {
+  const [checkedPrivacy, setCheckedPrivacy] = useState(false);
+  const [checkedParental, setCheckedParental] = useState(false);
+
+  const canProceed = checkedPrivacy && checkedParental;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm flex flex-col items-center gap-6">
+
+        <img src={boostLogo} alt="Boost" className="h-16 w-auto" />
+
+        <div className="flex flex-col items-center gap-2 text-center">
+          <ShieldCheck className="h-10 w-10 text-primary" />
+          <h1 className="text-xl font-bold tracking-tight">Datenschutz & Einwilligung</h1>
+          <p className="text-sm text-muted-foreground">
+            Bitte bestätige vor dem Einloggen folgende Punkte:
+          </p>
+        </div>
+
+        <div className="w-full flex flex-col gap-4">
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={checkedPrivacy}
+              onChange={e => setCheckedPrivacy(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-border accent-primary flex-shrink-0"
+            />
+            <span className="text-sm text-foreground leading-snug">
+              Ich habe die{" "}
+              <a
+                href="/datenschutz.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                Datenschutzerklärung
+              </a>{" "}
+              gelesen und stimme der Verarbeitung meiner Daten gemäß DSGVO zu.
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={checkedParental}
+              onChange={e => setCheckedParental(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-border accent-primary flex-shrink-0"
+            />
+            <span className="text-sm text-foreground leading-snug">
+              Meine Eltern / Erziehungsberechtigten haben ihr Einverständnis zur
+              Nutzung dieser App gegeben (Pflicht für Schüler*innen unter 14 Jahren).
+            </span>
+          </label>
+        </div>
+
+        <button
+          onClick={() => {
+            try {
+              localStorage.setItem(CONSENT_KEY, String(Date.now()));
+            } catch {
+              // storage unavailable — proceed anyway, consent was expressed in UI
+            }
+            onAccept();
+          }}
+          disabled={!canProceed}
+          className={[
+            "w-full h-12 rounded-xl font-semibold text-base",
+            "bg-primary text-primary-foreground",
+            "transition-opacity",
+            canProceed ? "hover:opacity-90" : "opacity-40 cursor-not-allowed",
+          ].join(" ")}
+        >
+          Weiter zum Login
+        </button>
+
+        <p className="text-xs text-muted-foreground text-center">
+          Diese Einwilligung gilt für ein Jahr und kann jederzeit widerrufen werden.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CodeLogin() {
   const navigate   = useNavigate();
   const { login }  = useCodeAuth();
+  const [step, setStep]           = useState<"consent" | "code">(() =>
+    hasValidConsent() ? "code" : "consent"
+  );
   const [digits, setDigits]   = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (step === "code") inputs.current[0]?.focus();
+  }, [step]);
+
+  if (step === "consent") {
+    return <ConsentScreen onAccept={() => setStep("code")} />;
+  }
 
   const focusNext = (idx: number) => inputs.current[idx + 1]?.focus();
   const focusPrev = (idx: number) => inputs.current[idx - 1]?.focus();
@@ -112,10 +216,8 @@ export default function CodeLogin() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
 
-        {/* Logo */}
         <img src={boostLogo} alt="Boost" className="h-16 w-auto" />
 
-        {/* Headline */}
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">Gib deinen Code ein</h1>
           <p className="text-sm text-muted-foreground">
@@ -123,7 +225,6 @@ export default function CodeLogin() {
           </p>
         </div>
 
-        {/* Code input */}
         <div className="flex gap-2" role="group" aria-label="Login-Code Eingabe">
           {digits.map((d, i) => (
             <input
@@ -133,7 +234,6 @@ export default function CodeLogin() {
               inputMode="text"
               maxLength={1}
               value={d}
-              autoFocus={i === 0}
               autoCapitalize="characters"
               autoCorrect="off"
               autoComplete="off"
@@ -156,10 +256,6 @@ export default function CodeLogin() {
           ))}
         </div>
 
-        {/* Separator for visual grouping (4 + 4) */}
-        {/* Handled by gap, but we can add a divider in the middle */}
-
-        {/* Submit */}
         <button
           onClick={handleSubmitButton}
           disabled={loading || digits.some(d => !d)}

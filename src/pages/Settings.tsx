@@ -7,7 +7,7 @@ import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
-import { CheckCircle2, HeartPulse } from "lucide-react";
+import { CheckCircle2, HeartPulse, ShieldCheck } from "lucide-react";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -103,6 +103,27 @@ const Settings = () => {
           >
             {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
           </Button>
+        </Card>
+
+        <Card className="p-6 bg-card shadow-card mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold text-foreground">Datenschutz</h2>
+          </div>
+          <div className="flex flex-col gap-2">
+            <a
+              href="/datenschutz.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary underline"
+            >
+              Datenschutzerklärung öffnen
+            </a>
+            <p className="text-xs text-muted-foreground">
+              Daten werden gemäß DSGVO verarbeitet. Einwilligung gilt für 1 Jahr.
+              Wende dich an deine Schule für eine Löschung.
+            </p>
+          </div>
         </Card>
 
         <Card className="p-6 bg-card shadow-card">

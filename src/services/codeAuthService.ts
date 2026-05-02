@@ -49,9 +49,17 @@ export function clearSession(): void {
 export async function loginWithCode(code: string): Promise<CodeSession> {
   const device_id = getOrCreateDeviceId();
 
+  // Read consent timestamp from localStorage if present
+  let consentTs: string | null = null;
+  try {
+    const raw = localStorage.getItem("boost:consent_given");
+    if (raw) consentTs = new Date(Number(raw)).toISOString();
+  } catch { /* ignore */ }
+
   const { data, error } = await supabase.rpc("login_with_code", {
-    p_code: code.trim().toUpperCase(),
-    p_device_id: device_id,
+    p_code:       code.trim().toUpperCase(),
+    p_device_id:  device_id,
+    p_consent_ts: consentTs,
   });
 
   if (error) throw new Error(error.message);
