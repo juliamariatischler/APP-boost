@@ -2,6 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KI-Kniebeugen-Zähler</title>
 
@@ -257,11 +259,8 @@
 
     async function main(){
       try{
-        await initBackend();
-        const msg = document.getElementById('loading-message');
-        msg.textContent = "Bitte Kamera erlauben…";
-        await Promise.all([setupCamera(), loadModel()]);
-        msg.textContent = "Modell lädt…";
+        document.getElementById('loading-message').textContent = 'Kamera & KI werden geladen…';
+        await Promise.all([setupCamera(), initBackend().then(() => loadModel())]);
       }catch(e){
         document.getElementById('loading-message').textContent = "Fehler: " + e.message;
         document.getElementById('loading-message').style.color = "crimson";

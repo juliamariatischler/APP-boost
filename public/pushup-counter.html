@@ -2,6 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KI-Liegestütz-Zähler</title>
 
@@ -407,11 +409,8 @@
 
     async function main() {
       try {
-        loadingMessageEl.textContent = 'GPU wird initialisiert…';
-        await initBackend();
-        loadingMessageEl.textContent = 'Kamera wird gestartet…';
-        await Promise.all([setupCamera(), loadModel()]);
-        loadingMessageEl.textContent = 'KI-Modell wird geladen…';
+        loadingMessageEl.textContent = 'Kamera & KI werden geladen…';
+        await Promise.all([setupCamera(), initBackend().then(() => loadModel())]);
       } catch (e) {
         loadingMessageEl.textContent = `Fehler: ${e.message}`;
         loadingMessageEl.style.color = 'red';

@@ -2,6 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KI-Sit-up-Zähler</title>
 
@@ -385,10 +387,8 @@
 
     async function main(){
       try{
-        await initBackend();
-        loadingMsg.textContent = "Bitte Kamera erlauben…";
-        await Promise.all([setupCamera(), loadModel()]);
-        loadingMsg.textContent = "Modell lädt…";
+        loadingMsg.textContent = 'Kamera & KI werden geladen…';
+        await Promise.all([setupCamera(), initBackend().then(() => loadModel())]);
       }catch(e){
         loadingMsg.textContent = "Fehler: " + e.message;
         loadingMsg.style.color = "crimson";
