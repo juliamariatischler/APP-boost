@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap, ChevronLeft, Clock } from "lucide-react";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { StudentNav } from "@/components/student/StudentNav";
+import {
+  getClassQuest,
+  getStudentStats,
+  EXERCISE_LABELS,
+  type ClassQuest,
+  type StudentStats,
+} from "@/services/studentDataService";
 
 interface Quest {
   id: string;
@@ -17,47 +24,55 @@ interface Quest {
   totalDays?: number;
 }
 
-const QUESTS: Quest[] = [
-  {
-    id: "weekly",
-    type: "EPIC",
-    title: "Wochen-Quest",
-    description: "10.000 Liegestütze gemeinsam als Klasse schaffen",
-    points: 100,
-    bonus: "+ Avatar-Item",
-    endsAt: "So 23:58",
-    progress: 60,
-    activeDays: 3,
-    totalDays: 5,
-  },
-  {
-    id: "steps",
-    type: "DAILY",
-    title: "Tagesziel Schritte",
-    description: "7.500 Schritte heute erreichen",
-    points: 10,
-    endsAt: "Heute 23:59",
-    progress: 45,
-  },
-  {
-    id: "exercise",
-    type: "DAILY",
-    title: "Übung des Tages",
-    description: "Mindestens eine Übung ab 15 Minuten absolvieren",
-    points: 10,
-    endsAt: "Heute 23:59",
-    progress: 0,
-  },
-  {
-    id: "streak",
-    type: "STREAK",
-    title: "Streak halten",
-    description: "Jeden Tag einloggen und aktiv bleiben",
-    points: 5,
-    endsAt: "Heute 23:59",
-    progress: 100,
-  },
-];
+function formatEndsAt(iso: string): string {
+  const d = new Date(iso);
+  const days = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  return `${days[d.getDay()]} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+function buildQuestsFromData(quest: ClassQuest | null, stats: StudentStats | null): Quest[] {
+  const exercisedToday = stats
+    ? stats.today_push_ups + stats.today_squats + stats.today_situps + stats.today_jumping_jacks > 0
+    : false;
+
+  const list: Quest[] = [];
+
+  if (quest) {
+    list.push({
+      id:          quest.id,
+      type:        "EPIC",
+      title:       quest.title,
+      description: `Gemeinsam ${quest.target_reps.toLocaleString("de-AT")} ${EXERCISE_LABELS[quest.exercise_type]} schaffen`,
+      points:      quest.reward_points,
+      bonus:       "+ Avatar-Item",
+      endsAt:      formatEndsAt(quest.ends_at),
+      progress:    quest.percent,
+    });
+  }
+
+  list.push(
+    {
+      id:          "exercise",
+      type:        "DAILY",
+      title:       "Übung des Tages",
+      description: "Mach eine Übung und schreibe Blitze gut",
+      points:      10,
+      endsAt:      "Heute 23:59",
+      progress:    exercisedToday ? 100 : 0,
+    },
+    {
+      id:          "streak",
+      type:        "STREAK",
+      title:       "Streak halten",
+      description: "Heute einloggen und aktiv bleiben",
+      points:      5,
+      endsAt:      "Heute 23:59",
+      progress:    stats ? Math.min(stats.active_days_week * 20, 100) : 0,
+    },
+  );
+
+  return list;
+}
 
 const TYPE_STYLE: Record<Quest["type"], { bg: string; text: string; badge: string }> = {
   EPIC:   { bg: "bg-green-500", text: "text-white",    badge: "⚡ EPIC"   },
@@ -197,12 +212,27 @@ function QuestDetail({ quest, onBack }: { quest: Quest; onBack: () => void }) {
 export default function StudentQuests() {
   const navigate = useNavigate();
   const { session } = useCodeAuth();
-  const [selected, setSelected] = useState<Quest | null>(null);
+  const [selected, setSelected]   = useState<Quest | null>(null);
+  const [classQuest, setClassQuest] = useState<ClassQuest | null>(null);
+  const [stats, setStats]           = useState<StudentStats | null>(null);
+  const [loading, setLoading]       = useState(true);
+
+  useEffect(() => {
+    if (!session || session.user_type !== "student") return;
+    Promise.all([
+      getClassQuest(session.device_id),
+      getStudentStats(session.device_id),
+    ])
+      .then(([q, s]) => { setClassQuest(q); setStats(s); })
+      .finally(() => setLoading(false));
+  }, [session]);
 
   if (!session || session.user_type !== "student") {
     navigate("/login", { replace: true });
     return null;
   }
+
+  const quests = buildQuestsFromData(classQuest, stats);
 
   if (selected) {
     return <QuestDetail quest={selected} onBack={() => setSelected(null)} />;
@@ -216,7 +246,10 @@ export default function StudentQuests() {
       </div>
 
       <div className="px-4 pt-4 space-y-3">
-        {QUESTS.map(q => {
+        {loading && (
+          <div className="text-center py-10 text-sm text-gray-400">Lade Quests…</div>
+        )}
+        {!loading && quests.map(q => {
           const style = TYPE_STYLE[q.type];
           return (
             <button
