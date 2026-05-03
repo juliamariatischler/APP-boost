@@ -10,8 +10,8 @@ import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 
 if (Capacitor.isNativePlatform()) {
-  StatusBar.setOverlaysWebView({ overlay: false });
-  StatusBar.setStyle({ style: Style.Light });
+  StatusBar.setOverlaysWebView({ overlay: true });
+  StatusBar.setStyle({ style: Style.Dark });
 }
 
 const Index = lazy(() => import("./pages/Index"));
@@ -20,6 +20,9 @@ const CodeLogin = lazy(() => import("./pages/CodeLogin"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
 const TeacherHome = lazy(() => import("./pages/TeacherHome"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Quests = lazy(() => import("./pages/Quests"));
+const Klasse = lazy(() => import("./pages/Klasse"));
+const Profil = lazy(() => import("./pages/Profil"));
 const ChallengeDetail = lazy(() => import("./pages/ChallengeDetail"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Rewards = lazy(() => import("./pages/Rewards"));
@@ -83,6 +86,9 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/quests" element={<Quests />} />
+                <Route path="/klasse" element={<Klasse />} />
+                <Route path="/profil" element={<Profil />} />
                 <Route path="/challenge/:id" element={<ChallengeDetail />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/rewards" element={<Rewards />} />

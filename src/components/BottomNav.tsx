@@ -1,4 +1,4 @@
-import { Crown, Home, Zap, Settings } from "lucide-react";
+import { Home, ClipboardList, Users, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export const BottomNav = () => {
@@ -6,32 +6,41 @@ export const BottomNav = () => {
   const location = useLocation();
 
   const navItems = [
-    { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: Settings, label: "Einstellungen", path: "/settings" },
-    { icon: Zap, label: "Blitze", path: "/boost" },
-    { icon: Crown, label: "Geschenke", path: "/rewards" },
+    { icon: Home, label: "Home", path: "/dashboard", matches: ["/dashboard"] },
+    { icon: ClipboardList, label: "Quests", path: "/quests", matches: ["/quests", "/challenge"] },
+    { icon: Users, label: "Klasse", path: "/klasse", matches: ["/klasse"] },
+    { icon: User, label: "Profil", path: "/profil", matches: ["/profil", "/settings", "/rewards", "/boost"] },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-      <div className="flex justify-around items-center h-16 max-w-screen-xl mx-auto">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card/95 shadow-lg backdrop-blur"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-around px-2">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = item.matches.some((path) =>
+            path === "/dashboard" ? location.pathname === path : location.pathname.startsWith(path),
+          );
           const Icon = item.icon;
-          
-          const isBoost = item.path === "/boost";
-          
+
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
+              className={`flex h-full flex-1 flex-col items-center justify-center gap-1 transition-colors ${
                 isActive
-                  ? "text-primary"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-6 w-6 mb-1" />
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                  isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-transparent"
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </div>
               <span className="text-xs">{item.label}</span>
             </button>
           );

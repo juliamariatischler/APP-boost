@@ -97,11 +97,16 @@ const Settings = () => {
 
           <Button
             onClick={handleConnectHealthData}
-            disabled={connectingHealth || !isHealthSupported}
+            disabled={connectingHealth || !isHealthSupported || (!checkingHealth && !healthAvailable)}
             className="w-full"
           >
             {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
           </Button>
+          {!checkingHealth && isHealthSupported && !healthAvailable && (
+            <p className="mt-2 text-xs text-muted-foreground text-center">
+              Nur auf echten Geräten verfügbar (nicht im Simulator).
+            </p>
+          )}
         </Card>
 
         <Card className="p-6 bg-card shadow-card">
