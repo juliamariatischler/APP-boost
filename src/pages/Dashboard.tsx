@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Flame, Sparkles, Target, Zap } from "lucide-react";
-import { ChallengeScroll } from "@/components/ChallengeScroll";
+import { ChevronRight, Clock3, Flame, MapPin, Sparkles, Target, Users, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { startOfWeek, endOfWeek, format } from "date-fns";
@@ -13,6 +13,53 @@ import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS, getLevelForPoints } from "@/lib/ga
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
 import { getDemoAwarePoints } from "@/lib/demo";
 import boostLogo from "@/assets/boost-logo.png";
+import dailyImg from "@/assets/challenge-daily.jpg";
+import friendImg from "@/assets/challenge-friend.jpg";
+import tryitImg from "@/assets/challenge-tryit.jpg";
+
+type HomeQuestCard = {
+  id: "daily" | "friend" | "tryit";
+  title: string;
+  eyebrow: string;
+  description: string;
+  reward: string;
+  meta: string;
+  image: string;
+  icon: typeof Clock3;
+};
+
+const homeQuestCards: HomeQuestCard[] = [
+  {
+    id: "daily",
+    title: "Tägliche Challenge",
+    eyebrow: "TÄGLICH",
+    description: "Heute reicht eine Übung oder dein Schrittziel, damit dein Fortschritt zählt.",
+    reward: `1 Wdh. / 1 Sek. = ${BOOST_POINT_RULES.repOrSecond} ⚡`,
+    meta: "5-10 Minuten",
+    image: dailyImg,
+    icon: Clock3,
+  },
+  {
+    id: "friend",
+    title: "Friendquest",
+    eyebrow: "TEAM",
+    description: "Fordere Freund:innen heraus und sammelt gemeinsam Bewegungspunkte.",
+    reward: "Mehr Spaß zusammen",
+    meta: "Gemeinsam spielen",
+    image: friendImg,
+    icon: Users,
+  },
+  {
+    id: "tryit",
+    title: "Try It",
+    eyebrow: "NEU",
+    description: "Teste eine neue Sportart, ein Training oder einen Verein in deiner Nähe.",
+    reward: `+${BOOST_POINT_RULES.tryItCompleted} ⚡`,
+    meta: "In deiner Nähe",
+    image: tryitImg,
+    icon: MapPin,
+  },
+];
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -155,7 +202,7 @@ const Dashboard = () => {
             <h1 className="text-[2rem] font-black leading-none tracking-tight text-foreground">
               Dein Boost
               <br />
-              fuer heute
+              für heute
             </h1>
             <button
               type="button"
@@ -227,8 +274,8 @@ const Dashboard = () => {
           <Progress value={(weeklyCompleted / weeklyTotal) * 100} className="h-2.5" />
           <div className="mt-4 grid grid-cols-3 gap-2">
             {[
-              { icon: Target, label: "Heute", value: "1 Uebung" },
-              { icon: Sparkles, label: "Bonus", value: `+${BOOST_POINT_RULES.dailyGoalCompleted} ⚡` },
+              { icon: Target, label: "Heute", value: "1 Wdh. = 1 ⚡" },
+              { icon: Sparkles, label: "Bonus", value: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡` },
               { icon: ChevronRight, label: "Mehr", value: "Zu Quests" },
             ].map((item) => {
               const Icon = item.icon;
@@ -263,7 +310,7 @@ const Dashboard = () => {
         )}
 
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Heute moeglich</h2>
+          <h2 className="text-lg font-bold text-foreground">Heute möglich</h2>
           <button
             type="button"
             onClick={() => navigate("/quests")}
@@ -272,8 +319,46 @@ const Dashboard = () => {
             Quests
           </button>
         </div>
-        
-        {userId && <ChallengeScroll />}
+        {userId && (
+          <div className="mb-6 space-y-3">
+            {homeQuestCards.map((quest) => {
+              const Icon = quest.icon;
+
+              return (
+                <Card
+                  key={quest.id}
+                  className="overflow-hidden rounded-[24px] border-border/70 bg-card/90 p-0 shadow-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/challenge/${quest.id}`)}
+                    className="flex w-full items-stretch text-left"
+                  >
+                    <div className="w-28 shrink-0 bg-muted">
+                      <img src={quest.image} alt={quest.title} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="flex flex-1 flex-col justify-between p-4">
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
+                            {quest.eyebrow}
+                          </span>
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-lg font-bold text-foreground">{quest.title}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{quest.description}</p>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold text-foreground">{quest.reward}</span>
+                        <span className="text-xs text-muted-foreground">{quest.meta}</span>
+                      </div>
+                    </div>
+                  </button>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <BottomNav />

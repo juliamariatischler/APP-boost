@@ -39,7 +39,7 @@ const quests: QuestCard[] = [
     title: "Tägliche Challenge",
     eyebrow: "TÄGLICH",
     description: "Heute reicht eine Übung oder dein Schrittziel, damit dein Fortschritt zählt.",
-    reward: `+${BOOST_POINT_RULES.exerciseCompleted} bis +${BOOST_POINT_RULES.dailyGoalCompleted} ⚡`,
+    reward: `1 Wdh. / 1 Sek. = ${BOOST_POINT_RULES.repOrSecond} ⚡`,
     meta: "5-10 Minuten",
     image: dailyImg,
     icon: Clock3,
@@ -137,7 +137,7 @@ const Quests = () => {
                   <div className="rounded-2xl bg-black/80 p-3 text-white">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Belohnung</p>
                     <p className="mt-1 flex items-center gap-1 text-lg font-black">
-                      100 <Zap className="h-4 w-4 fill-current" />
+                      {BOOST_POINT_RULES.weeklyChallengeCompleted} <Zap className="h-4 w-4 fill-current" />
                     </p>
                   </div>
                   <div className="rounded-2xl bg-black/80 p-3 text-white">

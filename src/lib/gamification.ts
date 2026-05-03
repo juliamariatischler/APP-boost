@@ -19,21 +19,30 @@ export const DAILY_EXERCISE_GOALS = {
 } as const;
 
 export const BOOST_POINT_RULES = {
-  exerciseCompleted: 10,
+  repOrSecond: 1,
+  exerciseCompleted: 1,
   dailyGoalCompleted: 20,
-  weeklyChallengeCompleted: 100,
-  tryItCompleted: 50,
-  tryItProbetraining: 5,
-  streak3DaysBonus: 30,
-  streak7DaysBonus: 100,
+  weeklyChallengeCompleted: 20,
+  tryItCompleted: 25,
+  tryItProbetraining: 10,
+  tryItNewSportDiscovered: 15,
+  friendQuestCompleted: 12,
+  friendQuestInvite: 8,
+  friendQuestNewClassmate: 10,
+  personalBestImproved: 15,
+  firstExerciseTried: 10,
+  accessibleVariantChosen: 10,
+  coachingCompleted: 50,
+  streak3DaysBonus: 5,
+  streak7DaysBonus: 15,
 } as const;
 
 export const LEVELS: LevelInfo[] = [
-  { level: 1, name: "Anfänger", emoji: "🌱", minPoints: 0, maxPoints: 99, color: "text-lime-600", tier: "Start" },
-  { level: 2, name: "Aktivstarter", emoji: "⚡", minPoints: 100, maxPoints: 249, color: "text-sky-600", tier: "Aktiv" },
-  { level: 3, name: "Booster", emoji: "🚀", minPoints: 250, maxPoints: 499, color: "text-indigo-600", tier: "Boost" },
-  { level: 4, name: "Champion", emoji: "🏆", minPoints: 500, maxPoints: 899, color: "text-orange-600", tier: "Top" },
-  { level: 5, name: "Legende", emoji: "👑", minPoints: 900, maxPoints: -1, color: "text-rose-600", tier: "Elite" },
+  { level: 1, name: "Anfänger", emoji: "🌱", minPoints: 0, maxPoints: 24, color: "text-lime-600", tier: "Start" },
+  { level: 2, name: "Aktivstarter", emoji: "⚡", minPoints: 25, maxPoints: 59, color: "text-sky-600", tier: "Aktiv" },
+  { level: 3, name: "Booster", emoji: "🚀", minPoints: 60, maxPoints: 119, color: "text-indigo-600", tier: "Boost" },
+  { level: 4, name: "Champion", emoji: "🏆", minPoints: 120, maxPoints: 199, color: "text-orange-600", tier: "Top" },
+  { level: 5, name: "Legende", emoji: "👑", minPoints: 200, maxPoints: -1, color: "text-rose-600", tier: "Elite" },
 ];
 
 export function getLevelForPoints(points: number): LevelInfo {

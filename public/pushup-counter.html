@@ -253,7 +253,7 @@
       const nextDeviceId = options.deviceId ?? currentDeviceId;
       stopCurrentStream();
 
-      const baseVideo = { width: { ideal: 1280 }, height: { ideal: 720 } };
+      const baseVideo = { width: { ideal: 960 }, height: { ideal: 540 } };
       const constraints = nextDeviceId
         ? { video: { ...baseVideo, deviceId: { exact: nextDeviceId } } }
         : { video: { ...baseVideo, facingMode: { ideal: nextFacingMode } } };
@@ -547,8 +547,8 @@
 
     async function main() {
       try {
-        loadingMessageEl.textContent = 'Kamera & KI werden geladen…';
-        await Promise.all([setupCamera(), initBackend().then(() => loadModel())]);
+        loadingMessageEl.textContent = 'Kamera wird gestartet…';
+        await setupCamera();
       } catch (e) {
         loadingMessageEl.textContent = `Fehler: ${e.message}`;
         loadingMessageEl.style.color = 'red';
@@ -558,12 +558,22 @@
 
       loadingEl.style.display = 'none';
       mainContentEl.style.display = 'block';
-      feedbackEl.textContent = 'Bereit!';
-      feedbackEl.style.color = '#059669';
-
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
-      detectPose();
+      feedbackEl.textContent = 'Kamera bereit. KI wird vorbereitet…';
+      feedbackEl.style.color = '#374151';
+
+      try {
+        await initBackend();
+        await loadModel();
+        feedbackEl.textContent = 'Bereit!';
+        feedbackEl.style.color = '#059669';
+        detectPose();
+      } catch (e) {
+        feedbackEl.textContent = `KI-Fehler: ${e.message}`;
+        feedbackEl.style.color = 'red';
+        console.error(e);
+      }
     }
 
     main();

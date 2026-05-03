@@ -48,7 +48,23 @@
       text-align: center;
       color: var(--muted);
       font-size: 0.95rem;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
+    }
+
+    .info-box {
+      margin: 0 auto 16px;
+      max-width: 560px;
+      border-radius: 12px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      padding: 12px 14px;
+      color: #065f46;
+    }
+
+    .info-box p {
+      font-size: 0.92rem;
+      line-height: 1.45;
+      text-align: center;
     }
 
     .card {
@@ -214,6 +230,9 @@
   <div class="container">
     <h1 class="title">KI Plank-Timer</h1>
     <p class="subtitle">Stell die Kamera seitlich auf und zeig dich im Profil.</p>
+    <div class="info-box">
+      <p>Erkannt wird dein Plank, wenn Schulter sichtbar, Hüfte sichtbar und dein Torso möglichst horizontal ist. Halte dabei ca. 1,2 m Abstand zur Kamera. Belohnung: 1 Sekunde = 1 Blitz.</p>
+    </div>
 
     <div class="card">
       <div id="loading" class="loader-wrap">
@@ -301,6 +320,12 @@
     let detector,isPlanking=false,time=0,timerInterval=null;
     let currentFacingMode='user';
     let currentDeviceId='';
+    const POSE_SCORE = 0.35;
+    const BACK_ANGLE_THRESHOLD = 132;
+    const TORSO_TILT_MAX = 38;
+    let stableHoldFrames = 0;
+    let stableBreakFrames = 0;
+    let missingPoseFrames = 0;
 
     async function resolveApiBase(){
       const stored = localStorage.getItem('boost_api_base') || '';
@@ -391,6 +416,11 @@
       return d;
     }
 
+    function angleToHorizontal(a,b){
+      const raw = Math.abs(Math.atan2(b.y-a.y, b.x-a.x) * 180 / Math.PI);
+      return Math.min(raw, Math.abs(180 - raw));
+    }
+
     async function initBackend(){
       try{await tf.setBackend('webgl');await tf.ready();}
       catch(e){await tf.setBackend('cpu');await tf.ready();}
@@ -418,7 +448,7 @@
       const legacyGetUserMedia=navigator.webkitGetUserMedia;
       const nextFacingMode = options.facingMode || currentFacingMode;
       const nextDeviceId = options.deviceId ?? currentDeviceId;
-      const baseVideo = { width: { ideal: 1280 }, height: { ideal: 720 } };
+      const baseVideo = { width: { ideal: 960 }, height: { ideal: 540 } };
 
       if(!secureOk){
         throw new Error('Kamera auf iPhone/Safari braucht HTTPS. Nutze https:// oder localhost.');
@@ -568,26 +598,70 @@
       return ((l?.score||0)>=(r?.score||0))?l:r;
     }
 
+    function updatePlankState(isStable, stableMessage, unstableMessage){
+      if(isStable){
+        stableHoldFrames++;
+        stableBreakFrames = 0;
+      }else{
+        stableBreakFrames++;
+        stableHoldFrames = 0;
+      }
+
+      if(stableHoldFrames >= 2){
+        stageEl.textContent="HALTEN";
+        feedbackEl.textContent=stableMessage;
+        if(!isPlanking){isPlanking=true;startTimer();}
+        return;
+      }
+
+      if(isPlanking){
+        stageEl.textContent="HALTEN";
+        feedbackEl.textContent=unstableMessage;
+        return;
+      }
+
+      if(stableBreakFrames >= 3){
+        stageEl.textContent="AUSRICHTEN";
+        feedbackEl.textContent=unstableMessage;
+      }
+    }
+
     function processPlank(pose){
       const k=pose.keypoints;
       const shoulder=pickSide(k,'shoulder');
       const hip=pickSide(k,'hip');
       const knee=pickSide(k,'knee');
-      if(!(shoulder?.score>0.5&&hip?.score>0.5&&knee?.score>0.5)){
-        feedbackEl.textContent="Kamera sieht dich nicht gut.";
-        stageEl.textContent="-";
-        stopTimer();isPlanking=false;return;
+
+      if(!(shoulder?.score>POSE_SCORE && hip?.score>POSE_SCORE)){
+        missingPoseFrames++;
+        feedbackEl.textContent="Rücken und Hüfte müssen sichtbar sein.";
+        if(missingPoseFrames >= 4){
+          stageEl.textContent="-";
+          stableHoldFrames = 0;
+          stableBreakFrames = 0;
+          stopTimer();
+          isPlanking=false;
+        }
+        return;
       }
-      const back=angle(shoulder,hip,knee);
-      if(back>150){
-        stageEl.textContent="HALTEN";
-        feedbackEl.textContent="Halten!";
-        if(!isPlanking){isPlanking=true;startTimer();}
-      }else{
-        stageEl.textContent="INSTABIL";
-        feedbackEl.textContent="Hüfte stabil halten!";
-        isPlanking=false;stopTimer();
+      missingPoseFrames = 0;
+
+      if(knee?.score>POSE_SCORE){
+        const back=angle(shoulder,hip,knee);
+        updatePlankState(back > BACK_ANGLE_THRESHOLD, "Halten!", "Leicht bewegen ist okay – Hüfte nur etwas stabiler halten.");
+        debugLog.textContent = `Rückenwinkel: ${Math.round(back)}°`;
+        return;
       }
+
+      const torsoTilt = angleToHorizontal(shoulder, hip);
+      const backLooksStraight = torsoTilt <= TORSO_TILT_MAX;
+
+      updatePlankState(
+        backLooksStraight,
+        "Rücken gerade halten!",
+        "Leicht bewegen ist okay – Rücken nur etwas gerader halten!",
+      );
+      debugLog.textContent = `Torso: ${torsoTilt.toFixed(1)}°`;
     }
 
     async function loop(){
@@ -604,6 +678,9 @@
 
     document.getElementById('reset-button').addEventListener('click',()=>{
       isPlanking=false;stopTimer();time=0;
+      stableHoldFrames = 0;
+      stableBreakFrames = 0;
+      missingPoseFrames = 0;
       timerEl.textContent='0';stageEl.textContent='-';
       feedbackEl.textContent='Zurückgesetzt!';
     });
@@ -614,14 +691,15 @@
       finishBtn.disabled = true;
       finishBtn.textContent = 'Speichere...';
       localStorage.setItem('planks_total', String(time));
+      const localPoints = Math.max(0, Math.floor(time));
       try{
         const result = await submitWorkoutToAccount('ex_plank', time);
-        const points = Number(result.calculated_points || 0);
+        const points = Number(result.calculated_points || localPoints);
         showReward(points, points > 0
           ? 'Stark! Die Blitze wurden auf dein Blitzekonto gebucht.'
           : 'Workout gespeichert. Heute wurden keine zusätzlichen Blitze gutgeschrieben.');
       }catch(err){
-        showReward(0, `Konnte nicht buchen: ${err.message}`);
+        showReward(localPoints, `Lokal gespeichert. Buchen nicht möglich: ${err.message}`);
       }
       setTimeout(() => {
         window.location.href = 'home.html';
@@ -630,8 +708,8 @@
 
     async function main(){
       try{
-        loadingMsg.textContent='Kamera & KI werden geladen…';
-        await Promise.all([setupCamera(), initBackend().then(() => loadModel())]);
+        loadingMsg.textContent='Kamera wird gestartet…';
+        await setupCamera();
       }catch(e){
         loadingMsg.textContent='Fehler: '+e.message;
         loadingMsg.style.color='red';
@@ -639,8 +717,18 @@
       }
       loadingWrap.style.display='none';
       appWrap.style.display='block';
-      feedbackEl.textContent='Bereit!';
-      loop();
+      feedbackEl.textContent='Kamera bereit. KI wird vorbereitet…';
+      feedbackEl.style.color='#374151';
+      try{
+        await initBackend();
+        await loadModel();
+        feedbackEl.textContent='Bereit!';
+        feedbackEl.style.color='#059669';
+        loop();
+      }catch(e){
+        feedbackEl.textContent='KI-Fehler: ' + e.message;
+        feedbackEl.style.color='red';
+      }
     }
     main();
   </script>

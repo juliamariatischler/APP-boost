@@ -520,7 +520,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             <h3 className="font-bold text-foreground">Challenge 2: Übungen</h3>
             <p className="text-xs text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
             <p className="text-xs text-muted-foreground/80">
-              Für jede abgeschlossene Übung gibt es +{BOOST_POINT_RULES.exerciseCompleted} Blitze.
+              1 Wiederholung bzw. 1 Sekunde Plank = {BOOST_POINT_RULES.repOrSecond} Blitz.
             </p>
           </div>
           {allExercisesComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
@@ -577,13 +577,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               {userAge !== null ? ` für ${userAge}-Jährige` : ""}
             </h3>
             <p className="text-sm text-muted-foreground">{muscleTrainingInfo}</p>
-            <p className="text-sm text-muted-foreground">
-              Wichtig ist eine mittlere bis hohe Anstrengung mit Übungen für Beine, Gesäß, Hüfte, Brust, Rücken,
-              Bauch, Schultern und Arme.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Auch Sportkurse mit Bändern, Körpergewicht oder einfachen Kraftformen können dazu beitragen.
-            </p>
             <p className="text-sm text-muted-foreground">
               Unsere Übungen basieren auf internationalen Trainingsrichtlinien für Kinder und sind speziell auf
               Sicherheit, Einfachheit und Skalierbarkeit ausgelegt.

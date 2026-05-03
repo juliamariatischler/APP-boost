@@ -248,7 +248,7 @@ const Klasse = () => {
               <div className="space-y-2">
                 {[
                   { emoji: "🌤", label: "Tagesziel Schritte", sub: `${DAILY_STEP_GOAL.toLocaleString("de")} Schritte`, pts: `+${BOOST_POINT_RULES.dailyGoalCompleted}` },
-                  { emoji: "⚡", label: "Eine Übung machen", sub: "Egal welche, ab 15 Min", pts: `+${BOOST_POINT_RULES.exerciseCompleted}` },
+                  { emoji: "⚡", label: "1 Wdh. oder 1 Sek.", sub: "Jede Wiederholung zählt", pts: `+${BOOST_POINT_RULES.repOrSecond}` },
                   { emoji: "🔥", label: "Streak halten", sub: "Heute eingeloggt + ✓", pts: "+5" },
                 ].map((item) => (
                   <div key={item.label} className="bg-card rounded-xl px-4 py-3 flex items-center justify-between border border-border">

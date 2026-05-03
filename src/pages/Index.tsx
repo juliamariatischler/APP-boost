@@ -41,7 +41,7 @@ const Index = () => {
         <img 
           src={boostLogo} 
           alt="BOOST Logo" 
-          className="h-32 w-auto mx-auto mb-8"
+          className="h-32 w-auto mx-auto mt-10 mb-8"
         />
         <h1 className="text-5xl md:text-6xl font-bold mb-6 text-foreground">
           BOOST Challenge

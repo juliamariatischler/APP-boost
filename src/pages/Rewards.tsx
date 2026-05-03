@@ -321,7 +321,7 @@ const Rewards = () => {
                   </div>
                   <span className="font-bold text-foreground text-sm">Tageschallenge</span>
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                    +{BOOST_POINT_RULES.exerciseCompleted} / +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
+                    1 Wdh. / 1 Sek. = {BOOST_POINT_RULES.repOrSecond} ⚡
                   </span>
                 </button>
 
@@ -348,7 +348,7 @@ const Rewards = () => {
                     <Swords className="h-6 w-6 text-purple-500" />
                   </div>
                   <span className="font-bold text-foreground text-sm">Friendquest</span>
-                  <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+20-50 ⚡</span>
+                  <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+{BOOST_POINT_RULES.friendQuestCompleted} ⚡</span>
                 </button>
 
                 {/* Try It */}
@@ -470,7 +470,7 @@ const Rewards = () => {
                   </div>
                   <span className="font-bold text-foreground text-sm">Tageschallenge</span>
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                    +{BOOST_POINT_RULES.exerciseCompleted} / +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
+                    1 Wdh. / 1 Sek. = {BOOST_POINT_RULES.repOrSecond} ⚡
                   </span>
                 </button>
 
@@ -497,7 +497,7 @@ const Rewards = () => {
                     <Swords className="h-6 w-6 text-purple-500" />
                   </div>
                   <span className="font-bold text-foreground text-sm">Friendquest</span>
-                  <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+20-50 ⚡</span>
+                  <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded-full font-bold">+{BOOST_POINT_RULES.friendQuestCompleted} ⚡</span>
                 </button>
 
                 {/* Try It */}

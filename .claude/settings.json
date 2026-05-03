@@ -5,7 +5,8 @@
       "Bash(supabase migration:*)",
       "Bash(supabase db:*)",
       "Bash(gh auth:*)",
-      "Bash(find \"/Users/juliatischler/Desktop/Mein Ordner/boost-main Kopie/supabase/migrations\" -name \"*.sql\" -exec grep -l \"RLS\\\\|POLICY\\\\|Row Level\" {} \\\\;)"
+      "Bash(find \"/Users/juliatischler/Desktop/Mein Ordner/boost-main Kopie/supabase/migrations\" -name \"*.sql\" -exec grep -l \"RLS\\\\|POLICY\\\\|Row Level\" {} \\\\;)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

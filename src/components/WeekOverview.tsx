@@ -177,7 +177,7 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Pro abgeschlossener Übung: +{BOOST_POINT_RULES.exerciseCompleted} ⚡. Tagesziel mit {DAILY_STEP_GOAL} Schritten und allen Übungen:
+        1 Wiederholung bzw. 1 Sekunde Plank = {BOOST_POINT_RULES.repOrSecond} ⚡. Tagesziel mit {DAILY_STEP_GOAL} Schritten und allen Übungen:
         +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡ extra.
       </p>
     </Card>

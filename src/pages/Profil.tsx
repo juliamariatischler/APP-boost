@@ -164,7 +164,7 @@ const Profil = () => {
         </Card>
 
         <div className="mb-4">
-          <LevelCard points={profile.points} level={getLevelForPoints(profile.points)} />
+          <LevelCard points={profile.points} level={getLevelForPoints(profile.points)} showPointSystem />
         </div>
 
         <div className="space-y-3">
