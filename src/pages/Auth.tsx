@@ -83,14 +83,15 @@ const Auth = () => {
 
   const DEMO_SCHOOL = "DemoSchule";
   const DEMO_CLASS = "4a";
+  const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD as string | undefined;
   const DEMO_STUDENT = {
     email: "demo@boost-challenge.de",
-    password: "demo123456",
+    password: DEMO_PASSWORD ?? "",
     username: "Demo",
   };
   const DEMO_TEACHER = {
     email: "demo-lehrkraft@boost-challenge.de",
-    password: "demo123456",
+    password: DEMO_PASSWORD ?? "",
     username: "DemoLehrkraft",
   };
 

@@ -2,8 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; img-src 'self' data: blob:; worker-src blob:; connect-src 'self' https://cdn.jsdelivr.net blob:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KI-Hampelmann-Zähler</title>
 
@@ -34,7 +33,7 @@
     @media (max-width:800px){ .layout{ grid-template-columns:1fr; } }
 
     .stage{ position:relative; width:100%; aspect-ratio:4/3; background:#1f2937; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); }
-    #webcam{ width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+    #webcam{ width:100%; height:100%; object-fit:cover; }
     #canvas{ position:absolute; inset:0; width:100%; height:100%; }
 
     .panel{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; }
@@ -65,7 +64,7 @@
         <div class="loader"></div>
         <div>
           <div id="loading-message"><strong>Modell wird geladen…</strong></div>
-          <div id="backend-info" class="debug" style="display:none"></div>
+          <div id="backend-info" class="debug"></div>
         </div>
       </div>
 
@@ -108,10 +107,10 @@
   </div>
 
   <!-- TFJS + Backends – pinned .min.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js" integrity="sha384-ZVckeGw84RpbmPMzx1s9LFUqIaeIsG46rmlH/HynDuJikkmGLnTDnEmT0CrKI6Yi" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js" integrity="sha384-sTQbAoegStaraHP3ijlE4F66mBcvLpX2zRxhhZqVsfVTGLsKLw6X3AMEyo18XygJ" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js" integrity="sha384-PAbE0QuTSZkDuS/hX4MEx1MZ0Nwd+mkb2Znz35ZqGDjb36klpR8/mCpykhdd7uHW" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js" integrity="sha384-pjg3ZYfXdbqsHl42YTyNHeHMzvrwQUvEuQ7tTn6+tDmoUkSD3ItK1sBa73y1l0H3" crossorigin="anonymous"></script>
   <script src="/celebration.js"></script>
 
   <script>
@@ -151,7 +150,7 @@
 
     async function setupCamera(){
       if(!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
-      const stream = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480, facingMode:'user'}});
+      const stream = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480}});
       video.srcObject = stream;
       return new Promise(res => video.onloadedmetadata = () => res());
     }
@@ -162,12 +161,10 @@
       detector = await poseDetection.createDetector(model, cfg);
     }
 
-    function mirrorX(x){ return canvas.width - x; }
-
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
         if(kp.score > KEYPOINT_CONFIDENCE){
-          ctx.beginPath(); ctx.arc(mirrorX(kp.x),kp.y,4,0,2*Math.PI);
+          ctx.beginPath(); ctx.arc(kp.x,kp.y,4,0,2*Math.PI);
           ctx.fillStyle = "#10b981"; ctx.fill();
         }
       }
@@ -178,7 +175,7 @@
       pairs.forEach(([a,b])=>{
         const k1 = pose.keypoints[a], k2 = pose.keypoints[b];
         if(k1.score>KEYPOINT_CONFIDENCE && k2.score>KEYPOINT_CONFIDENCE){
-          ctx.beginPath(); ctx.moveTo(mirrorX(k1.x),k1.y); ctx.lineTo(mirrorX(k2.x),k2.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(k1.x,k1.y); ctx.lineTo(k2.x,k2.y); ctx.stroke();
         }
       });
     }
@@ -267,8 +264,11 @@
 
     async function main(){
       try{
-        loadingMsg.textContent = 'Kamera & KI werden geladen…';
-        await Promise.all([setupCamera(), initBackend().then(() => loadModel())]);
+        await initBackend();
+        loadingMsg.textContent = 'Bitte Kamera erlauben…';
+        await setupCamera();
+        loadingMsg.textContent = 'Modell lädt…';
+        await loadModel();
       }catch(e){
         loadingMsg.textContent = 'Fehler: ' + e.message;
         loadingMsg.style.color = 'crimson';

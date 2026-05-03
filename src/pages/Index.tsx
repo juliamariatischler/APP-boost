@@ -1,89 +1,97 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import boostLogo from "@/assets/boost-logo.png";
-import { Dumbbell, Brain } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { session: codeSession } = useCodeAuth();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    setIsAuthenticated(!!session);
-    setLoading(false);
-    
-    if (!session) {
-      const nextPath = location.search ? `/auth${location.search}` : "/auth";
-      navigate(nextPath);
+    // If already logged in via code, go to the right home
+    if (codeSession) {
+      navigate(
+        codeSession.user_type === "student" ? "/student-home" : "/teacher-home",
+        { replace: true }
+      );
+      return;
     }
-  };
 
-  if (loading) {
-    return null;
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+    // If already logged in via legacy email/password, go to dashboard
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate("/dashboard", { replace: true });
+    });
+  }, [codeSession, navigate]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6">
-      <div className="text-center max-w-4xl w-full">
-        <img 
-          src={boostLogo} 
-          alt="BOOST Logo" 
-          className="h-32 w-auto mx-auto mb-8"
-        />
-        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-foreground">
-          BOOST Challenge
-        </h1>
-        <p className="text-xl md:text-2xl mb-12 text-muted-foreground">
-          Wähle deine Challenge aus
-        </p>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card 
-            className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
-            onClick={() => navigate("/dashboard")}
-          >
-            <Dumbbell className="h-20 w-20 mx-auto mb-4 text-primary" />
-            <h2 className="text-2xl font-bold mb-3 text-foreground">
-              Body Boost
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Bewege dich, sammle Blitze und fordere deine Freunde heraus!
-            </p>
-            <Button size="lg" className="w-full">
-              Starten
-            </Button>
-          </Card>
-
-          <Card 
-            className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
-            onClick={() => navigate("/mental")}
-          >
-            <Brain className="h-20 w-20 mx-auto mb-4 text-secondary" />
-            <h2 className="text-2xl font-bold mb-3 text-foreground">
-              Mind Boost
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Trainiere deinen Geist und verbessere deine mentale Stärke!
-            </p>
-            <Button size="lg" variant="secondary" className="w-full">
-              Starten
-            </Button>
-          </Card>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background:
+          "radial-gradient(circle at top left, #ecfdf5 0%, #f8fafc 50%, #ecfdf5 100%)",
+      }}
+    >
+      {/* Top nav */}
+      <header className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center gap-2">
+          <img src={boostLogo} alt="BOOST" className="h-10 w-auto" />
         </div>
-      </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/login")}
+            className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+          >
+            Schüler-Login
+          </button>
+          <button
+            onClick={() => navigate("/auth")}
+            className="rounded-full bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 active:scale-95 transition-all"
+          >
+            Schule anmelden
+          </button>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-6 pb-24">
+        <span className="rounded-full border border-green-200 bg-green-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-green-700">
+          Fitness-Programm für Schulen
+        </span>
+
+        <h1 className="text-4xl font-black leading-tight text-gray-900 md:text-6xl">
+          Mehr Bewegung.
+          <br />
+          <span className="text-green-500">Mehr Fokus.</span>
+          <br />
+          Mehr Leistung.
+        </h1>
+
+        <p className="max-w-md text-base text-gray-500 leading-relaxed">
+          BOOST bringt tägliche Bewegungsaufgaben an deine Schule – für
+          zuhause, unterwegs oder in der Pause. Kein Equipment, kein Aufwand,
+          maximale Wirkung.
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <button
+            onClick={() => navigate("/login")}
+            className="w-full rounded-2xl bg-green-500 py-4 text-base font-bold text-white shadow-md hover:bg-green-600 active:scale-95 transition-all"
+          >
+            Jetzt kostenlos starten
+          </button>
+          <button
+            onClick={() => navigate("/auth")}
+            className="w-full rounded-2xl border border-gray-200 bg-white py-4 text-base font-semibold text-gray-700 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+          >
+            Mehr erfahren
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-400">
+          ✓ Bereits an Schulen im Einsatz
+        </p>
+      </main>
     </div>
   );
 };

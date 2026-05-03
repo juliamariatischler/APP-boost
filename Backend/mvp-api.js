@@ -62,6 +62,36 @@ const LEVELS = [
   { key: "ELITE", min_points: 1000 },
 ];
 
+// In-memory rate limiter: max 10 login attempts per IP per 15 minutes
+const loginAttempts = new Map(); // ip -> { count, resetAt }
+const RATE_WINDOW_MS = 15 * 60 * 1000;
+const RATE_MAX = 10;
+
+function loginRateLimiter(req, res, next) {
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return next();
+  }
+  entry.count += 1;
+  if (entry.count > RATE_MAX) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+    res.setHeader("Retry-After", retryAfter);
+    return res.status(429).json({ error: "Zu viele Anmeldeversuche. Bitte warte kurz." });
+  }
+  next();
+}
+
+// Periodically purge expired entries to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if (now > entry.resetAt) loginAttempts.delete(ip);
+  }
+}, RATE_WINDOW_MS);
+
 function buildMvpApi() {
   const router = require("express").Router();
   const dataFile = path.join(__dirname, "data", "mvp-db.json");
@@ -100,7 +130,7 @@ function buildMvpApi() {
     });
   });
 
-  router.post("/auth/student/login", (req, res) => {
+  router.post("/auth/student/login", loginRateLimiter, (req, res) => {
     const joinCodeRaw = String(req.body?.join_code || "").trim();
     const nicknameRaw = String(req.body?.nickname || "").trim();
     const avatarIcon = String(req.body?.avatar_icon || "tiger").trim().toLowerCase();
@@ -178,7 +208,7 @@ function buildMvpApi() {
     });
   });
 
-  router.post("/auth/teacher/login", (req, res) => {
+  router.post("/auth/teacher/login", loginRateLimiter, (req, res) => {
     const email = String(req.body?.email || "").trim().toLowerCase();
     const schoolId = String(req.body?.school_id || "school_1").trim();
     const password = String(req.body?.password || "");

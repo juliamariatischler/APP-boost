@@ -14,6 +14,7 @@ dist-ssr
 .env.*
 !.env.example
 *.local
+Backend/data/mvp-db.json
 
 # Editor directories and files
 .vscode/*

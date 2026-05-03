@@ -18,6 +18,9 @@ const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const CodeLogin = lazy(() => import("./pages/CodeLogin"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
+const StudentKlasse = lazy(() => import("./pages/StudentKlasse"));
+const StudentQuests = lazy(() => import("./pages/StudentQuests"));
+const StudentProfil = lazy(() => import("./pages/StudentProfil"));
 const TeacherHome = lazy(() => import("./pages/TeacherHome"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ChallengeDetail = lazy(() => import("./pages/ChallengeDetail"));
@@ -77,7 +80,10 @@ const App = () => (
               <Routes>
                 {/* Code-based login routes */}
                 <Route path="/login" element={<CodeLogin />} />
-                <Route path="/student-home" element={<StudentHome />} />
+                <Route path="/student-home"   element={<StudentHome />} />
+                <Route path="/student-klasse" element={<StudentKlasse />} />
+                <Route path="/student-quests" element={<StudentQuests />} />
+                <Route path="/student-profil" element={<StudentProfil />} />
                 <Route path="/teacher-home" element={<TeacherHome />} />
                 {/* Legacy email/password routes */}
                 <Route path="/" element={<Index />} />

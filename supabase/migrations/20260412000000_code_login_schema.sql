@@ -337,6 +337,10 @@ $$;
 
 -- ============================================================
 -- Beispieldaten – Ursulinen Graz
+-- SICHERHEITSHINWEIS: Die Login-Codes unten sind Seed-Daten für
+-- die erste Einrichtung. Nach dem ersten Deployment müssen alle
+-- Codes sofort in der Datenbank rotiert werden (UPDATE teachers/students
+-- SET login_code = '...' WHERE id = '...').
 -- ============================================================
 
 DO $$
