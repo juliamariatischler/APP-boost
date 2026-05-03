@@ -1,4 +1,4 @@
-import { Home, ClipboardList, Users, User } from "lucide-react";
+import { ClipboardCheck, Home, Users, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export const BottomNav = () => {
@@ -7,7 +7,7 @@ export const BottomNav = () => {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/dashboard", matches: ["/dashboard"] },
-    { icon: ClipboardList, label: "Quests", path: "/quests", matches: ["/quests", "/challenge"] },
+    { icon: ClipboardCheck, label: "Daily", path: "/challenge/daily", matches: ["/challenge/daily"] },
     { icon: Users, label: "Klasse", path: "/klasse", matches: ["/klasse"] },
     { icon: User, label: "Profil", path: "/profil", matches: ["/profil", "/settings", "/rewards", "/boost"] },
   ];

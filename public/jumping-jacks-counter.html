@@ -34,7 +34,7 @@
     @media (max-width:800px){ .layout{ grid-template-columns:1fr; } }
 
     .stage{ position:relative; width:100%; aspect-ratio:4/3; background:#1f2937; border-radius:8px; overflow:hidden; box-shadow:var(--shadow); }
-    #webcam{ width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+    #webcam{ width:100%; height:100%; object-fit:cover; }
     #canvas{ position:absolute; inset:0; width:100%; height:100%; }
 
     .panel{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; }
@@ -97,6 +97,8 @@
               <p id="feedback" class="feedback">Initialisiere…</p>
             </div>
 
+            <button id="fit-button" class="btn">Mehr im Bild</button>
+            <button id="switch-camera-button" class="btn">Kamera wechseln</button>
             <button id="reset-button" class="btn">Zurücksetzen</button>
             <button id="finish-button" class="btn btn--green">Fertig</button>
 
@@ -125,12 +127,16 @@
     const feedbackEl = document.getElementById('feedback');
     const backendInfo = document.getElementById('backend-info');
     const debugLog = document.getElementById('debug-log');
+    const fitButton = document.getElementById('fit-button');
+    const switchCameraButton = document.getElementById('switch-camera-button');
 
     const loadingWrap = document.getElementById('loading');
     const appWrap = document.getElementById('app');
     const loadingMsg = document.getElementById('loading-message');
 
     let detector;
+    let currentFacingMode = 'user';
+    let currentDeviceId = '';
     let counter = 0;
     let phase = "closed"; // "closed" = Füße zusammen, Arme unten; "open" = Arme oben, Beine breit
     const KEYPOINT_CONFIDENCE = 0.35;
@@ -149,11 +155,121 @@
       backendInfo.textContent = 'TFJS-Backend: ' + tf.getBackend();
     }
 
-    async function setupCamera(){
+    function isMirrored(){ return currentFacingMode === 'user'; }
+    function updateVideoOrientation(){ video.style.transform = isMirrored() ? 'scaleX(-1)' : 'none'; }
+    function stopCurrentStream(){
+      const stream = video.srcObject;
+      if(stream && typeof stream.getTracks === 'function'){
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      video.srcObject = null;
+    }
+    function getActiveTrack(){ return video.srcObject?.getVideoTracks?.()[0] || null; }
+
+    async function setupCamera(options = {}){
       if(!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera wird von diesem Browser nicht unterstützt.');
-      const stream = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480, facingMode:'user'}});
+      const nextFacingMode = options.facingMode || currentFacingMode;
+      const nextDeviceId = options.deviceId ?? currentDeviceId;
+      stopCurrentStream();
+      const baseVideo = { width: { ideal: 1280 }, height: { ideal: 720 } };
+      const constraints = nextDeviceId
+        ? { video: { ...baseVideo, deviceId: { exact: nextDeviceId } } }
+        : { video: { ...baseVideo, facingMode: { ideal: nextFacingMode } } };
+
+      let stream;
+      try{
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }catch(error){
+        if(nextDeviceId){
+          stream = await navigator.mediaDevices.getUserMedia({ video: { ...baseVideo, facingMode: { ideal: nextFacingMode } } });
+        }else{
+          throw error;
+        }
+      }
+
       video.srcObject = stream;
-      return new Promise(res => video.onloadedmetadata = () => res());
+      await new Promise(res => video.onloadedmetadata = () => res());
+      const track = getActiveTrack();
+      const settings = track?.getSettings?.() || {};
+      currentFacingMode = settings.facingMode || nextFacingMode;
+      currentDeviceId = settings.deviceId || '';
+      updateVideoOrientation();
+    }
+
+    async function applyZoomOut(){
+      const track = getActiveTrack();
+      const capabilities = track?.getCapabilities?.();
+      if(!track || !capabilities || !capabilities.zoom) return false;
+      try{
+        await track.applyConstraints({ advanced: [{ zoom: Math.max(0.5, capabilities.zoom.min || 1) }] });
+        return true;
+      }catch(_error){
+        return false;
+      }
+    }
+
+    async function findWidestRearCamera(){
+      if(!navigator.mediaDevices?.enumerateDevices) return null;
+      const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === 'videoinput');
+      const ranked = devices
+        .map((device) => {
+          const label = (device.label || '').toLowerCase();
+          let rank = 0;
+          if(/ultra|0\.5|weitwinkel|wide/.test(label)) rank += 4;
+          if(/back|rear|environment|rück|hinten/.test(label)) rank += 2;
+          return { device, rank };
+        })
+        .sort((a, b) => b.rank - a.rank);
+      return ranked[0]?.device?.deviceId || null;
+    }
+
+    async function fitCameraView(){
+      fitButton.disabled = true;
+      switchCameraButton.disabled = true;
+      try{
+        feedbackEl.textContent = 'Versuche mehr ins Bild zu bekommen...';
+        feedbackEl.style.color = '#374151';
+        if(await applyZoomOut()){
+          feedbackEl.textContent = 'Zoom angepasst. Falls nötig, teste die Rückkamera.';
+          return;
+        }
+        const wideRearId = await findWidestRearCamera();
+        if(wideRearId && (currentFacingMode !== 'environment' || currentDeviceId !== wideRearId)){
+          await setupCamera({ facingMode: 'environment', deviceId: wideRearId });
+          feedbackEl.textContent = 'Auf weitere Kamera gewechselt. So passt mehr ins Bild.';
+          return;
+        }
+        if(currentFacingMode !== 'environment'){
+          await setupCamera({ facingMode: 'environment', deviceId: '' });
+          feedbackEl.textContent = 'Auf Rückkamera gewechselt. So passt oft mehr ins Bild.';
+          return;
+        }
+        feedbackEl.textContent = 'Diese Kamera kann nicht weiter rauszoomen. Geh noch etwas weiter zurück.';
+      }catch(error){
+        feedbackEl.textContent = 'Kamera-Anpassung fehlgeschlagen: ' + error.message;
+        feedbackEl.style.color = 'crimson';
+      }finally{
+        fitButton.disabled = false;
+        switchCameraButton.disabled = false;
+      }
+    }
+
+    async function toggleCamera(){
+      fitButton.disabled = true;
+      switchCameraButton.disabled = true;
+      try{
+        const nextMode = currentFacingMode === 'user' ? 'environment' : 'user';
+        currentDeviceId = '';
+        await setupCamera({ facingMode: nextMode });
+        feedbackEl.textContent = nextMode === 'user' ? 'Frontkamera aktiv.' : 'Rückkamera aktiv.';
+        feedbackEl.style.color = '#374151';
+      }catch(error){
+        feedbackEl.textContent = 'Kamerawechsel fehlgeschlagen: ' + error.message;
+        feedbackEl.style.color = 'crimson';
+      }finally{
+        fitButton.disabled = false;
+        switchCameraButton.disabled = false;
+      }
     }
 
     async function loadModel(){
@@ -162,7 +278,7 @@
       detector = await poseDetection.createDetector(model, cfg);
     }
 
-    function mirrorX(x){ return canvas.width - x; }
+    function mirrorX(x){ return isMirrored() ? canvas.width - x : x; }
 
     function drawKeypoints(pose){
       for(const kp of pose.keypoints){
@@ -255,6 +371,8 @@
       countEl.textContent = '0'; stageEl.textContent = '-';
       feedbackEl.textContent = 'Zurückgesetzt!';
     });
+    fitButton.addEventListener('click', fitCameraView);
+    switchCameraButton.addEventListener('click', toggleCamera);
 
     document.getElementById('finish-button').addEventListener('click', () => {
       if(counter === 0){

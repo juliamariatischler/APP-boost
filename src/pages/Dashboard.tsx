@@ -153,10 +153,18 @@ const Dashboard = () => {
             <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
             <p className="mt-3 text-sm font-medium text-primary">Hi {username}</p>
             <h1 className="text-[2rem] font-black leading-none tracking-tight text-foreground">
-              Bereit fuer
+              Dein Boost
               <br />
-              deine Quests?
+              fuer heute
             </h1>
+            <button
+              type="button"
+              onClick={() => navigate("/quests")}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+            >
+              Alle Quests
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
           <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Blitze</p>
@@ -255,13 +263,13 @@ const Dashboard = () => {
         )}
 
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Deine Challenges</h2>
+          <h2 className="text-lg font-bold text-foreground">Heute moeglich</h2>
           <button
             type="button"
             onClick={() => navigate("/quests")}
             className="text-sm font-medium text-primary"
           >
-            Alle ansehen
+            Quests
           </button>
         </div>
         
