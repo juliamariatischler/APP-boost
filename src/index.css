@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .pb-nav-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

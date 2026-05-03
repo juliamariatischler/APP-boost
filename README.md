@@ -64,6 +64,14 @@ The app uses a shared health provider architecture:
 
 - iOS: Apple Health (HealthKit)
 - Android: Health Connect
+- Web: fallback without native health access
+
+Relevant app code lives in one shared repo:
+
+- `src/services/platform/runtime.ts`: central native/web platform detection
+- `src/services/health/platform.ts`: maps runtime to health source and UI label
+- `src/services/health/providers/*`: provider implementations per platform
+- `src/services/healthService.ts`: app-facing API used by UI components
 
 To test as native app on phone:
 

@@ -1,5 +1,5 @@
-import { Capacitor } from '@capacitor/core';
 import { Health } from '@awesome-cordova-plugins/health';
+import { getHealthPlatformContext } from '../platform';
 import type { HealthProvider } from '../types';
 
 const normalizeSteps = (result: unknown): number => {
@@ -15,9 +15,10 @@ const normalizeSteps = (result: unknown): number => {
 export class AndroidHealthProvider implements HealthProvider {
   source = 'health_connect' as const;
   label = 'Health Connect';
+  platform = 'android' as const;
 
   isSupported(): boolean {
-    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+    return getHealthPlatformContext().source === this.source;
   }
 
   async isAvailable(): Promise<boolean> {

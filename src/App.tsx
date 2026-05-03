@@ -6,6 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CodeAuthProvider } from "@/contexts/CodeAuthContext";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
+
+if (Capacitor.isNativePlatform()) {
+  StatusBar.setOverlaysWebView({ overlay: false });
+  StatusBar.setStyle({ style: Style.Light });
+}
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));

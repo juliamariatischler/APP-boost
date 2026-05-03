@@ -48,7 +48,7 @@ const Boost = () => {
 
   if (authLoading || gamification.loading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-nav-safe">
         <div className="animate-pulse h-96 m-4 bg-muted rounded-lg" />
         <BottomNav />
       </div>
@@ -56,7 +56,7 @@ const Boost = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <TopHeader />
       <div className="max-w-md mx-auto px-4 -mt-4 space-y-3">
         <Card className="border-primary/20 bg-primary/5 p-4">
