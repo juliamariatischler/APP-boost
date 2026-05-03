@@ -81,48 +81,55 @@ const TYPE_STYLE: Record<Quest["type"], { bg: string; text: string; badge: strin
 };
 
 function QuestDetail({ quest, onBack }: { quest: Quest; onBack: () => void }) {
-  const style = TYPE_STYLE[quest.type];
+  const heroBg =
+    quest.type === "EPIC"   ? "bg-green-500" :
+    quest.type === "STREAK" ? "bg-sky-500"   :
+                              "bg-gray-700";
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Nav */}
-      <div className="bg-white px-4 pt-6 pb-4 flex items-start justify-between border-b border-gray-100">
-        <button
-          onClick={onBack}
-          className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center"
-        >
-          <ChevronLeft className="h-5 w-5 text-gray-600" />
-        </button>
-        <span className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black ${
-          quest.type === "EPIC" ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
-        }`}>
-          <Zap className="h-3 w-3" /> {quest.type === "EPIC" ? "EPIC" : quest.type}
-        </span>
-      </div>
+      {/* Hero section */}
+      <div className={`${heroBg} px-4 pt-12 pb-8`}>
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={onBack}
+            className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center"
+          >
+            <ChevronLeft className="h-5 w-5 text-white" />
+          </button>
+          <span className="flex items-center gap-1 bg-white/20 px-3 py-1.5 rounded-full text-xs font-black text-white">
+            <Zap className="h-3 w-3" />
+            {quest.type === "EPIC" ? "EPIC" : quest.type}
+          </span>
+        </div>
 
-      <div className="px-4 pt-5 space-y-5">
-        <h1 className="text-4xl font-black text-gray-900 leading-tight">{quest.title}</h1>
+        {/* Title */}
+        <h1 className="text-4xl font-black text-white leading-tight mb-6">{quest.title}</h1>
 
-        {/* Reward row */}
+        {/* Reward row – dark cards */}
         <div className="flex gap-3">
-          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm flex-1 text-center">
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Belohnung</p>
-            <div className="flex items-center justify-center gap-1 text-gray-900 font-black text-xl">
+          <div className="bg-black/30 rounded-2xl px-4 py-3 flex-1 text-center">
+            <p className="text-[10px] text-white/60 font-bold uppercase tracking-wide mb-1">Belohnung</p>
+            <div className="flex items-center justify-center gap-1 text-white font-black text-xl">
               {quest.points}
-              <Zap className="h-5 w-5 fill-green-500 text-green-500" />
+              <Zap className="h-5 w-5 fill-white text-white" />
             </div>
           </div>
           {quest.bonus && (
-            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm flex-1 text-center">
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Bonus</p>
-              <p className="font-black text-gray-900 text-sm">{quest.bonus}</p>
+            <div className="bg-black/30 rounded-2xl px-4 py-3 flex-1 text-center">
+              <p className="text-[10px] text-white/60 font-bold uppercase tracking-wide mb-1">Bonus</p>
+              <p className="font-black text-white text-sm">{quest.bonus}</p>
             </div>
           )}
-          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm text-center">
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Endet</p>
-            <p className="font-bold text-gray-900 text-sm">{quest.endsAt}</p>
+          <div className="bg-black/30 rounded-2xl px-4 py-3 text-center">
+            <p className="text-[10px] text-white/60 font-bold uppercase tracking-wide mb-1">Endet</p>
+            <p className="font-bold text-white text-sm">{quest.endsAt}</p>
           </div>
         </div>
+      </div>
+
+      <div className="px-4 pt-5 space-y-5">
 
         {/* Progress */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Footprints, Dumbbell, Flame, ChevronRight } from "lucide-react";
+import { Zap, Footprints, Flame, ChevronRight } from "lucide-react";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { StudentNav } from "@/components/student/StudentNav";
 import boostLogo from "@/assets/boost-logo.png";
@@ -70,7 +70,7 @@ export default function StudentHome() {
   const weekTasks = [
     {
       id: "exercise",
-      Icon: Dumbbell,
+      Icon: Zap,
       bg: "bg-orange-500",
       title: "Übung machen",
       subtitle: stats
@@ -138,7 +138,7 @@ export default function StudentHome() {
         {/* Featured quest card */}
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
           <div
-            className="px-4 py-3 flex items-center"
+            className="px-4 py-6 flex items-center"
             style={{
               background:
                 "repeating-linear-gradient(-45deg,#bbf7d0,#bbf7d0 8px,#dcfce7 8px,#dcfce7 16px)",
