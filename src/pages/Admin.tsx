@@ -1067,7 +1067,7 @@ const Admin = () => {
                       <TableCell>{student.school}</TableCell>
                       <TableCell>{student.class}</TableCell>
                       <TableCell>
-                        <span className={isAssigned ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                        <span className={isAssigned ? "text-primary font-medium" : "text-muted-foreground"}>
                           {isAssigned ? "Zugewiesen" : "Nicht zugewiesen"}
                         </span>
                       </TableCell>
@@ -1327,7 +1327,7 @@ const Admin = () => {
                         <TableCell>{profile.class}</TableCell>
                         <TableCell className="text-right font-semibold">{Number(profile.points || 0)} ⚡</TableCell>
                         <TableCell className="text-right">
-                          <span className={todayCompleted >= 5 ? "text-green-600 font-semibold" : "text-muted-foreground"}>
+                          <span className={todayCompleted >= 5 ? "text-primary font-semibold" : "text-muted-foreground"}>
                             {todayCompleted}/5
                           </span>
                         </TableCell>

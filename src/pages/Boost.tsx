@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { TopHeader } from "@/components/TopHeader";
-import { LevelCard } from "@/components/boost/LevelCard";
 import { StreakCard } from "@/components/boost/StreakCard";
 import { BadgesCard } from "@/components/boost/BadgesCard";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
@@ -61,7 +60,7 @@ const Boost = () => {
       <div className="max-w-md mx-auto px-4 -mt-4 space-y-3">
         <Card className="border-primary/20 bg-primary/5 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">BOOST-System</p>
-          <h1 className="mt-2 text-xl font-black text-foreground">Blitze, Level, Challenges, Klasse</h1>
+          <h1 className="mt-2 text-xl font-black text-foreground">Blitze, Challenges, Fortschritt, Klasse</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Blitze sind die zentrale Währung in BOOST. Sie machen Fortschritt sichtbar, bringen Kinder täglich zurück
             und verbinden persönliche Motivation mit dem Erfolg der ganzen Klasse.
@@ -78,7 +77,7 @@ const Boost = () => {
           </div>
           <div className="mt-3 grid gap-3 text-sm text-muted-foreground">
             <p>Täglich zurückkommen, Fortschritt sehen und durch klare Belohnungen sofort verstehen, wofür es Blitze gibt.</p>
-            <p>Level, Badges, Streaks und sichtbare Balken sorgen dafür, dass Leistung nicht abstrakt bleibt.</p>
+            <p>Badges, Streaks und sichtbare Balken sorgen dafür, dass Leistung nicht abstrakt bleibt.</p>
             <p>Das Klassenranking macht aus Einzelmotivation ein Teamziel und stärkt gleichzeitig den sozialen Vergleich.</p>
           </div>
         </Card>
@@ -106,8 +105,6 @@ const Boost = () => {
             <p>Lehrkräfte sehen Aktivität und Fortschritt der Klasse, ohne jede Übung einzeln kontrollieren zu müssen.</p>
           </div>
         </Card>
-
-        <LevelCard points={gamification.points} level={gamification.level} />
         <StreakCard streak={gamification.streak} weeklyCompletedDays={gamification.weeklyCompletedDays} />
         
         {/* Class participation - the game changer */}

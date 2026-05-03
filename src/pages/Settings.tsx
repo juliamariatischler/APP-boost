@@ -82,7 +82,7 @@ const Settings = () => {
             {checkingHealth ? (
               <span className="text-sm text-muted-foreground">Wird geprüft...</span>
             ) : healthAvailable && isHealthSupported ? (
-              <span className="inline-flex items-center gap-1 text-sm text-green-600">
+              <span className="inline-flex items-center gap-1 text-sm text-primary">
                 <CheckCircle2 className="h-4 w-4" />
                 Verfügbar
               </span>

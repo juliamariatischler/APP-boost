@@ -3,8 +3,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
-import { Zap } from "lucide-react";
-import { BOOST_POINT_RULES, DAILY_STEP_GOAL, DAILY_EXERCISE_GOALS, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
+import { Star, Zap } from "lucide-react";
+import { BOOST_POINT_RULES, DAILY_STEP_GOAL, DAILY_EXERCISE_GOALS, WEEKLY_GOAL_DAYS, calculateStreak, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
 
 interface DailyResult {
   date: string;
@@ -72,6 +72,24 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
     return blitze;
   };
 
+  const hasAnyActivity = (day: DailyResult) => {
+    return (
+      (day.steps || 0) > 0 ||
+      (day.jumping_jacks || 0) > 0 ||
+      (day.push_ups || 0) > 0 ||
+      (day.squats || 0) > 0 ||
+      (day.planks || 0) > 0 ||
+      (day.sit_ups || 0) > 0
+    );
+  };
+
+  const addOneDayToDateString = (dateStr: string) => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const nextDate = new Date(year, month - 1, day);
+    nextDate.setDate(nextDate.getDate() + 1);
+    return format(nextDate, "yyyy-MM-dd");
+  };
+
   const getDaysOfWeek = () => {
     const today = new Date();
     const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
@@ -86,6 +104,16 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
 
   const totalWeeklyBlitze = weeklyData.reduce((sum, day) => sum + calculateDailyBlitze(day), 0);
   const daysOfWeek = getDaysOfWeek();
+  const activeDates = weeklyData
+    .filter(hasAnyActivity)
+    .map((day) => day.date)
+    .sort((a, b) => a.localeCompare(b));
+  const currentStreak = calculateStreak(activeDates).currentStreak;
+  const lastActiveDate = activeDates[activeDates.length - 1];
+  const streakTargetDate = (() => {
+    if (currentStreak !== WEEKLY_GOAL_DAYS - 1 || !lastActiveDate) return null;
+    return addOneDayToDateString(lastActiveDate);
+  })();
 
   if (loading) {
     return <Card className="p-6 bg-card shadow-card"><p className="text-center">Lädt...</p></Card>;
@@ -106,13 +134,15 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
         {daysOfWeek.map((day) => {
           const data = getDataForDate(day);
           const blitze = data ? calculateDailyBlitze(data) : 0;
+          const hasActivity = data ? hasAnyActivity(data) : false;
           const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
           const isPast = day < new Date() && !isToday;
+          const showStreakStar = format(day, "yyyy-MM-dd") === streakTargetDate && !hasActivity;
           
           return (
             <div
               key={day.toISOString()}
-              className={`flex flex-col items-center p-3 rounded-lg border-2 ${
+              className={`relative flex flex-col items-center p-3 rounded-lg border-2 ${
                 isToday
                   ? "border-primary bg-primary/5"
                   : isPast && blitze === 0
@@ -120,6 +150,11 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
                   : "border-border bg-card"
               }`}
             >
+              {showStreakStar && (
+                <div className="absolute top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                  <Star className="h-3 w-3 fill-current" />
+                </div>
+              )}
               <div className="text-xs font-medium text-muted-foreground mb-2">
                 {format(day, "EEE", { locale: de })}
               </div>

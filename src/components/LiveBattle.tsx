@@ -325,7 +325,7 @@ export const LiveBattle = ({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${myReady ? 'bg-green-500' : 'bg-muted'}`}>
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${myReady ? 'bg-primary' : 'bg-muted'}`}>
                   <User className="h-8 w-8 text-white" />
                 </div>
                 <p className="mt-2 font-medium">Du</p>
@@ -335,7 +335,7 @@ export const LiveBattle = ({
               </div>
               
               <div className="text-center">
-                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${opponentReady ? 'bg-green-500' : 'bg-muted'}`}>
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${opponentReady ? 'bg-primary' : 'bg-muted'}`}>
                   <User className="h-8 w-8 text-white" />
                 </div>
                 <p className="mt-2 font-medium">{isChallenger ? opponentName : challengerName}</p>

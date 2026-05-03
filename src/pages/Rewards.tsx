@@ -255,7 +255,7 @@ const Rewards = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-bold text-foreground">{reward.title}</span>
                           {isUnlocked ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <CheckCircle className="h-4 w-4 text-primary" />
                           ) : (
                             <Lock className="h-4 w-4 text-muted-foreground" />
                           )}
@@ -280,7 +280,7 @@ const Rewards = () => {
                         {isUnlocked ? (
                           <Button
                             size="sm"
-                            className="bg-green-500 hover:bg-green-600"
+                            className="bg-primary hover:bg-primary/90"
                             onClick={() => handleRedeem(reward.id)}
                             disabled={redeemingId === reward.id}
                           >
@@ -439,7 +439,7 @@ const Rewards = () => {
                           )}
                           
                           {isUnlocked && (
-                            <div className="flex items-center gap-2 text-green-600 text-sm">
+                            <div className="flex items-center gap-2 text-primary text-sm">
                               <CheckCircle className="h-4 w-4" />
                               <span className="font-medium">Freigeschaltet!</span>
                             </div>

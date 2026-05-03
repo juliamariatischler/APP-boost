@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, ChevronRight, HeartPulse, LogOut, School, Settings2, ShieldCheck, User2, Zap } from "lucide-react";
+import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, School, Settings2, ShieldCheck, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LevelCard } from "@/components/boost/LevelCard";
+import { PointSystemCard } from "@/components/boost/PointSystemCard";
 import { HealthService } from "@/services/healthService";
 import { supabase } from "@/integrations/supabase/client";
 import { getDemoAwarePoints } from "@/lib/demo";
-import { getLevelForPoints } from "@/lib/gamification";
 import { toast } from "sonner";
-import boostLogo from "@/assets/boost-logo.png";
+import { BOOST_POINT_RULES, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
+import { endOfWeek, format, startOfWeek } from "date-fns";
+import { de } from "date-fns/locale";
+import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem, WEEKLY_AVATAR_ITEM_THRESHOLD } from "@/lib/avatarItems";
 
 interface ProfileData {
   username: string;
@@ -27,6 +29,9 @@ const Profil = () => {
   const [checkingHealth, setCheckingHealth] = useState(true);
   const [healthAvailable, setHealthAvailable] = useState(false);
   const [connectingHealth, setConnectingHealth] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [weeklyBlitze, setWeeklyBlitze] = useState(0);
+  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
 
   useEffect(() => {
     const init = async () => {
@@ -39,6 +44,8 @@ const Profil = () => {
           navigate("/");
           return;
         }
+        setUserId(session.user.id);
+        setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
 
         const [{ data: profileData }, healthStatus] = await Promise.all([
           supabase
@@ -48,6 +55,8 @@ const Profil = () => {
             .single(),
           HealthService.isAvailable().catch(() => false),
         ]);
+
+        await loadWeeklyBlitze(session.user.id);
 
         if (profileData) {
           setProfile({
@@ -72,6 +81,60 @@ const Profil = () => {
 
     void init();
   }, [navigate]);
+
+  const loadWeeklyBlitze = async (uid: string) => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
+
+    const { data } = await supabase
+      .from("daily_results")
+      .select("date, jumping_jacks, push_ups, squats, planks, sit_ups, steps")
+      .eq("user_id", uid)
+      .gte("date", format(weekStart, "yyyy-MM-dd"))
+      .lte("date", format(weekEnd, "yyyy-MM-dd"));
+
+    const total = (data || []).reduce((sum, day) => {
+      const completedExercises = countCompletedDailyExercises({
+        jumping_jacks: day.jumping_jacks || 0,
+        push_ups: day.push_ups || 0,
+        squats: day.squats || 0,
+        planks: day.planks || 0,
+        sit_ups: day.sit_ups || 0,
+      });
+
+      let dailyBlitze = completedExercises * BOOST_POINT_RULES.exerciseCompleted;
+      if (
+        isDailyGoalComplete(day.steps || 0, {
+          jumping_jacks: day.jumping_jacks || 0,
+          push_ups: day.push_ups || 0,
+          squats: day.squats || 0,
+          planks: day.planks || 0,
+          sit_ups: day.sit_ups || 0,
+        })
+      ) {
+        dailyBlitze += BOOST_POINT_RULES.dailyGoalCompleted;
+      }
+
+      return sum + dailyBlitze;
+    }, 0);
+
+    setWeeklyBlitze(total);
+  };
+
+  const weeklyItemUnlocked = weeklyBlitze >= WEEKLY_AVATAR_ITEM_THRESHOLD;
+
+  const handleEquipAvatarItem = (itemId: AvatarItemId) => {
+    if (!userId) return;
+    if (itemId !== "none" && !weeklyItemUnlocked) {
+      toast.info(`Sammle erst ${WEEKLY_AVATAR_ITEM_THRESHOLD} Blitze in dieser Woche.`);
+      return;
+    }
+
+    setEquippedAvatarItem(itemId);
+    saveEquippedAvatarItem(userId, itemId);
+    toast.success(itemId === "none" ? "Avatar-Item entfernt." : "Avatar-Item gespeichert.");
+  };
 
   const handleConnectHealthData = async () => {
     if (!HealthService.isHealthPlatformSupported()) {
@@ -99,7 +162,7 @@ const Profil = () => {
 
   if (loading || !profile) {
     return (
-      <div className="min-h-screen bg-[#f6f4ee] pb-nav-safe">
+      <div className="min-h-screen bg-background pb-nav-safe">
         <div className="mx-auto max-w-screen-xl space-y-4 px-4">
           <div className="pt-[calc(env(safe-area-inset-top)+1rem)]" />
           <Skeleton className="h-32 w-full rounded-[28px]" />
@@ -112,20 +175,9 @@ const Profil = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f4ee] pb-nav-safe">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
-          <button
-            type="button"
-            onClick={() => navigate("/settings")}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground shadow-[0_10px_25px_rgba(0,0,0,0.08)]"
-          >
-            <Settings2 className="h-5 w-5" />
-          </button>
-        </div>
-
-        <Card className="mb-4 overflow-hidden rounded-[30px] border-0 bg-[linear-gradient(135deg,#ffffff_0%,#edf8d7_100%)] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.06)]">
+        <Card className="mb-4 overflow-hidden rounded-[30px] border border-black/5 bg-[linear-gradient(135deg,#ffffff_0%,#edf8d7_100%)] p-5 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-primary">Profil</p>
@@ -139,22 +191,35 @@ const Profil = () => {
                 Boost Mitglied
               </div>
             </div>
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,#b9ff63_0%,#88dd34_100%)] text-zinc-950 shadow-[0_10px_20px_rgba(137,217,54,0.28)]">
-              <User2 className="h-8 w-8" />
+            <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white text-zinc-950 shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
+              <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
+              {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
+                <img
+                  src={AVATAR_ITEMS[equippedAvatarItem].asset}
+                  alt={AVATAR_ITEMS[equippedAvatarItem].name}
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              )}
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate("/settings")}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-foreground shadow-[0_10px_25px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]"
+            >
+              <Settings2 className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/80 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Blitze</p>
               <p className="mt-2 flex items-center gap-1 text-xl font-black text-foreground">
                 {profile.points}
                 <Zap className="h-4.5 w-4.5 fill-primary text-primary" />
               </p>
-            </div>
-            <div className="rounded-2xl bg-white/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Level</p>
-              <p className="mt-2 text-xl font-black text-foreground">{getLevelForPoints(profile.points).level}</p>
             </div>
             <div className="rounded-2xl bg-white/80 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Klasse</p>
@@ -164,8 +229,91 @@ const Profil = () => {
         </Card>
 
         <div className="mb-4">
-          <LevelCard points={profile.points} level={getLevelForPoints(profile.points)} showPointSystem />
+          <PointSystemCard />
         </div>
+
+        <Card className="mb-4 rounded-[26px] border border-black/5 bg-white p-4 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-foreground">Avatar-Item</h2>
+              <p className="text-sm text-muted-foreground">
+                Ab {WEEKLY_AVATAR_ITEM_THRESHOLD} Wochen-Blitzen schaltest du ein Item frei.
+              </p>
+            </div>
+            <div className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] ${weeklyItemUnlocked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+              {weeklyBlitze} / {WEEKLY_AVATAR_ITEM_THRESHOLD}
+            </div>
+          </div>
+
+          <div className="rounded-[22px] border border-black/5 bg-[linear-gradient(135deg,#ffffff_0%,#edf8d7_100%)] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_10px_22px_rgba(0,0,0,0.08)]">
+                <img src={AVATAR_BASE_ASSET} alt="Avatar Vorschau" className="h-full w-full object-contain" />
+                {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
+                  <img
+                    src={AVATAR_ITEMS[equippedAvatarItem].asset}
+                    alt={AVATAR_ITEMS[equippedAvatarItem].name}
+                    className="absolute inset-0 h-full w-full object-contain"
+                  />
+                )}
+              </div>
+              {weeklyItemUnlocked ? (
+                <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+                  Freigeschaltet
+                </div>
+              ) : (
+                <div className="rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                  Noch gesperrt
+                </div>
+              )}
+            </div>
+
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-semibold text-foreground">Wähle dein Item</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-2xl"
+                onClick={() => handleEquipAvatarItem("none")}
+              >
+                Ohne Item
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {AVATAR_ITEM_LIST.map((item) => {
+                const isActive = equippedAvatarItem === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleEquipAvatarItem(item.id)}
+                    disabled={!weeklyItemUnlocked}
+                    className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${
+                      isActive ? "border-primary bg-primary/10" : "border-black/5 bg-white"
+                    } ${weeklyItemUnlocked ? "opacity-100" : "opacity-55"}`}
+                  >
+                    <div className="relative mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.08)]">
+                      <img src={AVATAR_BASE_ASSET} alt={item.name} className="h-full w-full object-contain" />
+                      <img src={item.asset} alt={item.name} className="absolute inset-0 h-full w-full object-contain" />
+                    </div>
+                    <div className="mt-3 flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{item.name}</p>
+                        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{item.description}</p>
+                      </div>
+                      {isActive ? (
+                        <Check className="h-4 w-4 shrink-0 text-primary" />
+                      ) : !weeklyItemUnlocked ? (
+                        <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
 
         <div className="space-y-3">
           <Card className="rounded-[26px] border-0 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
@@ -227,7 +375,7 @@ const Profil = () => {
                 <Zap className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium text-foreground">BOOST-System</p>
-                  <p className="text-sm text-muted-foreground">Level, Streaks und Klassenlogik</p>
+                  <p className="text-sm text-muted-foreground">Blitze, Streaks und Klassenlogik</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />

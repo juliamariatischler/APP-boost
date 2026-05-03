@@ -20,7 +20,7 @@ const Index = () => {
     const { data: { session } } = await supabase.auth.getSession();
     setIsAuthenticated(!!session);
     setLoading(false);
-    
+
     if (!session) {
       const nextPath = location.search ? `/auth${location.search}` : "/auth";
       navigate(nextPath);
@@ -38,10 +38,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
       <div className="text-center max-w-4xl w-full">
-        <img 
-          src={boostLogo} 
-          alt="BOOST Logo" 
-          className="h-32 w-auto mx-auto mt-10 mb-8"
+        <img
+          src={boostLogo}
+          alt="BOOST Logo"
+          className="h-32 w-auto mx-auto mt-26 mb-8"
         />
         <h1 className="text-5xl md:text-6xl font-bold mb-6 text-foreground">
           BOOST Challenge
@@ -49,9 +49,9 @@ const Index = () => {
         <p className="text-xl md:text-2xl mb-12 text-muted-foreground">
           Wähle deine Challenge aus
         </p>
-        
+
         <div className="grid md:grid-cols-2 gap-6">
-          <Card 
+          <Card
             className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
             onClick={() => navigate("/dashboard")}
           >
@@ -67,7 +67,7 @@ const Index = () => {
             </Button>
           </Card>
 
-          <Card 
+          <Card
             className="p-8 cursor-pointer hover:shadow-lg transition-all hover:scale-105 bg-card"
             onClick={() => navigate("/mental")}
           >

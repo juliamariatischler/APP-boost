@@ -21,7 +21,7 @@ export const LevelCard = ({ points, level, showPointSystem = false }: Props) => 
   ];
 
   return (
-    <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#b9ff63_0%,#88dd34_100%)] shadow-[0_22px_60px_rgba(137,217,54,0.28)]">
+    <div className="overflow-hidden rounded-[30px] bg-gradient-primary shadow-[0_22px_60px_rgba(31,224,102,0.24)]">
       <div className="p-5">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>

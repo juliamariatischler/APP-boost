@@ -482,7 +482,7 @@ const TrialSessionsList = () => {
               <div className="flex-shrink-0 flex items-start">
                 {registered ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="flex items-center gap-2 text-green-600">
+                    <div className="flex items-center gap-2 text-primary">
                       <CheckCircle className="h-5 w-5" />
                       <span className="font-medium">Angemeldet</span>
                     </div>

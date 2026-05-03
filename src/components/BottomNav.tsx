@@ -7,7 +7,7 @@ export const BottomNav = () => {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/dashboard", matches: ["/dashboard"] },
-    { icon: ClipboardCheck, label: "Daily", path: "/challenge/daily", matches: ["/challenge/daily"] },
+    { icon: ClipboardCheck, label: "Quests", path: "/quests", matches: ["/quests"] },
     { icon: Users, label: "Klasse", path: "/klasse", matches: ["/klasse"] },
     { icon: User, label: "Profil", path: "/profil", matches: ["/profil", "/settings", "/rewards", "/boost"] },
   ];
@@ -36,7 +36,9 @@ export const BottomNav = () => {
             >
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
-                  isActive ? "bg-primary text-primary-foreground shadow-sm" : "bg-transparent"
+                  isActive
+                    ? "border border-black/5 bg-white text-foreground shadow-[0_8px_18px_rgba(0,0,0,0.12),inset_0_-2px_0_rgba(0,0,0,0.06)]"
+                    : "bg-transparent"
                 }`}
               >
                 <Icon className="h-[18px] w-[18px]" />

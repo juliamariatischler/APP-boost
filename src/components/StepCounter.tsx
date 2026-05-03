@@ -226,7 +226,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       <div className="flex items-center gap-3 mb-4">
         <div className={`p-3 rounded-full transition-all ${
           isActive 
-            ? "bg-green-500/20 text-green-600 animate-pulse" 
+            ? "bg-primary/20 text-primary animate-pulse" 
             : "bg-muted text-muted-foreground"
         }`}>
           <WalkingIcon className="h-8 w-8" />
@@ -258,9 +258,9 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
-            <div className="flex items-center gap-1 bg-green-500/20 px-3 py-1.5 rounded-full">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-600">Aktiv</span>
+            <div className="flex items-center gap-1 rounded-full bg-primary/20 px-3 py-1.5">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Aktiv</span>
             </div>
           </div>
         )}

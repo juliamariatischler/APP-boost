@@ -125,7 +125,7 @@ export const ChallengeInvitationsList = ({ userId, onStartChallenge }: Challenge
       case 'pending':
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Warten</Badge>;
       case 'accepted':
-        return <Badge className="bg-green-500"><Check className="h-3 w-3 mr-1" /> Bereit</Badge>;
+        return <Badge className="bg-primary"><Check className="h-3 w-3 mr-1" /> Bereit</Badge>;
       case 'in_progress':
         return <Badge className="bg-orange-500">⚡ Live</Badge>;
       case 'completed':

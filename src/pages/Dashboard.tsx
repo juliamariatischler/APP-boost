@@ -1,65 +1,28 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Clock3, Flame, MapPin, Sparkles, Target, Users, Zap } from "lucide-react";
+import { Check, ChevronRight, Crown, Play, Star, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { startOfWeek, endOfWeek, format } from "date-fns";
+import { eachDayOfInterval, endOfWeek, format, getISOWeek, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
-import { LevelCard } from "@/components/boost/LevelCard";
-import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS, getLevelForPoints } from "@/lib/gamification";
+import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, WEEKLY_GOAL_DAYS, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
+import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon, WalkingIcon } from "@/components/ExerciseIcons";
 import { getDemoAwarePoints } from "@/lib/demo";
-import boostLogo from "@/assets/boost-logo.png";
-import dailyImg from "@/assets/challenge-daily.jpg";
-import friendImg from "@/assets/challenge-friend.jpg";
-import tryitImg from "@/assets/challenge-tryit.jpg";
+import weeklyImg from "@/assets/challenge-weekly.jpg";
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
-type HomeQuestCard = {
-  id: "daily" | "friend" | "tryit";
-  title: string;
-  eyebrow: string;
-  description: string;
-  reward: string;
-  meta: string;
-  image: string;
-  icon: typeof Clock3;
+type WeeklyResult = {
+  date: string;
+  jumping_jacks: number | null;
+  push_ups: number | null;
+  squats: number | null;
+  planks: number | null;
+  sit_ups: number | null;
+  steps: number | null;
 };
-
-const homeQuestCards: HomeQuestCard[] = [
-  {
-    id: "daily",
-    title: "Tägliche Challenge",
-    eyebrow: "TÄGLICH",
-    description: "Heute reicht eine Übung oder dein Schrittziel, damit dein Fortschritt zählt.",
-    reward: `1 Wdh. / 1 Sek. = ${BOOST_POINT_RULES.repOrSecond} ⚡`,
-    meta: "5-10 Minuten",
-    image: dailyImg,
-    icon: Clock3,
-  },
-  {
-    id: "friend",
-    title: "Friendquest",
-    eyebrow: "TEAM",
-    description: "Fordere Freund:innen heraus und sammelt gemeinsam Bewegungspunkte.",
-    reward: "Mehr Spaß zusammen",
-    meta: "Gemeinsam spielen",
-    image: friendImg,
-    icon: Users,
-  },
-  {
-    id: "tryit",
-    title: "Try It",
-    eyebrow: "NEU",
-    description: "Teste eine neue Sportart, ein Training oder einen Verein in deiner Nähe.",
-    reward: `+${BOOST_POINT_RULES.tryItCompleted} ⚡`,
-    meta: "In deiner Nähe",
-    image: tryitImg,
-    icon: MapPin,
-  },
-];
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -70,8 +33,10 @@ const Dashboard = () => {
   const [userClass, setUserClass] = useState("");
   const [isTeacher, setIsTeacher] = useState(false);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
+  const [weeklyData, setWeeklyData] = useState<WeeklyResult[]>([]);
   const [weeklyTotal] = useState(WEEKLY_GOAL_DAYS);
   const [loading, setLoading] = useState(true);
+  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
 
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
@@ -84,6 +49,7 @@ const Dashboard = () => {
         }
 
         setUserId(session.user.id);
+        setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
 
         const [{ data: roleData }, { data: profileData, error: profileError }] = await Promise.all([
           supabase
@@ -145,6 +111,59 @@ const Dashboard = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+    const handleStorage = () => {
+      setEquippedAvatarItem(loadEquippedAvatarItem(userId));
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleStorage);
+    };
+  }, [userId]);
+
+  const hasAnyActivity = (day: WeeklyResult) => {
+    return (
+      (day.steps || 0) > 0 ||
+      (day.jumping_jacks || 0) > 0 ||
+      (day.push_ups || 0) > 0 ||
+      (day.squats || 0) > 0 ||
+      (day.planks || 0) > 0 ||
+      (day.sit_ups || 0) > 0
+    );
+  };
+
+  const getDailyBlitze = (day?: WeeklyResult) => {
+    if (!day) return 0;
+
+    const completedExercises = countCompletedDailyExercises({
+      jumping_jacks: day.jumping_jacks || 0,
+      push_ups: day.push_ups || 0,
+      squats: day.squats || 0,
+      planks: day.planks || 0,
+      sit_ups: day.sit_ups || 0,
+    });
+
+    let total = completedExercises * BOOST_POINT_RULES.exerciseCompleted;
+
+    if (
+      isDailyGoalComplete(day.steps || 0, {
+        jumping_jacks: day.jumping_jacks || 0,
+        push_ups: day.push_ups || 0,
+        squats: day.squats || 0,
+        planks: day.planks || 0,
+        sit_ups: day.sit_ups || 0,
+      })
+    ) {
+      total += BOOST_POINT_RULES.dailyGoalCompleted;
+    }
+
+    return total;
+  };
+
   const loadWeeklyProgress = async (currentUserId: string) => {
     const today = new Date();
     const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
@@ -158,20 +177,86 @@ const Dashboard = () => {
       .lte("date", format(weekEnd, "yyyy-MM-dd"));
 
     if (weeklyData) {
-      const daysWithActivity = weeklyData.filter(day => 
-        (day.jumping_jacks || 0) > 0 || 
-        (day.push_ups || 0) > 0 || 
-        (day.squats || 0) > 0 || 
-        (day.planks || 0) > 0 || 
-        (day.sit_ups || 0) > 0
-      ).length;
+      setWeeklyData(weeklyData);
+      const daysWithActivity = weeklyData.filter(hasAnyActivity).length;
       setWeeklyCompleted(daysWithActivity);
     }
   };
 
+  const today = new Date();
+  const calendarWeek = getISOWeek(today);
+  const daysOfWeek = eachDayOfInterval({
+    start: startOfWeek(today, { locale: de, weekStartsOn: 1 }),
+    end: endOfWeek(today, { locale: de, weekStartsOn: 1 }),
+  });
+  const activeDates = weeklyData
+    .filter(hasAnyActivity)
+    .map((day) => day.date)
+    .sort((a, b) => a.localeCompare(b));
+  const starredActiveDate = weeklyCompleted === WEEKLY_GOAL_DAYS - 1 ? activeDates[WEEKLY_GOAL_DAYS - 2] : null;
+  const weeklyChallengeCompletedDate = weeklyCompleted >= WEEKLY_GOAL_DAYS ? activeDates[WEEKLY_GOAL_DAYS - 1] : null;
+  const todayKey = format(today, "yyyy-MM-dd");
+  const todayResult = weeklyData.find((day) => day.date === todayKey);
+  const dailyTasks = [
+    {
+      key: "steps",
+      title: `${Number(todayResult?.steps || 0).toLocaleString("de-DE")} Schritte`,
+      subtitle: `Tagesziel / +${BOOST_POINT_RULES.dailyGoalCompleted} ⚡`,
+      progress: Number(todayResult?.steps || 0),
+      goal: DAILY_STEP_GOAL,
+      icon: <WalkingIcon className="h-5 w-5" />,
+      iconClass: "bg-emerald-500/15 text-emerald-500",
+    },
+    {
+      key: "jumping_jacks",
+      title: "Hampelmänner",
+      subtitle: `${Number(todayResult?.jumping_jacks || 0)} / ${DAILY_EXERCISE_GOALS.jumping_jacks} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
+      progress: Number(todayResult?.jumping_jacks || 0),
+      goal: DAILY_EXERCISE_GOALS.jumping_jacks,
+      icon: <JumpingJacksIcon className="h-5 w-5" />,
+      iconClass: "bg-amber-500/15 text-amber-500",
+    },
+    {
+      key: "push_ups",
+      title: "Push-ups",
+      subtitle: `${Number(todayResult?.push_ups || 0)} / ${DAILY_EXERCISE_GOALS.push_ups} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
+      progress: Number(todayResult?.push_ups || 0),
+      goal: DAILY_EXERCISE_GOALS.push_ups,
+      icon: <PushUpIcon className="h-5 w-5" />,
+      iconClass: "bg-sky-500/15 text-sky-500",
+    },
+    {
+      key: "squats",
+      title: "Kniebeugen",
+      subtitle: `${Number(todayResult?.squats || 0)} / ${DAILY_EXERCISE_GOALS.squats} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
+      progress: Number(todayResult?.squats || 0),
+      goal: DAILY_EXERCISE_GOALS.squats,
+      icon: <SquatIcon className="h-5 w-5" />,
+      iconClass: "bg-orange-500/15 text-orange-500",
+    },
+    {
+      key: "planks",
+      title: "Planks",
+      subtitle: `${Number(todayResult?.planks || 0)} / ${DAILY_EXERCISE_GOALS.planks} Sek. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
+      progress: Number(todayResult?.planks || 0),
+      goal: DAILY_EXERCISE_GOALS.planks,
+      icon: <PlankIcon className="h-5 w-5" />,
+      iconClass: "bg-cyan-500/15 text-cyan-500",
+    },
+    {
+      key: "sit_ups",
+      title: "Sit-ups",
+      subtitle: `${Number(todayResult?.sit_ups || 0)} / ${DAILY_EXERCISE_GOALS.sit_ups} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
+      progress: Number(todayResult?.sit_ups || 0),
+      goal: DAILY_EXERCISE_GOALS.sit_ups,
+      icon: <SitUpIcon className="h-5 w-5" />,
+      iconClass: "bg-fuchsia-500/15 text-fuchsia-500",
+    },
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f6f4ee] pb-nav-safe">
+      <div className="min-h-screen bg-background pb-nav-safe">
         <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-4">
           <div className="space-y-2">
             <Skeleton className="h-10 w-32 rounded-xl" />
@@ -193,164 +278,148 @@ const Dashboard = () => {
   if (!username) return null;
 
   return (
-    <div className="min-h-screen bg-[#f6f4ee] pb-nav-safe">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
-            <p className="mt-3 text-sm font-medium text-primary">Hi {username}</p>
-            <h1 className="text-[2rem] font-black leading-none tracking-tight text-foreground">
-              Dein Boost
-              <br />
-              für heute
-            </h1>
-            <button
-              type="button"
-              onClick={() => navigate("/quests")}
-              className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
-            >
-              Alle Quests
-              <ChevronRight className="h-4 w-4" />
-            </button>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
+              <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
+              {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
+                <img
+                  src={AVATAR_ITEMS[equippedAvatarItem].asset}
+                  alt={AVATAR_ITEMS[equippedAvatarItem].name}
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              )}
+            </div>
+            <div>
+              <p className="text-[18px] font-semibold text-muted-foreground">Hi</p>
+              <h1 className="mt-1 text-[2.1rem] font-black leading-none tracking-tight text-primary">
+                {username}
+              </h1>
+            </div>
           </div>
           <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Blitze</p>
-            <p className="mt-1 flex items-center gap-1 text-2xl font-black text-foreground">
+            <p className="flex items-center gap-1 text-2xl font-black text-foreground">
               {points}
               <Zap className="h-5 w-5 fill-primary text-primary" />
             </p>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => navigate("/challenge/weekly")}
-          className="mb-4 block w-full text-left"
-        >
-          <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#b9ff63_0%,#88dd34_100%)] p-5 shadow-[0_22px_60px_rgba(137,217,54,0.28)]">
-            <div className="mb-8 flex items-start justify-between gap-3">
-              <div>
-                <span className="inline-flex rounded-full bg-black/80 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
-                  Wochen-Quest
-                </span>
-                <h2 className="mt-4 max-w-[12rem] text-4xl font-black leading-none text-zinc-950">
-                  5 aktive
-                  <br />
-                  Tage
-                </h2>
-              </div>
-              <span className="rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">EPIC</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-2xl bg-black/80 p-3 text-white">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Belohnung</p>
-                <p className="mt-1 flex items-center gap-1 text-lg font-black">
-                  {BOOST_POINT_RULES.weeklyChallengeCompleted}
-                  <Zap className="h-4 w-4 fill-current" />
-                </p>
-              </div>
-              <div className="rounded-2xl bg-black/80 p-3 text-white">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Fortschritt</p>
-                <p className="mt-1 text-lg font-black">{weeklyCompleted} / {weeklyTotal}</p>
-              </div>
-            </div>
-          </div>
-        </button>
-
-        <div className="mb-4 rounded-[26px] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Flame className="h-4.5 w-4.5 text-primary" />
-              <span className="text-sm font-bold text-foreground">Dein Fortschritt</span>
-            </div>
-            <span className="text-sm font-bold text-primary">
-              {Math.round((weeklyCompleted / weeklyTotal) * 100)}%
-            </span>
-          </div>
-          <p className="mb-3 text-sm text-muted-foreground">
-            {weeklyCompleted} von {weeklyTotal} aktiven Tagen diese Woche.
+        <div className="mb-3 flex items-end justify-between gap-3 px-1">
+          <h2 className="text-base font-black leading-none text-foreground">Deine Woche</h2>
+          <p className="text-sm font-bold text-foreground/80">
+            {weeklyCompleted} von {weeklyTotal} Tagen aktiv
           </p>
-          <Progress value={(weeklyCompleted / weeklyTotal) * 100} className="h-2.5" />
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {[
-              { icon: Target, label: "Heute", value: "1 Wdh. = 1 ⚡" },
-              { icon: Sparkles, label: "Bonus", value: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡` },
-              { icon: ChevronRight, label: "Mehr", value: "Zu Quests" },
-            ].map((item) => {
-              const Icon = item.icon;
+        </div>
+        <div className="mb-4 overflow-hidden rounded-[28px] border border-black/5 bg-white px-4 py-4 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.04)]">
+          <div className="grid grid-cols-7 gap-2">
+            {daysOfWeek.map((day) => {
+              const dateKey = format(day, "yyyy-MM-dd");
+              const dayResult = weeklyData.find((entry) => entry.date === dateKey);
+              const isActive = activeDates.includes(dateKey);
+              const isToday = dateKey === format(today, "yyyy-MM-dd");
+              const showStreakStar = starredActiveDate === dateKey && isActive;
+              const showWeeklyBadge = weeklyChallengeCompletedDate === dateKey;
+              const dayBlitze = getDailyBlitze(dayResult);
 
               return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => navigate(item.label === "Mehr" ? "/quests" : "/challenge/daily")}
-                  className="rounded-2xl bg-[#f7f7f1] px-3 py-3 text-left"
-                >
-                  <Icon className="h-4 w-4 text-primary" />
-                  <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    {item.label}
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-foreground">{item.value}</p>
-                </button>
+                <div key={dateKey} className="flex flex-col items-center gap-1.5">
+                  <div className="flex flex-col items-center leading-none">
+                    <span className="text-xs font-black uppercase text-foreground/55">
+                      {format(day, "EE", { locale: de })}
+                    </span>
+                    <span className="mt-1 text-[11px] font-semibold text-foreground/35">
+                      {format(day, "d.")}
+                    </span>
+                  </div>
+                  <div
+                    className={`flex h-12 w-full items-center justify-center rounded-2xl border ${
+                      showWeeklyBadge
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : isActive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : isToday
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-black/8 bg-[#f3f5f8] text-black/25"
+                    } ${isToday ? "ring-2 ring-primary/35 ring-offset-2 ring-offset-white" : ""}`}
+                  >
+                    {showWeeklyBadge ? (
+                      <Crown className="h-5 w-5 fill-current" />
+                    ) : showStreakStar ? (
+                      <Star className="h-5 w-5 fill-current" />
+                    ) : isActive ? (
+                      <Check className="h-5 w-5 stroke-[3]" />
+                    ) : null}
+                  </div>
+                  <div className="flex min-h-[16px] items-center gap-1 text-[11px] font-bold text-foreground/55">
+                    {dayBlitze > 0 ? (
+                      <>
+                        <span>{dayBlitze}</span>
+                        <Zap className="h-3 w-3 fill-warning text-warning" />
+                      </>
+                    ) : (
+                      <span>•</span>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
         </div>
-
-        <div className="mb-4">
-          <LevelCard points={points} level={getLevelForPoints(points)} />
-        </div>
-
-        {isTeacher && userSchool && userClass && (
-          <div className="mb-6">
-            <h2 className="mb-3 text-lg font-bold text-foreground">Klassen-Leaderboard</h2>
-            <ClassLeaderboard userClass={userClass} userSchool={userSchool} />
-          </div>
-        )}
-
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Heute möglich</h2>
+          <h2 className="text-base font-black leading-none text-foreground">Heutige Aufgaben</h2>
           <button
             type="button"
             onClick={() => navigate("/quests")}
-            className="text-sm font-medium text-primary"
+            className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
           >
             Quests
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
         {userId && (
-          <div className="mb-6 space-y-3">
-            {homeQuestCards.map((quest) => {
-              const Icon = quest.icon;
+          <div className="mb-6 grid grid-cols-2 gap-2.5">
+            {dailyTasks.map((task) => {
+              const isComplete = task.progress >= task.goal;
+              const progressPercent = Math.min(100, Math.round((task.progress / task.goal) * 100));
 
               return (
                 <Card
-                  key={quest.id}
-                  className="overflow-hidden rounded-[24px] border-border/70 bg-card/90 p-0 shadow-sm"
+                  key={task.key}
+                  className="overflow-hidden rounded-[20px] border border-black/5 bg-white p-0 shadow-[0_12px_26px_rgba(0,0,0,0.07),inset_0_-2px_0_rgba(0,0,0,0.04)]"
                 >
                   <button
                     type="button"
-                    onClick={() => navigate(`/challenge/${quest.id}`)}
-                    className="flex w-full items-stretch text-left"
+                    onClick={() => navigate("/challenge/daily")}
+                    className="flex w-full flex-col items-start gap-2.5 p-2.5 text-left"
                   >
-                    <div className="w-28 shrink-0 bg-muted">
-                      <img src={quest.image} alt={quest.title} className="h-full w-full object-cover" />
-                    </div>
-                    <div className="flex flex-1 flex-col justify-between p-4">
-                      <div>
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
-                            {quest.eyebrow}
-                          </span>
-                          <Icon className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-bold text-foreground">{quest.title}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{quest.description}</p>
+                    <div className="flex w-full items-start justify-between gap-2">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] ${task.iconClass}`}>
+                        {task.icon}
                       </div>
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <span className="text-sm font-bold text-foreground">{quest.reward}</span>
-                        <span className="text-xs text-muted-foreground">{quest.meta}</span>
+                      <div className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                        isComplete ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                      }`}>
+                        {isComplete ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : `${progressPercent}%`}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 w-full">
+                      <h3 className="truncate text-sm font-black leading-tight text-foreground">{task.title}</h3>
+                      <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">{task.subtitle}</p>
+                    </div>
+
+                    <div className="w-full">
+                      <div className="h-2 overflow-hidden rounded-full bg-black/6 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)]">
+                        <div
+                          className="h-full rounded-full bg-primary shadow-[0_4px_10px_rgba(31,224,102,0.3)]"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-foreground/60">
+                        <span>{task.progress}</span>
+                        <span>{task.goal}</span>
                       </div>
                     </div>
                   </button>
@@ -359,6 +428,63 @@ const Dashboard = () => {
             })}
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => navigate("/challenge/weekly/athlete")}
+          className="mb-4 block w-full text-left"
+        >
+          <Card className="overflow-hidden rounded-[24px] border-0 bg-transparent p-0 shadow-none">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <h2 className="text-base font-black leading-none text-foreground">Motivation der Woche</h2>
+              <span className="flex items-center gap-1 text-sm font-black text-primary">
+                +{BOOST_POINT_RULES.weeklyChallengeCompleted}
+                <Zap className="h-3.5 w-3.5 fill-current" />
+              </span>
+            </div>
+
+            <div className="overflow-hidden rounded-[24px] border border-white/45 bg-[linear-gradient(135deg,hsl(var(--primary)/0.24)_0%,hsl(var(--primary)/0.5)_100%)] shadow-[0_22px_44px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-3px_0_rgba(0,0,0,0.08)]">
+              <div className="relative">
+                <div className="relative aspect-[16/8.5]">
+                  <img
+                    src={weeklyImg}
+                    alt="Wochen-Quest Video"
+                    className="h-full w-full object-cover opacity-15 mix-blend-multiply"
+                  />
+                  <div className="absolute left-3 top-3 rounded-full bg-yellow-400 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-zinc-950">
+                    Neu · KW {calendarWeek}
+                  </div>
+                  <div className="absolute right-3 top-3 rounded-lg bg-primary/80 px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+                    So 23:58
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-primary text-primary-foreground shadow-[0_16px_28px_rgba(0,0,0,0.16),inset_0_-2px_0_rgba(0,0,0,0.08)]">
+                      <Play className="ml-0.5 h-5 w-5 fill-current" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-3 right-3 rounded-lg bg-primary/80 px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+                    2:48
+                  </div>
+                </div>
+
+                <div className="border-t border-black/5 bg-primary/50 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">
+                  <p className="text-lg font-black leading-tight text-zinc-950">
+                    "So bleibe ich dran, wenn ich keinen Bock habe."
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-zinc-950">Anna Gasser</p>
+                  <p className="text-xs text-zinc-900/70">Snowboard-Olympiasiegerin</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </button>
+
+        {isTeacher && userSchool && userClass && (
+          <div className="mb-6">
+            <h2 className="mb-3 text-lg font-bold text-foreground">Klassen-Leaderboard</h2>
+            <ClassLeaderboard userClass={userClass} userSchool={userSchool} />
+          </div>
+        )}
+
       </div>
 
       <BottomNav />

@@ -12,6 +12,8 @@ import {
 import { Calendar, Clock, ExternalLink, MapPin, Users, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type SportOffer = {
   id: string;
@@ -228,6 +230,7 @@ const offers: SportOffer[] = [
 const GrazSportsGallery = () => {
   const [selectedOffer, setSelectedOffer] = useState<SportOffer | null>(null);
   const [activeFilter, setActiveFilter] = useState<OfferFilter>("all");
+  const [claimingOfferId, setClaimingOfferId] = useState<string | null>(null);
 
   const filterCounts = useMemo(
     () => ({
@@ -261,6 +264,49 @@ const GrazSportsGallery = () => {
       <span className="text-base font-semibold">{label}</span>
     </div>
   );
+
+  const getClaimStorageKey = (offerId: string, userId: string) => `boost:tryit-claimed:${userId}:${offerId}`;
+
+  const handleClaimReward = async (offer: SportOffer) => {
+    setClaimingOfferId(offer.id);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const userId = session?.user?.id;
+      if (!userId) {
+        toast.error("Du musst angemeldet sein, um Blitze zu sichern.");
+        return;
+      }
+
+      const claimKey = getClaimStorageKey(offer.id, userId);
+      const alreadyClaimed = typeof window !== "undefined" && window.localStorage.getItem(claimKey) === "1";
+
+      if (!alreadyClaimed) {
+        const { error } = await supabase.rpc("increment_points", {
+          points_to_add: offer.rewardPoints,
+        });
+
+        if (error) {
+          console.error("Try-It reward failed", error);
+          toast.error("Weiterleitung möglich, aber die Blitze konnten nicht gutgeschrieben werden.");
+          return;
+        }
+
+        window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: offer.rewardPoints } }));
+        window.localStorage.setItem(claimKey, "1");
+        toast.success(`+${offer.rewardPoints} ⚡ gutgeschrieben!`);
+      } else {
+        toast.info("Für dieses Angebot hast du die Blitze bereits gesichert.");
+      }
+
+      window.location.href = offer.bookingUrl;
+    } finally {
+      setClaimingOfferId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -475,17 +521,15 @@ const GrazSportsGallery = () => {
                     </a>
                   </Button>
 
-                  <Button asChild>
-                    <a
-                      href={selectedOffer.bookingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2"
-                    >
+                  <Button
+                    type="button"
+                    onClick={() => handleClaimReward(selectedOffer)}
+                    disabled={claimingOfferId === selectedOffer.id}
+                    className="inline-flex items-center gap-2"
+                  >
                       <Zap className="h-4 w-4 fill-current" />
-                      {selectedOffer.rewardPoints} Blitze sichern
+                      {claimingOfferId === selectedOffer.id ? "Wird gesichert..." : `${selectedOffer.rewardPoints} Blitze sichern`}
                       <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
                   </Button>
                 </div>
               </div>

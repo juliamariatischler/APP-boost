@@ -421,14 +421,14 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   return (
     <div className="space-y-6">
       {/* Overall Status */}
-      <Card className={`p-4 ${isDailyChallengeComplete ? 'bg-green-500/10 border-green-500' : 'bg-muted/30'}`}>
+      <Card className={`p-4 ${isDailyChallengeComplete ? 'bg-primary/10 border-primary' : 'bg-muted/30'}`}>
         <div className="flex items-center gap-3">
           {isDailyChallengeComplete ? (
             <>
-              <Trophy className="h-8 w-8 text-green-600" />
+              <Trophy className="h-8 w-8 text-primary" />
               <div>
-                <h2 className="text-lg font-bold text-green-600">🎉 Tageschallenge geschafft!</h2>
-                <p className="text-sm text-green-600/80">
+                <h2 className="text-lg font-bold text-primary">🎉 Tageschallenge geschafft!</h2>
+                <p className="text-sm text-primary/80">
                   Du hast dein Tagesziel erreicht und dir +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze gesichert.
                 </p>
               </div>
@@ -448,10 +448,10 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       </Card>
 
       {/* PART 1: Steps */}
-      <Card className={`p-5 ${isStepsComplete ? 'border-green-500 bg-green-500/5' : ''}`}>
+      <Card className={`p-5 ${isStepsComplete ? 'border-primary bg-primary/5' : ''}`}>
         <div className="flex items-center gap-2 mb-4">
           <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-            isStepsComplete ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
+            isStepsComplete ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
           }`}>
             {isStepsComplete ? <CheckCircle2 className="h-5 w-5" /> : "1"}
           </div>
@@ -470,9 +470,9 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
-              <WalkingIcon className={`h-12 w-12 ${isStepsComplete ? 'text-green-500' : 'text-primary'}`} />
+              <WalkingIcon className="h-12 w-12 text-primary" />
               <div className="flex-1">
-                <div className={`text-4xl font-bold ${isStepsComplete ? 'text-green-600' : 'text-foreground'}`}>
+                <div className={`text-4xl font-bold ${isStepsComplete ? 'text-primary' : 'text-foreground'}`}>
                   {steps.toLocaleString()}
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -509,10 +509,10 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       </Card>
 
       {/* PART 2: Exercises */}
-      <Card className={`p-5 ${allExercisesComplete ? 'border-green-500 bg-green-500/5' : ''}`}>
+      <Card className={`p-5 ${allExercisesComplete ? 'border-primary bg-primary/5' : ''}`}>
         <div className="flex items-center gap-2 mb-4">
           <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-            allExercisesComplete ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
+            allExercisesComplete ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
           }`}>
             {allExercisesComplete ? <CheckCircle2 className="h-5 w-5" /> : "2"}
           </div>
@@ -537,15 +537,15 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
                 onClick={() => handleExerciseClick(exercise.name)}
                 className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
                   isComplete 
-                    ? 'bg-green-500/10 border border-green-500' 
+                    ? 'bg-primary/10 border border-primary' 
                     : 'bg-muted/50 hover:bg-muted border border-transparent'
                 }`}
               >
-                <div className={`p-2 rounded-lg ${isComplete ? 'bg-green-500/20' : 'bg-background'}`}>
+                <div className={`p-2 rounded-lg ${isComplete ? 'bg-primary/20' : 'bg-background'}`}>
                   {exercise.icon}
                 </div>
                 <div className="flex-1 text-left">
-                  <div className={`font-medium ${isComplete ? 'text-green-600' : 'text-foreground'}`}>
+                  <div className={`font-medium ${isComplete ? 'text-primary' : 'text-foreground'}`}>
                     {exercise.name}
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -553,12 +553,12 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-medium ${isComplete ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <span className={`text-sm font-medium ${isComplete ? 'text-primary' : 'text-muted-foreground'}`}>
                     {exercise.goal}×
                   </span>
                   <Checkbox 
                     checked={isComplete} 
-                    className={isComplete ? 'border-green-500 bg-green-500 text-white' : ''}
+                    className={isComplete ? 'border-primary bg-primary text-primary-foreground' : ''}
                     disabled
                   />
                 </div>
