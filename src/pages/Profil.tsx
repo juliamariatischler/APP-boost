@@ -1,7 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, School, Settings2, ShieldCheck, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +25,7 @@ import { BOOST_POINT_RULES, countCompletedDailyExercises, isDailyGoalComplete } 
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem, WEEKLY_AVATAR_ITEM_THRESHOLD } from "@/lib/avatarItems";
+import { ONBOARDING_OPEN_EVENT } from "@/lib/onboarding";
 
 interface ProfileData {
   username: string;
@@ -23,6 +35,7 @@ interface ProfileData {
 }
 
 const Profil = () => {
+  const INITIAL_VISIBLE_AVATAR_ITEMS = 3;
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +45,9 @@ const Profil = () => {
   const [userId, setUserId] = useState("");
   const [weeklyBlitze, setWeeklyBlitze] = useState(0);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [showAllAvatarItems, setShowAllAvatarItems] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const settingsSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -123,6 +139,11 @@ const Profil = () => {
   };
 
   const weeklyItemUnlocked = weeklyBlitze >= WEEKLY_AVATAR_ITEM_THRESHOLD;
+  const selectedItemIndex = AVATAR_ITEM_LIST.findIndex((item) => item.id === equippedAvatarItem);
+  const visibleAvatarItems = showAllAvatarItems
+    ? AVATAR_ITEM_LIST
+    : AVATAR_ITEM_LIST.filter((item, index) => index < INITIAL_VISIBLE_AVATAR_ITEMS || index === selectedItemIndex);
+  const hasHiddenAvatarItems = AVATAR_ITEM_LIST.length > visibleAvatarItems.length;
 
   const handleEquipAvatarItem = (itemId: AvatarItemId) => {
     if (!userId) return;
@@ -138,7 +159,7 @@ const Profil = () => {
 
   const handleConnectHealthData = async () => {
     if (!HealthService.isHealthPlatformSupported()) {
-      toast.info("Health-Sync ist nur auf iPhone oder Android verfügbar.");
+      toast.info("Health-Sync ist nur auf dem iPhone verfügbar.");
       return;
     }
 
@@ -158,6 +179,44 @@ const Profil = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const currentUserId = session?.user.id;
+
+      const { error } = await supabase.rpc("delete_my_account");
+
+      if (error) {
+        throw error;
+      }
+
+      if (currentUserId && typeof window !== "undefined") {
+        window.localStorage.removeItem(`boost:avatar-item:${currentUserId}`);
+        window.localStorage.removeItem(`weekly_video_rewards_${currentUserId}`);
+      }
+
+      await supabase.auth.signOut();
+      toast.success("Dein Konto wurde gelöscht.");
+      navigate("/auth", { replace: true });
+    } catch (error: any) {
+      toast.error("Konto konnte nicht gelöscht werden: " + (error?.message ?? "Unbekannter Fehler"));
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const handleOpenOnboarding = () => {
+    window.dispatchEvent(new Event(ONBOARDING_OPEN_EVENT));
+  };
+
+  const handleOpenSettingsSection = () => {
+    settingsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   if (loading || !profile) {
@@ -206,7 +265,7 @@ const Profil = () => {
           <div className="mt-4 flex justify-end">
             <button
               type="button"
-              onClick={() => navigate("/settings")}
+              onClick={handleOpenSettingsSection}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-foreground shadow-[0_10px_25px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]"
             >
               <Settings2 className="h-5 w-5" />
@@ -270,18 +329,30 @@ const Profil = () => {
 
             <div className="mb-3 flex items-center justify-between">
               <p className="font-semibold text-foreground">Wähle dein Item</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-2xl"
-                onClick={() => handleEquipAvatarItem("none")}
-              >
-                Ohne Item
-              </Button>
+              <div className="flex items-center gap-2">
+                {AVATAR_ITEM_LIST.length > INITIAL_VISIBLE_AVATAR_ITEMS && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-2xl"
+                    onClick={() => setShowAllAvatarItems((prev) => !prev)}
+                  >
+                    {showAllAvatarItems ? "Weniger" : "Alle"}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl"
+                  onClick={() => handleEquipAvatarItem("none")}
+                >
+                  Ohne Item
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              {AVATAR_ITEM_LIST.map((item) => {
+              {visibleAvatarItems.map((item) => {
                 const isActive = equippedAvatarItem === item.id;
                 return (
                   <button
@@ -312,14 +383,30 @@ const Profil = () => {
                 );
               })}
             </div>
+
+            {hasHiddenAvatarItems && (
+              <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
+                Tippe auf "Alle", um weitere Items zu sehen.
+              </p>
+            )}
           </div>
         </Card>
 
-        <div className="space-y-3">
+        <div ref={settingsSectionRef} className="space-y-3">
           <Card className="rounded-[26px] border-0 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-primary" />
+                <h2 className="font-bold text-foreground">Einstellungen</h2>
+              </div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+                Direkt im Profil
+              </span>
+            </div>
+
             <div className="mb-3 flex items-center gap-2">
               <HeartPulse className="h-5 w-5 text-primary" />
-              <h2 className="font-bold text-foreground">Health-Sync</h2>
+              <h3 className="font-bold text-foreground">Health-Daten</h3>
             </div>
             <p className="text-sm text-muted-foreground">
               Verbinde {HealthService.getHealthSourceLabel()}, damit echte Schritte automatisch in BOOST landen.
@@ -333,9 +420,30 @@ const Profil = () => {
             <Button className="mt-4 w-full rounded-2xl" onClick={handleConnectHealthData} disabled={connectingHealth}>
               {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
             </Button>
+
+            {!checkingHealth && !HealthService.isHealthPlatformSupported() && (
+              <p className="mt-2 text-xs text-center text-muted-foreground">
+                Health-Sync ist aktuell nur auf dem iPhone verfügbar.
+              </p>
+            )}
           </Card>
 
           <Card className="rounded-[26px] border-0 bg-white p-2 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <button
+              type="button"
+              onClick={handleOpenOnboarding}
+              className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
+            >
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">App-Erklärung</p>
+                  <p className="text-sm text-muted-foreground">Onboarding nochmal ansehen</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+
             <button
               type="button"
               onClick={() => navigate("/rewards")}
@@ -346,21 +454,6 @@ const Profil = () => {
                 <div>
                   <p className="font-medium text-foreground">Belohnungen</p>
                   <p className="text-sm text-muted-foreground">Persönliche und Klassen-Rewards</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/quests")}
-              className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
-            >
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">Meine Quests</p>
-                  <p className="text-sm text-muted-foreground">Direkt zu Weekly, Daily und Try It</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -380,27 +473,51 @@ const Profil = () => {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/settings")}
-              className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
-            >
-              <div className="flex items-center gap-3">
-                <Settings2 className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">Weitere Einstellungen</p>
-                  <p className="text-sm text-muted-foreground">Gerätefunktionen und App-Optionen</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
           </Card>
 
-          <Button variant="destructive" className="mb-4 w-full rounded-2xl" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Abmelden
-          </Button>
+          <Card className="rounded-[26px] border-0 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <Button variant="destructive" className="w-full rounded-2xl" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Abmelden
+            </Button>
+
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <h2 className="text-base font-semibold text-red-700">Konto löschen</h2>
+              <p className="mt-1 text-sm text-red-700/80">
+                Dein Konto und deine zugehörigen Daten werden dauerhaft gelöscht.
+              </p>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="mt-4 w-full rounded-2xl border-red-200 text-red-700 hover:bg-red-100 hover:text-red-800">
+                    Konto dauerhaft löschen
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Konto wirklich löschen?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Diese Aktion kann nicht rückgängig gemacht werden. Dein Konto, dein Profil und deine Fortschritte werden dauerhaft entfernt.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(event) => {
+                        event.preventDefault();
+                        if (!deletingAccount) {
+                          void handleDeleteAccount();
+                        }
+                      }}
+                      className="bg-red-600 text-white hover:bg-red-700"
+                    >
+                      {deletingAccount ? "Lösche..." : "Ja, Konto löschen"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </Card>
         </div>
       </div>
 

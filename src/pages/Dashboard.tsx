@@ -200,57 +200,75 @@ const Dashboard = () => {
   const dailyTasks = [
     {
       key: "steps",
-      title: `${Number(todayResult?.steps || 0).toLocaleString("de-DE")} Schritte`,
-      subtitle: `Tagesziel / +${BOOST_POINT_RULES.dailyGoalCompleted} ⚡`,
+      title: "Schritte",
       progress: Number(todayResult?.steps || 0),
       goal: DAILY_STEP_GOAL,
+      unit: "Schritte",
+      reward: BOOST_POINT_RULES.dailyGoalCompleted,
       icon: <WalkingIcon className="h-5 w-5" />,
       iconClass: "bg-emerald-500/15 text-emerald-500",
+      progressClass: "bg-emerald-400 shadow-[0_4px_12px_rgba(52,211,153,0.35)]",
+      cardCompleteClass: "bg-emerald-50/60",
     },
     {
       key: "jumping_jacks",
       title: "Hampelmänner",
-      subtitle: `${Number(todayResult?.jumping_jacks || 0)} / ${DAILY_EXERCISE_GOALS.jumping_jacks} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
       progress: Number(todayResult?.jumping_jacks || 0),
       goal: DAILY_EXERCISE_GOALS.jumping_jacks,
+      unit: "Wdh.",
+      reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <JumpingJacksIcon className="h-5 w-5" />,
       iconClass: "bg-amber-500/15 text-amber-500",
+      progressClass: "bg-amber-400 shadow-[0_4px_12px_rgba(251,191,36,0.32)]",
+      cardCompleteClass: "bg-amber-50/60",
     },
     {
       key: "push_ups",
       title: "Push-ups",
-      subtitle: `${Number(todayResult?.push_ups || 0)} / ${DAILY_EXERCISE_GOALS.push_ups} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
       progress: Number(todayResult?.push_ups || 0),
       goal: DAILY_EXERCISE_GOALS.push_ups,
+      unit: "Wdh.",
+      reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <PushUpIcon className="h-5 w-5" />,
       iconClass: "bg-sky-500/15 text-sky-500",
+      progressClass: "bg-sky-400 shadow-[0_4px_12px_rgba(56,189,248,0.32)]",
+      cardCompleteClass: "bg-sky-50/60",
     },
     {
       key: "squats",
       title: "Kniebeugen",
-      subtitle: `${Number(todayResult?.squats || 0)} / ${DAILY_EXERCISE_GOALS.squats} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
       progress: Number(todayResult?.squats || 0),
       goal: DAILY_EXERCISE_GOALS.squats,
+      unit: "Wdh.",
+      reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <SquatIcon className="h-5 w-5" />,
       iconClass: "bg-orange-500/15 text-orange-500",
+      progressClass: "bg-emerald-400 shadow-[0_4px_12px_rgba(52,211,153,0.35)]",
+      cardCompleteClass: "bg-neutral-100",
     },
     {
       key: "planks",
       title: "Planks",
-      subtitle: `${Number(todayResult?.planks || 0)} / ${DAILY_EXERCISE_GOALS.planks} Sek. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
       progress: Number(todayResult?.planks || 0),
       goal: DAILY_EXERCISE_GOALS.planks,
+      unit: "Sek.",
+      reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <PlankIcon className="h-5 w-5" />,
       iconClass: "bg-cyan-500/15 text-cyan-500",
+      progressClass: "bg-cyan-400 shadow-[0_4px_12px_rgba(34,211,238,0.32)]",
+      cardCompleteClass: "bg-cyan-50/60",
     },
     {
       key: "sit_ups",
       title: "Sit-ups",
-      subtitle: `${Number(todayResult?.sit_ups || 0)} / ${DAILY_EXERCISE_GOALS.sit_ups} Wdh. · +${BOOST_POINT_RULES.exerciseCompleted} ⚡`,
       progress: Number(todayResult?.sit_ups || 0),
       goal: DAILY_EXERCISE_GOALS.sit_ups,
+      unit: "Wdh.",
+      reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <SitUpIcon className="h-5 w-5" />,
       iconClass: "bg-fuchsia-500/15 text-fuchsia-500",
+      progressClass: "bg-fuchsia-500 shadow-[0_4px_12px_rgba(217,70,239,0.3)]",
+      cardCompleteClass: "bg-fuchsia-50/60",
     },
   ];
 
@@ -379,7 +397,7 @@ const Dashboard = () => {
           </button>
         </div>
         {userId && (
-          <div className="mb-6 grid grid-cols-2 gap-2.5">
+          <div className="mb-6 grid grid-cols-2 gap-2">
             {dailyTasks.map((task) => {
               const isComplete = task.progress >= task.goal;
               const progressPercent = Math.min(100, Math.round((task.progress / task.goal) * 100));
@@ -387,39 +405,50 @@ const Dashboard = () => {
               return (
                 <Card
                   key={task.key}
-                  className="overflow-hidden rounded-[20px] border border-black/5 bg-white p-0 shadow-[0_12px_26px_rgba(0,0,0,0.07),inset_0_-2px_0_rgba(0,0,0,0.04)]"
+                  className={`overflow-hidden rounded-[20px] border p-0 shadow-[0_12px_26px_rgba(0,0,0,0.07),inset_0_-2px_0_rgba(0,0,0,0.04)] ${
+                    isComplete
+                      ? `border-primary/15 ${task.cardCompleteClass}`
+                      : "border-black/5 bg-white"
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={() => navigate("/challenge/daily")}
-                    className="flex w-full flex-col items-start gap-2.5 p-2.5 text-left"
+                    className="flex w-full flex-col items-start gap-2 p-3 text-left"
                   >
-                    <div className="flex w-full items-start justify-between gap-2">
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] ${task.iconClass}`}>
+                    <div className="flex w-full items-start gap-2">
+                      <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[14px] ${task.iconClass}`}>
                         {task.icon}
                       </div>
-                      <div className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
-                        isComplete ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                      }`}>
-                        {isComplete ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : `${progressPercent}%`}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 w-full">
-                      <h3 className="truncate text-sm font-black leading-tight text-foreground">{task.title}</h3>
-                      <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted-foreground">{task.subtitle}</p>
-                    </div>
-
-                    <div className="w-full">
-                      <div className="h-2 overflow-hidden rounded-full bg-black/6 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)]">
-                        <div
-                          className="h-full rounded-full bg-primary shadow-[0_4px_10px_rgba(31,224,102,0.3)]"
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
-                      <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-foreground/60">
-                        <span>{task.progress}</span>
-                        <span>{task.goal}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="truncate pr-1 text-[13px] font-black leading-tight text-foreground">{task.title}</h3>
+                          <div className={`flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                            isComplete ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                          }`}>
+                            {isComplete ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : `${progressPercent}%`}
+                          </div>
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-between gap-2">
+                          <p className="text-[10px] font-black text-foreground/80">
+                            {task.progress} / {task.goal} <span className="font-semibold text-foreground/55">{task.unit}</span>
+                          </p>
+                          <p className="shrink-0 text-[9px] font-bold text-primary/75">
+                            +{task.reward} ⚡
+                          </p>
+                        </div>
+                        <div className="mt-1.5 w-full">
+                          <div className="relative h-2.5 overflow-hidden rounded-full bg-white/95 shadow-[inset_0_1px_2px_rgba(15,23,42,0.1)]">
+                            <div
+                              className={`h-full rounded-full ${task.progressClass}`}
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                          <div className="mt-1 flex items-center justify-between text-[9px] font-semibold text-foreground/55">
+                            <span>{progressPercent}% erreicht</span>
+                            <span>{task.goal} {task.unit}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </button>

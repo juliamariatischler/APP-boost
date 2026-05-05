@@ -98,8 +98,8 @@ const Quests = () => {
         ) : (
           <>
             <div className="mb-5">
-              <h1 className="text-3xl font-black tracking-tight text-foreground">Deine Quests</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Wähle eine Challenge und sammle heute neue Blitze.</p>
+              <h1 className="text-3xl font-black tracking-tight text-foreground">Meine Quests</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Such dir eine Quest aus und sammle neue Blitze.</p>
             </div>
 
             <button
@@ -135,7 +135,7 @@ const Quests = () => {
               </div>
             </button>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               {quests.map((quest) => {
                 const Icon = quest.icon;
 
@@ -147,10 +147,14 @@ const Quests = () => {
                     <button
                       type="button"
                       onClick={() => navigate(quest.id === "class" ? "/klasse" : `/challenge/${quest.id}`)}
-                      className="flex w-full items-stretch text-left"
+                      className="flex w-full flex-col text-left"
                     >
-                      <div className="w-28 shrink-0 bg-muted">
-                        <img src={quest.image} alt={quest.title} className="h-full w-full object-cover" />
+                      <div className="flex h-32 items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)] px-4 py-4">
+                        <img
+                          src={quest.image}
+                          alt={quest.title}
+                          className="max-h-full w-auto max-w-[82%] object-contain object-center"
+                        />
                       </div>
                       <div className="flex flex-1 flex-col justify-between p-4">
                         <div>
@@ -160,12 +164,12 @@ const Quests = () => {
                             </span>
                             <Icon className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <h3 className="text-lg font-bold text-foreground">{quest.title}</h3>
-                          <p className="mt-1 text-sm text-muted-foreground">{quest.description}</p>
+                          <h3 className="text-lg font-bold leading-tight text-foreground">{quest.title}</h3>
+                          <p className="mt-1 text-sm leading-snug text-muted-foreground">{quest.description}</p>
                         </div>
-                        <div className="mt-4 flex items-center justify-between gap-3">
-                          <span className="text-sm font-bold text-foreground">{quest.reward}</span>
-                          <span className="text-xs text-muted-foreground">{quest.meta}</span>
+                        <div className="mt-4 space-y-1">
+                          <span className="block text-sm font-bold text-foreground">{quest.reward}</span>
+                          <span className="block text-xs text-muted-foreground">{quest.meta}</span>
                         </div>
                       </div>
                     </button>

@@ -151,10 +151,8 @@ const Rewards = () => {
     if (!userId) return;
     setRedeemingId(rewardId);
 
-    const { error } = await (supabase as any).from("reward_redemptions").insert({
-      user_id: userId,
-      reward_id: rewardId,
-      status: "requested",
+    const { error } = await (supabase.rpc as any)("request_reward_redemption", {
+      p_reward_id: rewardId,
     });
 
     setRedeemingId(null);

@@ -254,25 +254,27 @@ const Klasse = () => {
                 </div>
 
                 <div className="overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-                  <div className="grid grid-cols-[1.15fr_0.85fr]">
+                  <div className="grid min-h-[300px] grid-cols-[0.95fr_1.05fr]">
                     <div className="flex flex-col justify-center p-4">
                       <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary shadow-[0_8px_16px_rgba(31,224,102,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]">
                         <GraduationCap className="h-5 w-5" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-[1.45rem] font-black leading-none text-foreground">Klassenranking</h2>
-                        <button
-                          type="button"
-                          onClick={() => setShowAllRankings(true)}
-                          className="rounded-full border border-black/8 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-foreground shadow-[0_8px_18px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)]"
-                        >
-                          Alle
-                        </button>
-                      </div>
+                      <h2 className="text-[1.55rem] font-black leading-none text-foreground">
+                        Klassen-
+                        <br />
+                        ranking
+                      </h2>
                       <p className="mt-2 text-sm text-foreground/65">alle Klassen</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllRankings(true)}
+                        className="mt-4 inline-flex w-fit rounded-full border border-black/8 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-foreground shadow-[0_8px_18px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)]"
+                      >
+                        Alle
+                      </button>
                     </div>
                     <div className="border-l border-black/6 p-4">
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {visibleClassRankings.slice(0, 3).map((cls, idx) => {
                           const isMyClass = cls.className === userClass && cls.school === userSchool;
                           return (

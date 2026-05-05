@@ -17,7 +17,11 @@ interface Profile {
   points: number;
 }
 
-export const TopHeader = () => {
+interface TopHeaderProps {
+  backTo?: string;
+}
+
+export const TopHeader = ({ backTo = "/dashboard" }: TopHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -152,7 +156,7 @@ export const TopHeader = () => {
           {!isDashboard && (
             <Button
               variant="outline"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(backTo)}
               className="h-10 px-3 shrink-0"
             >
               <ArrowLeft className="h-5 w-5 mr-1" />

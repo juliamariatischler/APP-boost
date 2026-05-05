@@ -13,28 +13,22 @@ const STORAGE_KEY = "weekly_geocaching_finds";
 
 const caches = [
   {
-    code: "GT-GRAZ-01",
-    name: "Schlossberg-Microcache",
-    area: "Graz Altstadt",
-    hint: "Suche nahe der Aussichtslinie und achte auf metallische Verstecke.",
+    code: "SCHOECKL-START",
+    name: "Startpunkt-Cache",
+    area: "St. Radegund / Start",
+    hint: "Finde den ersten Marker am Start der Tour und achte auf den Wegweiser.",
   },
   {
-    code: "GT-GRAZ-02",
-    name: "Augarten Riverside Cache",
-    area: "Augarten",
-    hint: "Bleib am Weg, aber schau auf Bankhöhe und in Griffnähe.",
+    code: "SCHOECKL-WEG",
+    name: "Weg-Cache",
+    area: "Schöckl / Unterwegs",
+    hint: "Halte am Weg nach dem nächsten Marker Ausschau. Bleib auf der Route.",
   },
   {
-    code: "GT-GRAZ-03",
-    name: "Murpark Urban Cache",
-    area: "Murpark",
-    hint: "Der Cache liegt nicht offen. Suche dort, wo man kurz stehen bleiben kann.",
-  },
-  {
-    code: "GT-GRAZ-04",
-    name: "Sportplatz Bonus Cache",
-    area: "Sportplatz",
-    hint: "Der Bonus liegt sportnah, aber nie auf dem Spielfeld selbst.",
+    code: "SCHOECKL-ZIEL",
+    name: "Ziel-Cache",
+    area: "Alpengasthof am Schöckl",
+    hint: "Am Ziel wartet der letzte Marker. Schau in der Nähe des Zielbereichs.",
   },
 ] as const;
 
@@ -125,20 +119,20 @@ const WeeklyGeoTracking = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <TopHeader />
+      <TopHeader backTo="/quests" />
 
       <div className="mx-auto max-w-screen-xl px-4 pb-8">
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-primary via-emerald-600 to-teal-600 text-white shadow-lg">
           <div className="p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Option B</p>
-            <h1 className="mt-2 text-3xl font-bold">Geocaching x BOOST</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Wochenchallenge vor Ort</p>
+            <h1 className="mt-2 text-3xl font-bold">Wanderung: Alpengasthof am Schöckl</h1>
             <p className="mt-3 max-w-3xl text-sm text-white/85">
-              Das Modell ist jetzt an klassisches Geocaching angelehnt: Kinder suchen echte Verstecke vor Ort,
-              orientieren sich über Ort und Hinweis, finden einen Cache und loggen danach den Fund in BOOST.
+              Schau zuerst das Wochenvideo an und starte dann die Tour. Unterwegs findest du Marker auf der Strecke
+              und loggst sie danach in BOOST.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">GPS- / Ortsnavigation</span>
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Physischer Cache</span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">12,5 km Tour</span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Marker am Weg</span>
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold inline-flex items-center gap-1">
                 <Zap className="h-3 w-3 fill-white text-white" />
                 Erster Fund = {POINTS_PER_FIND} Blitze
@@ -151,12 +145,12 @@ const WeeklyGeoTracking = () => {
           <Card className="p-6">
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-bold text-foreground">Cache finden und loggen</h2>
+              <h2 className="text-xl font-bold text-foreground">Marker finden und loggen</h2>
             </div>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Statt QR-Codes arbeitet diese Challenge mit echten Verstecken. Vor Ort findest du einen Cache, trägst dich
-              ins Logbuch ein oder entdeckst einen Fundcode und löst ihn danach hier ein.
+              Diese Wochenchallenge läuft als echte Tour. Vor Ort findest du Marker oder Fundcodes und trägst sie
+              danach hier ein.
             </p>
 
             <div className="mt-5 grid gap-3">
@@ -166,17 +160,17 @@ const WeeklyGeoTracking = () => {
                   <p className="text-sm font-semibold text-foreground">1. Ort ansteuern</p>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Die Kinder steuern mit Geocaching-Logik einen echten Ort oder ein Versteck an.
+                  Starte die Wanderung am ausgeschriebenen Startpunkt Richtung Schöckl.
                 </p>
               </div>
 
               <div className="rounded-xl border bg-muted/30 p-4">
                 <div className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-semibold text-foreground">2. Cache finden</p>
+                  <p className="text-sm font-semibold text-foreground">2. Marker finden</p>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Vor Ort wird kein QR-Code gescannt. Stattdessen wird ein physischer Cache entdeckt.
+                  Unterwegs findest du Marker am Start, am Weg oder am Ziel der Challenge.
                 </p>
               </div>
 
@@ -186,7 +180,7 @@ const WeeklyGeoTracking = () => {
                   <p className="text-sm font-semibold text-foreground">3. Fund eintragen</p>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Danach wird der Fundcode in BOOST eingetragen. Der erste validierte Fund schließt die Wochenchallenge ab.
+                  Danach wird der Fundcode in BOOST eingetragen. Der erste valide Fund bringt die Wochenbelohnung.
                 </p>
               </div>
             </div>
@@ -200,7 +194,7 @@ const WeeklyGeoTracking = () => {
                 <Input
                   value={manualCode}
                   onChange={(event) => setManualCode(event.target.value)}
-                  placeholder="z. B. GT-GRAZ-01"
+                  placeholder="z. B. SCHOECKL-START"
                 />
                 <Button onClick={() => void handleManualSubmit()}>Loggen</Button>
               </div>
@@ -211,7 +205,7 @@ const WeeklyGeoTracking = () => {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-bold text-foreground">Challenge-Caches</h2>
+                <h2 className="text-xl font-bold text-foreground">Challenge-Stationen</h2>
               </div>
               <RewardPill points={foundCodes.length > 0 ? POINTS_PER_FIND : 0} />
             </div>

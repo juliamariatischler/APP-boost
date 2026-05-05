@@ -370,16 +370,9 @@ const Admin = () => {
     if (!adminUserId) return;
     setAssigningStudentId(studentId);
 
-    const { error } = await (supabase as any)
-      .from("teacher_student_assignments")
-      .upsert(
-        {
-          teacher_id: adminUserId,
-          student_id: studentId,
-          created_by: adminUserId,
-        },
-        { onConflict: "teacher_id,student_id" }
-      );
+    const { error } = await (supabase.rpc as any)("admin_assign_student", {
+      p_student_id: studentId,
+    });
 
     if (error) {
       toast.error("Schüler konnte nicht zugeteilt werden");
@@ -396,11 +389,9 @@ const Admin = () => {
     if (!adminUserId) return;
     setAssigningStudentId(studentId);
 
-    const { error } = await (supabase as any)
-      .from("teacher_student_assignments")
-      .delete()
-      .eq("teacher_id", adminUserId)
-      .eq("student_id", studentId);
+    const { error } = await (supabase.rpc as any)("admin_unassign_student", {
+      p_student_id: studentId,
+    });
 
     if (error) {
       toast.error("Zuteilung konnte nicht entfernt werden");
@@ -443,14 +434,10 @@ const Admin = () => {
 
     setHandlingRequestId(requestId);
 
-    const { error } = await (supabase as any)
-      .from("school_registration_requests")
-      .update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: adminUserId,
-      })
-      .eq("id", requestId);
+    const { error } = await (supabase.rpc as any)("review_school_registration_request", {
+      p_request_id: requestId,
+      p_status: status,
+    });
 
     setHandlingRequestId(null);
 
@@ -469,14 +456,10 @@ const Admin = () => {
 
     setHandlingRewardRequestId(requestId);
 
-    const { error } = await (supabase as any)
-      .from("reward_redemptions")
-      .update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: adminUserId,
-      })
-      .eq("id", requestId);
+    const { error } = await (supabase.rpc as any)("review_reward_redemption", {
+      p_request_id: requestId,
+      p_status: status,
+    });
 
     setHandlingRewardRequestId(null);
 
@@ -497,13 +480,12 @@ const Admin = () => {
     }
 
     setSavingReward(true);
-    const { error } = await (supabase as any).from("reward_items").insert({
-      title: newReward.title.trim(),
-      partner: newReward.partner.trim() || null,
-      threshold: Number(newReward.threshold),
-      category: newReward.category.trim() || "allgemein",
-      icon: newReward.icon.trim() || null,
-      is_active: true,
+    const { error } = await (supabase.rpc as any)("create_reward_item", {
+      p_title: newReward.title.trim(),
+      p_partner: newReward.partner.trim() || null,
+      p_threshold: Number(newReward.threshold),
+      p_category: newReward.category.trim() || "allgemein",
+      p_icon: newReward.icon.trim() || null,
     });
     setSavingReward(false);
 
@@ -519,7 +501,10 @@ const Admin = () => {
   };
 
   const handleToggleRewardActive = async (rewardId: string, active: boolean) => {
-    const { error } = await (supabase as any).from("reward_items").update({ is_active: !active }).eq("id", rewardId);
+    const { error } = await (supabase.rpc as any)("set_reward_item_active", {
+      p_reward_id: rewardId,
+      p_is_active: !active,
+    });
     if (error) {
       console.error(error);
       toast.error("Status konnte nicht geändert werden");
@@ -536,13 +521,12 @@ const Admin = () => {
     }
 
     setSavingMilestone(true);
-    const { error } = await (supabase as any).from("class_milestones").insert({
-      threshold: Number(newMilestone.threshold),
-      title: newMilestone.title.trim(),
-      description: newMilestone.description.trim() || null,
-      icon: newMilestone.icon.trim() || null,
-      sort_order: Number(newMilestone.sort_order) || 1,
-      is_active: true,
+    const { error } = await (supabase.rpc as any)("create_class_milestone", {
+      p_threshold: Number(newMilestone.threshold),
+      p_title: newMilestone.title.trim(),
+      p_description: newMilestone.description.trim() || null,
+      p_icon: newMilestone.icon.trim() || null,
+      p_sort_order: Number(newMilestone.sort_order) || 1,
     });
     setSavingMilestone(false);
 
@@ -558,7 +542,10 @@ const Admin = () => {
   };
 
   const handleToggleMilestoneActive = async (milestoneId: string, active: boolean) => {
-    const { error } = await (supabase as any).from("class_milestones").update({ is_active: !active }).eq("id", milestoneId);
+    const { error } = await (supabase.rpc as any)("set_class_milestone_active", {
+      p_milestone_id: milestoneId,
+      p_is_active: !active,
+    });
     if (error) {
       console.error(error);
       toast.error("Status konnte nicht geändert werden");

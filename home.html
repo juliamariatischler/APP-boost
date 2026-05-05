@@ -325,12 +325,13 @@
       const candidates = [
         API_BASE,
         `${window.location.origin}/api/v1`,
-        "http://localhost:3000/api/v1",
-        "http://127.0.0.1:3000/api/v1",
       ];
       const unique = [...new Set(candidates.map((x) => String(x || "").replace(/\/$/, "")))];
       for (const base of unique) {
         try {
+          const parsed = new URL(base, window.location.origin);
+          const isLocalApi = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+          if (parsed.protocol !== "https:" && !isLocalApi) continue;
           const res = await fetch(`${base}/health`, { method: "GET" });
           if (res.ok) {
             API_BASE = base;

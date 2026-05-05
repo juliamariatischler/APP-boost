@@ -21,7 +21,7 @@ export default function TeacherHome() {
   useEffect(() => {
     if (!session || session.user_type !== "teacher") return;
 
-    getTeacherClasses(session.device_id)
+    getTeacherClasses(session)
       .then(setClasses)
       .catch(err => toast.error(err instanceof Error ? err.message : "Fehler beim Laden"))
       .finally(() => setLoading(false));

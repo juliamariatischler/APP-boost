@@ -136,8 +136,7 @@ const Auth = () => {
     // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const params = new URLSearchParams(location.search);
-        navigate(params.get("demo") === "student" ? "/dashboard" : "/");
+        navigate("/dashboard", { replace: true });
       }
     });
   }, [location.search, navigate]);
@@ -221,7 +220,7 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich angemeldet!");
-        navigate("/");
+        navigate("/dashboard", { replace: true });
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -277,12 +276,12 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
-        navigate("/");
+        navigate("/dashboard", { replace: true });
       } else if (data.user) {
         // User created but needs email confirmation
         toast.success("Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach.");
         // Auto-confirm is enabled, so this shouldn't happen, but handle it gracefully
-        setTimeout(() => navigate("/"), 2000);
+        setTimeout(() => navigate("/dashboard", { replace: true }), 2000);
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -511,16 +510,9 @@ const Auth = () => {
 
       // Fallback: ensure explicit demo student -> demo teacher mapping when table exists.
       try {
-        const { error: directAssignError } = await (supabase as any)
-          .from("teacher_student_assignments")
-          .upsert(
-            {
-              teacher_id: teacherId,
-              student_id: studentId,
-              created_by: teacherId,
-            },
-            { onConflict: "teacher_id,student_id" }
-          );
+        const { error: directAssignError } = await (supabase.rpc as any)("admin_assign_student", {
+          p_student_id: studentId,
+        });
 
         if (!directAssignError) {
           assignmentSucceeded = true;
@@ -538,11 +530,11 @@ const Auth = () => {
       } else {
         toast.success("Demo-Lehrkraft-Login erfolgreich! Demoschüler ist der Demo-Lehrkraft zugeordnet.");
       }
-      navigate("/");
+      navigate("/dashboard", { replace: true });
     } catch (error: any) {
       if (isAssignmentInfraMissing(error)) {
         toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.");
-        navigate("/");
+        navigate("/dashboard", { replace: true });
         return;
       }
       toast.error("Demo-Lehrkraft-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
@@ -560,14 +552,12 @@ const Auth = () => {
 
     setSchoolRequestLoading(true);
 
-    const { error } = await (supabase as any)
-      .from("school_registration_requests")
-      .insert({
-        requested_school: schoolName,
-        requester_email: signupData.email?.trim() || null,
-        requester_name: signupData.username?.trim() || null,
-        request_note: `Anfrage aus Registrierung (${signupData.accountType})`,
-      });
+    const { error } = await (supabase.rpc as any)("submit_school_registration_request", {
+      p_requested_school: schoolName,
+      p_requester_email: signupData.email?.trim() || null,
+      p_requester_name: signupData.username?.trim() || null,
+      p_request_note: `Anfrage aus Registrierung (${signupData.accountType})`,
+    });
 
     setSchoolRequestLoading(false);
 

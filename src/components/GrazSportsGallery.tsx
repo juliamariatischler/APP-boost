@@ -61,8 +61,8 @@ const offers: SportOffer[] = [
       "Du lernst Passspiel, Ballkontrolle und bekommst einen direkten Einblick in das Vereinsleben. Die ASKÖ-Vereinszuordnung von ESK Graz ist über die ASKÖ-Steiermark-Vereinssuche belegt. Sportschuhe und Trinkflasche mitnehmen.",
     imageHeadline: "Spür den Teamspirit",
     imageSubline: "Offenes Probetraining mit echtem Stadiongefühl.",
-    websiteUrl: "http://www.eskgraz.at",
-    bookingUrl: "http://www.eskgraz.at",
+    websiteUrl: "https://www.eskgraz.at",
+    bookingUrl: "https://www.eskgraz.at",
   },
   {
     id: "football-giants",
@@ -199,8 +199,8 @@ const offers: SportOffer[] = [
       "Der Damen-Basketballclub Graz ist laut ASKÖ-Steiermark-Vereinssuche ein Grazer ASKÖ-Basketballverein. Der Kurs verbindet Dribbling, Wurf und kleine Spielformen mit klarer Trainerstruktur. Hallenschuhe und Trinkflasche genügen.",
     imageHeadline: "Volle Energie auf dem Court",
     imageSubline: "Kurs mit Tempo, Teamplay und starker Clubidentität.",
-    websiteUrl: "http://www.dbbc.at",
-    bookingUrl: "http://www.dbbc.at",
+    websiteUrl: "https://www.dbbc.at",
+    bookingUrl: "https://www.dbbc.at",
   },
   {
     id: "swimming-graz",

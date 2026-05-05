@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CodeAuthProvider } from "@/contexts/CodeAuthContext";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import AppOnboarding from "@/components/AppOnboarding";
 
 if (Capacitor.isNativePlatform()) {
   StatusBar.setOverlaysWebView({ overlay: true });
@@ -76,6 +77,7 @@ const App = () => (
       <BrowserRouter>
         <CodeAuthProvider>
           <RecoveryRedirect>
+            <AppOnboarding />
             <Suspense fallback={<RouteFallback />}>
               <Routes>
                 {/* Code-based login routes */}

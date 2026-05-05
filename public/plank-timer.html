@@ -332,11 +332,12 @@
       const candidates = [
         stored,
         `${window.location.origin}/api/v1`,
-        'http://localhost:3000/api/v1',
-        'http://127.0.0.1:3000/api/v1',
       ].filter(Boolean).map((x) => x.replace(/\/$/, ''));
       for(const base of [...new Set(candidates)]){
         try{
+          const parsed = new URL(base, window.location.origin);
+          const isLocalApi = ['localhost', '127.0.0.1'].includes(parsed.hostname);
+          if(parsed.protocol !== 'https:' && !isLocalApi) continue;
           const health = await fetch(`${base}/health`);
           if(health.ok){
             localStorage.setItem('boost_api_base', base);
@@ -424,7 +425,6 @@
     async function initBackend(){
       try{await tf.setBackend('webgl');await tf.ready();}
       catch(e){await tf.setBackend('cpu');await tf.ready();}
-      console.log('TFJS Backend:', tf.getBackend());
     }
 
     function isLocalhostHost(hostname){

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { TopHeader } from "@/components/TopHeader";
+import { getISOWeek, getISOWeekYear } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { CheckCircle2, MapPin, Mountain, Play, Route, Trophy, Video, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -10,58 +13,71 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { TopHeader } from "@/components/TopHeader";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
-import { CheckCircle2, Play, Trophy, Zap } from "lucide-react";
-import { getISOWeek } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 const REWARD_POINTS = BOOST_POINT_RULES.weeklyChallengeCompleted;
-const VIDEO_REWARD_STORAGE_KEY = "weekly_athlete_video_rewards";
+const WEEKLY_VIDEO_REWARD_STORAGE_KEY = "weekly_video_rewards";
 
-const athletes = [
-  {
-    id: "sprint-star-lena",
-    name: "Anna Gasser",
-    knownFor: "Snowboard-Olympiasiegerin",
-    sport: "Leichtathletik",
-    slogan: "So bleibe ich dran, wenn ich keinen Bock habe.",
-    challenge: "3 Runden: 10 Squats, 10 Sekunden Plank, 20 Jumping Jacks",
-    reward: `+${REWARD_POINTS} Blitze + Wochenbadge bei Abschluss`,
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    duration: "2:48",
-  },
-  {
-    id: "focus-pro-noah",
-    name: "Mikaela Shiffrin",
-    knownFor: "Ski-Weltcup-Rekordhalterin",
-    sport: "Fußball",
-    slogan: "Fokus entsteht, wenn du auch an schweren Tagen anfängst.",
-    challenge: "2 Aktivblöcke: 10 Push-ups, 10 Squats, 3000 Schritte",
-    reward: `+${REWARD_POINTS} Blitze + Wochenbadge bei Abschluss`,
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-    duration: "2:12",
-  },
-  {
-    id: "power-pro-mia",
-    name: "Simone Biles",
-    knownFor: "Turn-Legende",
-    sport: "Turnen",
-    slogan: "Mut wächst, wenn du dir jede Woche ein neues Ziel setzt.",
-    challenge: "Einbeinstand, Linien-Sprünge und danach 10 Sekunden Plank",
-    reward: `+${REWARD_POINTS} Blitze + Wochenbadge bei Abschluss`,
-    videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
-    duration: "2:31",
-  },
-];
+type WeeklyVideo = {
+  id: string;
+  weekKey: string;
+  title: string;
+  speakerName: string;
+  speakerLabel: string;
+  quote: string;
+  challengeText: string;
+  reward: string;
+  duration: string;
+  videoUrl: string;
+  image: string;
+  missionTitle: string;
+  missionSubtitle: string;
+  missionStats: { label: string; value: string }[];
+  missionStops: { id: string; title: string; label: string; done?: boolean }[];
+};
+
+type WeeklyRewardMap = Record<string, boolean>;
 
 const WeeklyAthleteChallenge = () => {
-  const calendarWeek = getISOWeek(new Date());
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
-  const [completedAthleteIds, setCompletedAthleteIds] = useState<string[]>([]);
-  const [rewardingAthleteId, setRewardingAthleteId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [isWeeklyVideoCompleted, setIsWeeklyVideoCompleted] = useState(false);
+  const [rewardingVideo, setRewardingVideo] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const currentWeeklyVideo = useMemo<WeeklyVideo>(() => {
+    const now = new Date();
+    const isoWeek = getISOWeek(now);
+    const isoWeekYear = getISOWeekYear(now);
+    const weekKey = `${isoWeekYear}-KW${String(isoWeek).padStart(2, "0")}`;
+
+    return {
+      id: `weekly-video-${weekKey}`,
+      weekKey,
+      title: "Video der Woche: Wanderung zum Alpengasthof am Schöckl",
+      speakerName: "Anna Gasser",
+      speakerLabel: "Snowboard-Olympiasiegerin",
+      quote: "So bleibe ich dran, wenn ich keinen Bock habe.",
+      challengeText: "Schau das Video an, bleib in Bewegung und hol dir die Belohnung einmal pro Woche.",
+      reward: `+${REWARD_POINTS} Blitze`,
+      duration: "2:48",
+      videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      image: weeklyImg,
+      missionTitle: "Wanderung: Alpengasthof am Schöckl",
+      missionSubtitle: "Unsere erste Wochenchallenge kombiniert Video-Motivation mit einer echten Tour vor Ort.",
+      missionStats: [
+        { label: "Distanz", value: "12,5 km" },
+        { label: "Höhenmeter", value: "1052 m" },
+      ],
+      missionStops: [
+        { id: "1", title: "am Start", label: "#1 Find me & scan me", done: true },
+        { id: "2", title: "am Weg", label: "#2 Find me & scan me" },
+      ],
+    };
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -76,38 +92,44 @@ const WeeklyAthleteChallenge = () => {
     if (!userId) return;
 
     try {
-      const stored = localStorage.getItem(`${VIDEO_REWARD_STORAGE_KEY}_${userId}`);
-      setCompletedAthleteIds(stored ? JSON.parse(stored) : []);
+      const stored = localStorage.getItem(`${WEEKLY_VIDEO_REWARD_STORAGE_KEY}_${userId}`);
+      const parsed: WeeklyRewardMap = stored ? JSON.parse(stored) : {};
+      setIsWeeklyVideoCompleted(Boolean(parsed[currentWeeklyVideo.weekKey]));
     } catch {
-      setCompletedAthleteIds([]);
+      setIsWeeklyVideoCompleted(false);
     }
-  }, [userId]);
+  }, [currentWeeklyVideo.weekKey, userId]);
 
-  const selectedAthlete = useMemo(
-    () => athletes.find((athlete) => athlete.id === selectedAthleteId) ?? null,
-    [selectedAthleteId]
-  );
-
-  const persistCompletedAthletes = (athleteIds: string[]) => {
-    setCompletedAthleteIds(athleteIds);
+  const persistWeeklyVideoReward = (weekKey: string) => {
+    setIsWeeklyVideoCompleted(true);
 
     if (!userId) return;
 
-    localStorage.setItem(`${VIDEO_REWARD_STORAGE_KEY}_${userId}`, JSON.stringify(athleteIds));
+    try {
+      const stored = localStorage.getItem(`${WEEKLY_VIDEO_REWARD_STORAGE_KEY}_${userId}`);
+      const parsed: WeeklyRewardMap = stored ? JSON.parse(stored) : {};
+      const nextValue = { ...parsed, [weekKey]: true };
+      localStorage.setItem(`${WEEKLY_VIDEO_REWARD_STORAGE_KEY}_${userId}`, JSON.stringify(nextValue));
+    } catch {
+      localStorage.setItem(
+        `${WEEKLY_VIDEO_REWARD_STORAGE_KEY}_${userId}`,
+        JSON.stringify({ [weekKey]: true }),
+      );
+    }
   };
 
   const handleVideoCompleted = async () => {
-    if (!selectedAthlete || !userId) {
-      toast.error("Bitte melde dich an, damit wir dir die Blitze gutschreiben können.");
+    if (!userId) {
+      toast.error("Bitte melde dich an, damit wir dir die Blitze gutschreiben koennen.");
       return;
     }
 
-    if (completedAthleteIds.includes(selectedAthlete.id)) {
-      toast.success("Dieses Challenge-Video hast du bereits abgeschlossen.");
+    if (isWeeklyVideoCompleted) {
+      toast.success("Dieses Wochenvideo hast du diese Woche schon geschafft.");
       return;
     }
 
-    setRewardingAthleteId(selectedAthlete.id);
+    setRewardingVideo(true);
 
     try {
       const { error } = await supabase.rpc("increment_points", { points_to_add: REWARD_POINTS });
@@ -116,151 +138,285 @@ const WeeklyAthleteChallenge = () => {
         throw error;
       }
 
-      const nextCompletedAthleteIds = [...completedAthleteIds, selectedAthlete.id];
-      persistCompletedAthletes(nextCompletedAthleteIds);
+      persistWeeklyVideoReward(currentWeeklyVideo.weekKey);
       window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: REWARD_POINTS } }));
-      toast.success(`Challenge abgeschlossen! +${REWARD_POINTS} Blitze`);
+      toast.success(`Wochenvideo geschafft! +${REWARD_POINTS} Blitze`);
     } catch (error) {
-      console.error("Video reward failed", error);
+      console.error("Weekly video reward failed", error);
       toast.error("Video beendet, aber die Blitze konnten nicht gutgeschrieben werden.");
     } finally {
-      setRewardingAthleteId(null);
+      setRewardingVideo(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <TopHeader />
+      <TopHeader backTo="/quests" />
 
       <div className="mx-auto max-w-screen-xl px-4 pb-8">
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white shadow-lg">
-          <div className="grid gap-6 p-6 md:grid-cols-[1.2fr_0.8fr] md:items-center">
+          <div className="grid gap-6 p-6 md:grid-cols-[1.05fr_0.95fr] md:items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Wochen-Quest</p>
-              <h1 className="mt-2 text-3xl font-bold">Video-Challenge der Woche</h1>
-              <p className="mt-3 text-sm text-white/80">
-                Hier startet die Wochen-Quest direkt mit einem Motivationsvideo. Danach sehen die Kinder sofort den
-                Slogan, die Person dahinter und die Challenge für diese Woche.
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-primary px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-primary-foreground">
+                  +{REWARD_POINTS} Blitze
+                </span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-white/85">
+                  Wochenquest
+                </span>
+                <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-zinc-950">
+                  {currentWeeklyVideo.weekKey}
+                </span>
+              </div>
+              <h1 className="mt-3 text-3xl font-black leading-tight">{currentWeeklyVideo.title}</h1>
+              <p className="mt-2 text-xl font-black leading-tight text-primary/90">
+                {currentWeeklyVideo.missionTitle}
               </p>
+              <p className="mt-3 max-w-md text-sm text-white/80">
+                Es gibt genau ein Wochenvideo. Du kannst es so oft ansehen, wie du willst, aber die Belohnung gibt es nur einmal.
+              </p>
+
+              <div className="mt-5 rounded-2xl bg-white/10 p-4">
+                <p className="text-xl font-black leading-tight text-white">"{currentWeeklyVideo.quote}"</p>
+                <p className="mt-3 text-sm font-semibold text-white">{currentWeeklyVideo.speakerName}</p>
+                <p className="text-sm text-white/70">{currentWeeklyVideo.speakerLabel}</p>
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Wochenvideo</span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Vorbilder</span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Klarer Wochenstart</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Ein Video pro Woche</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Neue Wochenquest alle 2 Wochen</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Belohnung nur 1x</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">{currentWeeklyVideo.duration}</span>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl">
-              <img src={weeklyImg} alt="Wochen-Quest" className="h-full w-full object-cover" />
+
+            <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+              <button
+                type="button"
+                onClick={() => setIsVideoOpen(true)}
+                className="relative block w-full text-left"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    src={currentWeeklyVideo.image}
+                    alt={currentWeeklyVideo.title}
+                    className="h-full w-full object-cover opacity-45"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/10 to-transparent" />
+                  <div className="absolute left-4 top-4 rounded-full bg-primary/95 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-primary-foreground">
+                    Jetzt ansehen
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-slate-950 shadow-[0_18px_40px_rgba(0,0,0,0.32)]">
+                      <Play className="ml-1 h-8 w-8 fill-current" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-4 right-4 rounded-xl bg-slate-950/75 px-3 py-1 text-sm font-bold text-white">
+                    {currentWeeklyVideo.duration}
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         </Card>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {athletes.map((athlete) => (
-            <Card key={athlete.name} className="overflow-hidden border-0 bg-[linear-gradient(135deg,#123524_0%,#22c55e_100%)] text-white shadow-lg">
-              <button
-                type="button"
-                onClick={() => setSelectedAthleteId(athlete.id)}
-                className="w-full text-left"
-              >
-                <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,#123524_0%,#22c55e_100%)]">
-                  <img src={weeklyImg} alt={athlete.name} className="h-full w-full object-cover opacity-20 mix-blend-screen" />
-                  <div className="absolute left-4 top-4 rounded-full bg-yellow-400 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-950">
-                    Neu • KW {calendarWeek}
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-zinc-950 shadow-[0_20px_40px_rgba(31,224,102,0.32)]">
-                      <Play className="ml-1 h-8 w-8 fill-current" />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-3 right-3 rounded-lg bg-emerald-950/80 px-2 py-1 text-xs font-bold">
-                    {athlete.duration}
-                  </div>
-                </div>
-                <div className="border-t border-white/10 bg-emerald-950/50 p-5">
-                  <p className="text-2xl font-black leading-tight text-white">
-                    "{athlete.slogan}"
-                  </p>
-                  <p className="mt-3 text-sm font-semibold text-white">{athlete.name}</p>
-                  <p className="text-sm text-white/70">{athlete.knownFor}</p>
-                </div>
-              </button>
-
-              <div className="p-5 pt-4">
-                <div className="rounded-xl bg-emerald-950/30 p-4">
-                  <div className="flex items-center gap-2 text-white">
-                    <Trophy className="h-4 w-4 text-primary" />
-                    <span className="font-semibold">Wochen-Challenge</span>
-                  </div>
-                  <p className="mt-2 text-sm text-white/75">{athlete.challenge}</p>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-1 text-sm font-semibold text-yellow-400">
-                    <Zap className="h-4 w-4" />
-                    <span>{athlete.reward}</span>
-                  </div>
-                  <Button onClick={() => setSelectedAthleteId(athlete.id)}>
-                  {completedAthleteIds.includes(athlete.id) ? "Erneut ansehen" : "Challenge ansehen"}
-                  </Button>
-                </div>
-
-                {completedAthleteIds.includes(athlete.id) && (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Video abgeschlossen. Blitze bereits erhalten.
-                  </div>
-                )}
+        <Card className="mt-6 overflow-hidden rounded-[28px] border border-black/5 bg-[linear-gradient(180deg,#ffffff_0%,#f7fff5_100%)] p-6 shadow-[0_18px_40px_rgba(0,0,0,0.08)]">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-xl">
+              <div className="flex items-center gap-2 text-primary">
+                <Trophy className="h-5 w-5" />
+                <span className="text-sm font-black uppercase tracking-[0.16em]">Wochen-Challenge</span>
               </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+              <p className="mt-3 text-lg font-black text-foreground">{currentWeeklyVideo.challengeText}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Diese Wochenchallenge erscheint nur alle 2 Wochen. Das Video kannst du oefter ansehen, Punkte gibt es aber nur einmal nach dem vollstaendigen Ansehen.
+              </p>
+            </div>
 
-      <Dialog open={Boolean(selectedAthlete)} onOpenChange={(open) => !open && setSelectedAthleteId(null)}>
-        <DialogContent className="sm:max-w-3xl">
-          {selectedAthlete && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedAthlete.name}</DialogTitle>
-                <DialogDescription>
-                  Sieh dir das Video an, mach direkt mit und sichere dir die Blitze erst nach dem vollständigen Abspielen.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                <div className="overflow-hidden rounded-2xl bg-black">
-                  <video
-                    key={selectedAthlete.id}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="aspect-video w-full"
-                    src={selectedAthlete.videoUrl}
-                    onEnded={() => {
-                      void handleVideoCompleted();
-                    }}
-                  />
-                </div>
-
-                <div className="rounded-xl border bg-muted/30 p-4">
-                  <p className="text-sm font-semibold text-foreground">Mitmach-Challenge</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{selectedAthlete.challenge}</p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-amber-50 px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-                    <Zap className="h-4 w-4" />
-                    {completedAthleteIds.includes(selectedAthlete.id)
-                      ? "Belohnung bereits gutgeschrieben"
-                      : `Nach Videoende: +${REWARD_POINTS} Blitze`}
-                  </div>
-                  {rewardingAthleteId === selectedAthlete.id && (
-                    <span className="text-sm text-muted-foreground">Blitze werden gutgeschrieben...</span>
+            <div className="min-w-[220px] rounded-[24px] bg-white p-4 shadow-[0_12px_24px_rgba(0,0,0,0.06)]">
+              <div className="flex items-center gap-2 text-amber-600">
+                <Zap className="h-4 w-4 fill-current" />
+                <span className="text-sm font-black">{currentWeeklyVideo.reward}</span>
+              </div>
+              <div className="mt-3 rounded-2xl bg-muted/50 px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+                  {isWeeklyVideoCompleted ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <span>Schon geschafft</span>
+                    </>
+                  ) : (
+                    <>
+                      <Video className="h-4 w-4 text-primary" />
+                      <span>Noch offen</span>
+                    </>
                   )}
                 </div>
               </div>
-            </>
+              <Button className="mt-4 w-full" onClick={() => setIsVideoOpen(true)}>
+                {isWeeklyVideoCompleted ? "Erneut ansehen" : "Video starten"}
+              </Button>
+            </div>
+          </div>
+
+          {isWeeklyVideoCompleted && (
+            <div className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              Diese Woche ist das Video bereits abgeschlossen. Weitere Aufrufe geben keine zweite Belohnung.
+            </div>
           )}
+        </Card>
+
+        <Card className="mt-6 overflow-hidden rounded-[28px] border border-[#f3b5da] bg-white p-6 shadow-[0_18px_40px_rgba(0,0,0,0.08)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="inline-flex rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-fuchsia-700">
+                Erste Wochenchallenge
+              </span>
+              <h2 className="mt-3 text-[2rem] font-black leading-tight text-foreground">
+                {currentWeeklyVideo.missionTitle}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {currentWeeklyVideo.missionSubtitle}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsVideoOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-black text-primary-foreground shadow-[0_12px_24px_rgba(31,224,102,0.25)]"
+            >
+              <Play className="h-4 w-4 fill-current" />
+              Video ansehen
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {currentWeeklyVideo.missionStops.map((stop) => (
+              <div
+                key={stop.id}
+                className="rounded-[24px] bg-[linear-gradient(135deg,#eefbe9_0%,#dbf7d7_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-[18px] bg-white text-foreground shadow-[0_10px_18px_rgba(0,0,0,0.08)]">
+                    <Route className="h-8 w-8" />
+                  </div>
+                  {stop.done ? (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_18px_rgba(31,224,102,0.24)]">
+                      <CheckCircle2 className="h-7 w-7" />
+                    </div>
+                  ) : null}
+                </div>
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-foreground/70">{stop.label}</p>
+                <p className="mt-1 text-2xl font-black leading-tight text-foreground">{stop.title}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 overflow-hidden rounded-[28px] border border-black/6 bg-[linear-gradient(180deg,#e9f9d8_0%,#d7f5d0_100%)]">
+            <div className="grid gap-5 p-5 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+              <div>
+                <div className="rounded-[24px] bg-white/70 p-4 shadow-[0_10px_24px_rgba(0,0,0,0.05)]">
+                  <div className="mb-3 flex items-center gap-2 text-primary">
+                    <Mountain className="h-5 w-5" />
+                    <span className="text-sm font-black uppercase tracking-[0.16em]">Tourübersicht</span>
+                  </div>
+                  <div className="rounded-[22px] bg-[linear-gradient(135deg,#f3ffe9_0%,#daf8d7_100%)] p-4">
+                    <div className="flex h-48 items-center justify-center rounded-[18px] border border-primary/15 bg-[radial-gradient(circle_at_20%_20%,rgba(34,197,94,0.18),transparent_30%),linear-gradient(180deg,#d8f1b8_0%,#b2e48d_100%)]">
+                      <div className="relative h-full w-full overflow-hidden rounded-[16px]">
+                        <div className="absolute left-[14%] top-[72%] h-5 w-5 rounded-full bg-primary shadow-[0_0_0_6px_rgba(34,197,94,0.15)]" />
+                        <div className="absolute right-[18%] top-[28%] h-5 w-5 rounded-full bg-red-500 shadow-[0_0_0_6px_rgba(239,68,68,0.14)]" />
+                        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+                          <path
+                            d="M15 78 C28 66, 36 58, 44 44 S62 22, 82 30"
+                            fill="none"
+                            stroke="#22c55e"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-black text-fuchsia-700 shadow-[0_8px_18px_rgba(0,0,0,0.08)]">
+                          GPX
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="rounded-[24px] bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
+                  <div className="flex items-center gap-2 text-primary">
+                    <MapPin className="h-5 w-5" />
+                    <span className="text-sm font-black uppercase tracking-[0.16em]">Tourdaten</span>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {currentWeeklyVideo.missionStats.map((stat) => (
+                      <div key={stat.label} className="flex items-center justify-between rounded-2xl bg-muted/40 px-4 py-3">
+                        <span className="text-sm font-semibold text-foreground/70">{stat.label}</span>
+                        <span className="text-lg font-black text-foreground">{stat.value}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between rounded-2xl bg-muted/40 px-4 py-3">
+                      <span className="text-sm font-semibold text-foreground/70">Ziel</span>
+                      <span className="text-lg font-black text-foreground">Schöckl</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="mt-5 w-full rounded-2xl"
+                    onClick={() => navigate("/challenge/weekly/geotracking")}
+                  >
+                    Tour vor Ort starten
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Dialog open={isVideoOpen} onOpenChange={setIsVideoOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{currentWeeklyVideo.title}</DialogTitle>
+            <DialogDescription>
+              Schau das Video komplett an. Du kannst es spaeter wieder ansehen, aber die Wochenbelohnung wird nur einmal gutgeschrieben.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-2xl bg-black">
+              <video
+                key={currentWeeklyVideo.id}
+                controls
+                playsInline
+                preload="metadata"
+                className="aspect-video w-full"
+                src={currentWeeklyVideo.videoUrl}
+                onEnded={() => {
+                  void handleVideoCompleted();
+                }}
+              />
+            </div>
+
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-sm font-semibold text-foreground">Mitmach-Challenge</p>
+              <p className="mt-2 text-sm text-muted-foreground">{currentWeeklyVideo.challengeText}</p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-amber-50 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                <Zap className="h-4 w-4" />
+                {isWeeklyVideoCompleted
+                  ? "Belohnung fuer diese Woche bereits gutgeschrieben"
+                  : `Nach Videoende: +${REWARD_POINTS} Blitze`}
+              </div>
+              {rewardingVideo && (
+                <span className="text-sm text-muted-foreground">Blitze werden gutgeschrieben...</span>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

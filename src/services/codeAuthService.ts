@@ -7,7 +7,9 @@ export interface CodeSession {
   user_id: string;
   display_name: string;
   session_id: string;
+  session_token: string;
   device_id: string;
+  expires_at?: string;
   // student-only
   class_id?: string;
   class_name?: string;
@@ -49,7 +51,7 @@ export function clearSession(): void {
 export async function loginWithCode(code: string): Promise<CodeSession> {
   const device_id = getOrCreateDeviceId();
 
-  const { data, error } = await supabase.rpc("login_with_code", {
+  const { data, error } = await (supabase.rpc as any)("login_with_code", {
     p_code: code.trim().toUpperCase(),
     p_device_id: device_id,
   });
@@ -64,7 +66,9 @@ export async function loginWithCode(code: string): Promise<CodeSession> {
     user_id:      result.user_id as string,
     display_name: result.display_name as string,
     session_id:   result.session_id as string,
+    session_token: result.session_token as string,
     device_id,
+    expires_at:   result.expires_at as string | undefined,
     class_id:     result.class_id as string | undefined,
     class_name:   result.class_name as string | undefined,
     school_name:  result.school_name as string | undefined,
@@ -77,9 +81,16 @@ export async function loginWithCode(code: string): Promise<CodeSession> {
 // ── Validate existing session ────────────────────────────────
 export async function validateSession(): Promise<CodeSession | null> {
   const device_id = getOrCreateDeviceId();
+  const cached = loadSession();
 
-  const { data, error } = await supabase.rpc("validate_session", {
+  if (!cached?.session_token) {
+    clearSession();
+    return null;
+  }
+
+  const { data, error } = await (supabase.rpc as any)("validate_session", {
     p_device_id: device_id,
+    p_session_token: cached.session_token,
   });
 
   if (error || !data) {
@@ -98,7 +109,9 @@ export async function validateSession(): Promise<CodeSession | null> {
     user_id:      result.user_id as string,
     display_name: result.display_name as string,
     session_id:   result.session_id as string,
+    session_token: result.session_token as string,
     device_id,
+    expires_at:   result.expires_at as string | undefined,
     class_id:     result.class_id as string | undefined,
     class_name:   result.class_name as string | undefined,
     school_name:  result.school_name as string | undefined,
@@ -110,11 +123,10 @@ export async function validateSession(): Promise<CodeSession | null> {
 
 // ── Logout ───────────────────────────────────────────────────
 export async function logout(session: CodeSession): Promise<void> {
-  // Best-effort deactivate on server (no RPC needed — next login will clear it)
-  await supabase
-    .from("active_sessions" as never)
-    .update({ active: false } as never)
-    .eq("id", session.session_id as never);
+  await (supabase.rpc as any)("logout_code_session", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+  });
 
   clearSession();
 }
@@ -127,9 +139,10 @@ export interface TeacherClass {
   student_count: number;
 }
 
-export async function getTeacherClasses(device_id: string): Promise<TeacherClass[]> {
-  const { data, error } = await supabase.rpc("get_teacher_classes", {
-    p_device_id: device_id,
+export async function getTeacherClasses(session: Pick<CodeSession, "device_id" | "session_token">): Promise<TeacherClass[]> {
+  const { data, error } = await (supabase.rpc as any)("get_teacher_classes", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
   });
 
   if (error) throw new Error(error.message);
@@ -143,11 +156,12 @@ export interface ClassStudent {
 }
 
 export async function getClassStudents(
-  device_id: string,
+  session: Pick<CodeSession, "device_id" | "session_token">,
   class_id: string
 ): Promise<ClassStudent[]> {
-  const { data, error } = await supabase.rpc("get_class_students", {
-    p_device_id: device_id,
+  const { data, error } = await (supabase.rpc as any)("get_class_students", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
     p_class_id:  class_id,
   });
 
