@@ -22,6 +22,7 @@ const StudentHome = lazy(() => import("./pages/StudentHome"));
 const TeacherHome = lazy(() => import("./pages/TeacherHome"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Quests = lazy(() => import("./pages/Quests"));
+const ClassQuest = lazy(() => import("./pages/ClassQuest"));
 const Klasse = lazy(() => import("./pages/Klasse"));
 const Profil = lazy(() => import("./pages/Profil"));
 const ChallengeDetail = lazy(() => import("./pages/ChallengeDetail"));
@@ -89,6 +90,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/quests" element={<Quests />} />
+                <Route path="/class-quest" element={<ClassQuest />} />
                 <Route path="/klasse" element={<Klasse />} />
                 <Route path="/profil" element={<Profil />} />
                 <Route path="/challenge/:id" element={<ChallengeDetail />} />

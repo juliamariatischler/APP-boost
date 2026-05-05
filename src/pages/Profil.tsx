@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, School, Settings2, ShieldCheck, Zap } from "lucide-react";
+import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, Settings2, ShieldCheck, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import {
   AlertDialog,
@@ -16,10 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PointSystemCard } from "@/components/boost/PointSystemCard";
 import { HealthService } from "@/services/healthService";
 import { supabase } from "@/integrations/supabase/client";
-import { getDemoAwarePoints } from "@/lib/demo";
 import { toast } from "sonner";
 import { BOOST_POINT_RULES, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
 import { endOfWeek, format, startOfWeek } from "date-fns";
@@ -29,9 +27,6 @@ import { ONBOARDING_OPEN_EVENT } from "@/lib/onboarding";
 
 interface ProfileData {
   username: string;
-  school: string;
-  class: string;
-  points: number;
 }
 
 const Profil = () => {
@@ -66,7 +61,7 @@ const Profil = () => {
         const [{ data: profileData }, healthStatus] = await Promise.all([
           supabase
             .from("profiles")
-            .select("username, school, class, points")
+            .select("username")
             .eq("id", session.user.id)
             .single(),
           HealthService.isAvailable().catch(() => false),
@@ -75,16 +70,10 @@ const Profil = () => {
         await loadWeeklyBlitze(session.user.id);
 
         if (profileData) {
-          setProfile({
-            ...profileData,
-            points: getDemoAwarePoints(profileData.points, session.user.email),
-          });
+          setProfile(profileData);
         } else {
           setProfile({
             username: "Spieler",
-            school: "",
-            class: "",
-            points: 0,
           });
         }
 
@@ -236,21 +225,9 @@ const Profil = () => {
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
       <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
-        <Card className="mb-4 overflow-hidden rounded-[30px] border border-black/5 bg-[linear-gradient(135deg,#ffffff_0%,#edf8d7_100%)] p-5 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-primary">Profil</p>
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-foreground">{profile.username}</h1>
-              <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                <School className="h-4 w-4" />
-                {profile.school} {profile.class ? `• ${profile.class}` : ""}
-              </p>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Boost Mitglied
-              </div>
-            </div>
-            <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white text-zinc-950 shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white text-zinc-950 shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
               <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
               {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
                 <img
@@ -260,35 +237,21 @@ const Profil = () => {
                 />
               )}
             </div>
-          </div>
-
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={handleOpenSettingsSection}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-foreground shadow-[0_10px_25px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]"
-            >
-              <Settings2 className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Blitze</p>
-              <p className="mt-2 flex items-center gap-1 text-xl font-black text-foreground">
-                {profile.points}
-                <Zap className="h-4.5 w-4.5 fill-primary text-primary" />
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Klasse</p>
-              <p className="mt-2 truncate text-xl font-black text-foreground">{profile.class || "-"}</p>
+            <div className="min-w-0">
+              <p className="text-[18px] font-semibold text-muted-foreground">Profil</p>
+              <h1 className="mt-1 max-w-full truncate text-[2.1rem] font-black leading-none tracking-tight text-primary">
+                {profile.username}
+              </h1>
             </div>
           </div>
-        </Card>
-
-        <div className="mb-4">
-          <PointSystemCard />
+          <button
+            type="button"
+            onClick={handleOpenSettingsSection}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white text-foreground shadow-[0_10px_25px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]"
+            aria-label="Einstellungen öffnen"
+          >
+            <Settings2 className="h-4 w-4" />
+          </button>
         </div>
 
         <Card className="mb-4 rounded-[26px] border border-black/5 bg-white p-4 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
@@ -393,41 +356,6 @@ const Profil = () => {
         </Card>
 
         <div ref={settingsSectionRef} className="space-y-3">
-          <Card className="rounded-[26px] border-0 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5 text-primary" />
-                <h2 className="font-bold text-foreground">Einstellungen</h2>
-              </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
-                Direkt im Profil
-              </span>
-            </div>
-
-            <div className="mb-3 flex items-center gap-2">
-              <HeartPulse className="h-5 w-5 text-primary" />
-              <h3 className="font-bold text-foreground">Health-Daten</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Verbinde {HealthService.getHealthSourceLabel()}, damit echte Schritte automatisch in BOOST landen.
-            </p>
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-muted/60 px-4 py-3">
-              <span className="text-sm text-foreground">Status</span>
-              <span className="text-sm font-medium text-muted-foreground">
-                {checkingHealth ? "Wird geprüft..." : healthAvailable ? "Verbunden" : "Nicht verbunden"}
-              </span>
-            </div>
-            <Button className="mt-4 w-full rounded-2xl" onClick={handleConnectHealthData} disabled={connectingHealth}>
-              {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
-            </Button>
-
-            {!checkingHealth && !HealthService.isHealthPlatformSupported() && (
-              <p className="mt-2 text-xs text-center text-muted-foreground">
-                Health-Sync ist aktuell nur auf dem iPhone verfügbar.
-              </p>
-            )}
-          </Card>
-
           <Card className="rounded-[26px] border-0 bg-white p-2 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <button
               type="button"
@@ -473,6 +401,31 @@ const Profil = () => {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
+          </Card>
+
+          <Card className="rounded-[26px] border-0 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="mb-3 flex items-center gap-2">
+              <HeartPulse className="h-5 w-5 text-primary" />
+              <h3 className="font-bold text-foreground">Health-Daten</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Verbinde {HealthService.getHealthSourceLabel()}, damit echte Schritte automatisch in BOOST landen.
+            </p>
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-muted/60 px-4 py-3">
+              <span className="text-sm text-foreground">Status</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {checkingHealth ? "Wird geprüft..." : healthAvailable ? "Verbunden" : "Nicht verbunden"}
+              </span>
+            </div>
+            <Button className="mt-4 w-full rounded-2xl" onClick={handleConnectHealthData} disabled={connectingHealth}>
+              {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
+            </Button>
+
+            {!checkingHealth && !HealthService.isHealthPlatformSupported() && (
+              <p className="mt-2 text-xs text-center text-muted-foreground">
+                Health-Sync ist aktuell nur auf dem iPhone verfügbar.
+              </p>
+            )}
           </Card>
 
           <Card className="rounded-[26px] border-0 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">

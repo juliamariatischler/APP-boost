@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "build:ios": "vite build && npx cap sync ios",
-    "cap:sync:ios": "npx cap sync ios",
+    "build:ios": "vite build && npx cap sync ios && node scripts/patch-ios-spm-warnings.mjs",
+    "cap:sync:ios": "npx cap sync ios && node scripts/patch-ios-spm-warnings.mjs",
     "cap:open:ios": "npx cap open ios",
     "lint": "eslint .",
+    "patch:ios-warnings": "node scripts/patch-ios-spm-warnings.mjs",
+    "postinstall": "node scripts/patch-ios-spm-warnings.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

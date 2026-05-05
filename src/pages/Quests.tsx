@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Sparkles, Users, Zap } from "lucide-react";
+import { MapPin, Sparkles, Users } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,7 @@ import classAvatarImg from "@/assets/quest-class-avatar.svg";
 import friendAvatarImg from "@/assets/quest-friend-avatar.svg";
 import tryitAvatarImg from "@/assets/quest-tryit-avatar.svg";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
 type QuestCard = {
   id: string;
@@ -26,7 +27,7 @@ const quests: QuestCard[] = [
   {
     id: "weekly",
     title: "Wochen-Quest",
-    eyebrow: "EPIC",
+    eyebrow: "WOCHENZIEL",
     description: "5 aktive Tage schaffen und dir die Wochenbelohnung sichern.",
     reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡`,
     meta: "Endet Sonntag 23:59",
@@ -37,7 +38,7 @@ const quests: QuestCard[] = [
     id: "class",
     title: "Klassen-Quest",
     eyebrow: "GEMEINSAM",
-    description: "1.000 Liegestütze gemeinsam schaffen und eure Klasse im Ranking nach vorne bringen.",
+    description: "1.000 Kniebeugen gemeinsam schaffen und sehen, wer am meisten beigetragen hat.",
     reward: "Für deine Klasse",
     meta: "1 Monat aktiv",
     image: classAvatarImg,
@@ -68,6 +69,8 @@ const quests: QuestCard[] = [
 const Quests = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState("");
+  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -79,15 +82,32 @@ const Quests = () => {
         navigate("/");
         return;
       }
+      setUserId(session.user.id);
+      setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
       setLoading(false);
     };
 
     void loadProfile();
   }, [navigate]);
 
+  useEffect(() => {
+    if (!userId) return;
+
+    const handleStorage = () => {
+      setEquippedAvatarItem(loadEquippedAvatarItem(userId));
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleStorage);
+    };
+  }, [userId]);
+
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="mx-auto max-w-screen-xl px-4 pb-8 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         {loading ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-52 rounded-xl" />
@@ -97,43 +117,22 @@ const Quests = () => {
           </div>
         ) : (
           <>
-            <div className="mb-5">
-              <h1 className="text-3xl font-black tracking-tight text-foreground">Meine Quests</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Such dir eine Quest aus und sammle neue Blitze.</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/challenge/weekly")}
-              className="mb-6 block w-full text-left"
-            >
-              <div className="overflow-hidden rounded-[28px] bg-gradient-primary p-5 shadow-[0_20px_60px_rgba(31,224,102,0.24)]">
-                <div className="mb-8 flex items-start justify-between gap-3">
-                  <div>
-                    <span className="inline-flex rounded-full bg-black/80 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
-                      Wochen-Quest
-                    </span>
-                    <h2 className="mt-4 max-w-[12rem] text-4xl font-black leading-none text-zinc-950">
-                      5 aktive Tage
-                    </h2>
-                  </div>
-                  <span className="rounded-full bg-black/80 px-2.5 py-1 text-xs font-bold text-white">EPIC</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="rounded-2xl bg-black/80 p-3 text-white">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Belohnung</p>
-                    <p className="mt-1 flex items-center gap-1 text-lg font-black">
-                      {BOOST_POINT_RULES.weeklyChallengeCompleted} <Zap className="h-4 w-4 fill-current" />
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-black/80 p-3 text-white">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Endet</p>
-                    <p className="mt-1 text-lg font-black">So 23:58</p>
-                  </div>
-                </div>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
+                <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
+                {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
+                  <img
+                    src={AVATAR_ITEMS[equippedAvatarItem].asset}
+                    alt={AVATAR_ITEMS[equippedAvatarItem].name}
+                    className="absolute inset-0 h-full w-full object-contain"
+                  />
+                )}
               </div>
-            </button>
+              <div className="min-w-0">
+                <h1 className="text-3xl font-black tracking-tight text-foreground">Meine Quests</h1>
+                <p className="mt-1 text-sm text-muted-foreground">Such dir eine Quest aus und sammle neue Blitze.</p>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {quests.map((quest) => {
@@ -146,14 +145,14 @@ const Quests = () => {
                   >
                     <button
                       type="button"
-                      onClick={() => navigate(quest.id === "class" ? "/klasse" : `/challenge/${quest.id}`)}
+                      onClick={() => navigate(quest.id === "class" ? "/class-quest" : `/challenge/${quest.id}`)}
                       className="flex w-full flex-col text-left"
                     >
                       <div className="flex h-32 items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)] px-4 py-4">
                         <img
                           src={quest.image}
                           alt={quest.title}
-                          className="max-h-full w-auto max-w-[82%] object-contain object-center"
+                          className="max-h-full w-auto max-w-[82%] object-contain object-center mix-blend-multiply"
                         />
                       </div>
                       <div className="flex flex-1 flex-col justify-between p-4">

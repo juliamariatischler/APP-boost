@@ -325,12 +325,12 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="mb-3 flex items-end justify-between gap-3 px-1">
-          <h2 className="text-base font-black leading-none text-foreground">Deine Woche</h2>
+          <h2 className="text-base font-black leading-none text-foreground">Meine Woche</h2>
           <p className="text-sm font-bold text-foreground/80">
             {weeklyCompleted} von {weeklyTotal} Tagen aktiv
           </p>
         </div>
-        <div className="mb-4 overflow-hidden rounded-[28px] border border-black/5 bg-white px-4 py-4 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.04)]">
+        <div className="mb-4 overflow-hidden rounded-[28px] border border-primary/35 bg-white px-4 py-4 text-foreground shadow-[0_20px_42px_rgba(31,224,102,0.14),0_10px_24px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.82)]">
           <div className="grid grid-cols-7 gap-2">
             {daysOfWeek.map((day) => {
               const dateKey = format(day, "yyyy-MM-dd");
