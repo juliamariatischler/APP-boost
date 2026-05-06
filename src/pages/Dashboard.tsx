@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronRight, Crown, Play, Star, Zap } from "lucide-react";
+import { Activity, Bell, Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { eachDayOfInterval, endOfWeek, format, getISOWeek, startOfWeek } from "date-fns";
+import { endOfWeek, format, getISOWeek, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
-import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, WEEKLY_GOAL_DAYS, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
+import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon, WalkingIcon } from "@/components/ExerciseIcons";
 import { getDemoAwarePoints } from "@/lib/demo";
+import { HealthService } from "@/services/healthService";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
+import voltUnder39Img from "@/assets/volt-under-39.png";
+import volt39To59Img from "@/assets/volt-39-59.png";
+import volt60To79Img from "@/assets/volt-60-79.png";
+import volt80To89Img from "@/assets/volt-80-89.png";
+import volt90PlusImg from "@/assets/volt-90-plus.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
 type WeeklyResult = {
+  id?: string;
   date: string;
   jumping_jacks: number | null;
   push_ups: number | null;
@@ -22,7 +29,11 @@ type WeeklyResult = {
   planks: number | null;
   sit_ups: number | null;
   steps: number | null;
+  steps_tracking_active?: boolean | null;
 };
+
+const STEP_TASK_REWARD = 5;
+const STREAK_DAY_THRESHOLD_PERCENT = 90;
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -34,7 +45,6 @@ const Dashboard = () => {
   const [isTeacher, setIsTeacher] = useState(false);
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
   const [weeklyData, setWeeklyData] = useState<WeeklyResult[]>([]);
-  const [weeklyTotal] = useState(WEEKLY_GOAL_DAYS);
   const [loading, setLoading] = useState(true);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
 
@@ -125,44 +135,23 @@ const Dashboard = () => {
     };
   }, [userId]);
 
-  const hasAnyActivity = (day: WeeklyResult) => {
-    return (
-      (day.steps || 0) > 0 ||
-      (day.jumping_jacks || 0) > 0 ||
-      (day.push_ups || 0) > 0 ||
-      (day.squats || 0) > 0 ||
-      (day.planks || 0) > 0 ||
-      (day.sit_ups || 0) > 0
-    );
-  };
-
-  const getDailyBlitze = (day?: WeeklyResult) => {
+  const getDayProgressPercent = (day?: WeeklyResult) => {
     if (!day) return 0;
 
-    const completedExercises = countCompletedDailyExercises({
+    const completedExerciseCount = countCompletedDailyExercises({
       jumping_jacks: day.jumping_jacks || 0,
       push_ups: day.push_ups || 0,
       squats: day.squats || 0,
       planks: day.planks || 0,
       sit_ups: day.sit_ups || 0,
     });
+    const completedTaskCount = (Number(day.steps || 0) >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
+    const taskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
 
-    let total = completedExercises * BOOST_POINT_RULES.exerciseCompleted;
-
-    if (
-      isDailyGoalComplete(day.steps || 0, {
-        jumping_jacks: day.jumping_jacks || 0,
-        push_ups: day.push_ups || 0,
-        squats: day.squats || 0,
-        planks: day.planks || 0,
-        sit_ups: day.sit_ups || 0,
-      })
-    ) {
-      total += BOOST_POINT_RULES.dailyGoalCompleted;
-    }
-
-    return total;
+    return Math.min(100, Math.round((completedTaskCount / taskCount) * 100));
   };
+
+  const isWeeklyStreakDay = (day: WeeklyResult) => getDayProgressPercent(day) > STREAK_DAY_THRESHOLD_PERCENT;
 
   const loadWeeklyProgress = async (currentUserId: string) => {
     const today = new Date();
@@ -178,25 +167,119 @@ const Dashboard = () => {
 
     if (weeklyData) {
       setWeeklyData(weeklyData);
-      const daysWithActivity = weeklyData.filter(hasAnyActivity).length;
-      setWeeklyCompleted(daysWithActivity);
+      const streakDays = weeklyData.filter(isWeeklyStreakDay).length;
+      setWeeklyCompleted(streakDays);
+      void syncTodayHealthSteps(currentUserId, weeklyData);
+    }
+  };
+
+  const syncTodayHealthSteps = async (currentUserId: string, currentWeeklyData: WeeklyResult[]) => {
+    if (!HealthService.isHealthPlatformSupported()) return;
+
+    try {
+      const realSteps = await HealthService.getTodaySteps();
+      const todayDate = format(new Date(), "yyyy-MM-dd");
+      const existingToday = currentWeeklyData.find((day) => day.date === todayDate);
+
+      if (realSteps <= 0 && existingToday?.steps && !existingToday.steps_tracking_active) {
+        return;
+      }
+
+      const payload = {
+        steps: realSteps,
+        steps_tracking_active: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existingToday?.id) {
+        const { error } = await supabase
+          .from("daily_results")
+          .update(payload)
+          .eq("id", existingToday.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("daily_results")
+          .insert({
+            user_id: currentUserId,
+            date: todayDate,
+            ...payload,
+            steps_started_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+      }
+
+      const nextWeeklyData = existingToday
+        ? currentWeeklyData.map((day) => (day.date === todayDate ? { ...day, ...payload } : day))
+        : [...currentWeeklyData, { date: todayDate, steps: realSteps, steps_tracking_active: true, jumping_jacks: 0, push_ups: 0, squats: 0, planks: 0, sit_ups: 0 }];
+
+      setWeeklyData(nextWeeklyData);
+      setWeeklyCompleted(nextWeeklyData.filter(isWeeklyStreakDay).length);
+    } catch (error) {
+      console.error("Dashboard health step sync failed:", error);
     }
   };
 
   const today = new Date();
   const calendarWeek = getISOWeek(today);
-  const daysOfWeek = eachDayOfInterval({
-    start: startOfWeek(today, { locale: de, weekStartsOn: 1 }),
-    end: endOfWeek(today, { locale: de, weekStartsOn: 1 }),
-  });
-  const activeDates = weeklyData
-    .filter(hasAnyActivity)
-    .map((day) => day.date)
-    .sort((a, b) => a.localeCompare(b));
-  const starredActiveDate = weeklyCompleted === WEEKLY_GOAL_DAYS - 1 ? activeDates[WEEKLY_GOAL_DAYS - 2] : null;
-  const weeklyChallengeCompletedDate = weeklyCompleted >= WEEKLY_GOAL_DAYS ? activeDates[WEEKLY_GOAL_DAYS - 1] : null;
   const todayKey = format(today, "yyyy-MM-dd");
   const todayResult = weeklyData.find((day) => day.date === todayKey);
+  const completedExerciseCount = todayResult
+    ? countCompletedDailyExercises({
+        jumping_jacks: todayResult.jumping_jacks || 0,
+        push_ups: todayResult.push_ups || 0,
+        squats: todayResult.squats || 0,
+        planks: todayResult.planks || 0,
+        sit_ups: todayResult.sit_ups || 0,
+      })
+    : 0;
+  const dailyProgressPercent = getDayProgressPercent(todayResult);
+  const estimatedMovementMinutes = Math.max(0, Math.round(((todayResult?.steps || 0) / 1000) * 4 + completedExerciseCount * 3));
+  const voltMoods = [
+    {
+      key: "inaktiv",
+      min: 0,
+      title: "Volt ist inaktiv.",
+      copy: "Erledige eine Aufgabe, damit dein Buddy wieder Energie bekommt.",
+      label: "Inaktiv",
+      image: voltUnder39Img,
+    },
+    {
+      key: "bereit",
+      min: 39,
+      title: "Volt ist bereit!",
+      copy: "Du bist gut gestartet. Jetzt fehlt nicht mehr viel.",
+      label: "Bereit",
+      image: volt39To59Img,
+    },
+    {
+      key: "aktiv",
+      min: 60,
+      title: "Volt ist aktiv!",
+      copy: "Dein Buddy sammelt Energie und bleibt mit dir dran.",
+      label: "Aktiv",
+      image: volt60To79Img,
+    },
+    {
+      key: "aufgeladen",
+      min: 80,
+      title: "Volt ist aufgeladen!",
+      copy: "Starker Fortschritt. Dein Tagesziel ist fast geschafft.",
+      label: "Aufgeladen",
+      image: volt80To89Img,
+    },
+    {
+      key: "mega-boost",
+      min: 90,
+      title: "Volt im Mega Boost!",
+      copy: "Mega Tag. Volt ist voll da und wächst mit dir.",
+      label: "Mega Boost",
+      image: volt90PlusImg,
+    },
+  ];
+  const activeVoltMood = [...voltMoods].reverse().find((mood) => dailyProgressPercent >= mood.min) || voltMoods[0];
   const dailyTasks = [
     {
       key: "steps",
@@ -204,7 +287,7 @@ const Dashboard = () => {
       progress: Number(todayResult?.steps || 0),
       goal: DAILY_STEP_GOAL,
       unit: "Schritte",
-      reward: BOOST_POINT_RULES.dailyGoalCompleted,
+      reward: STEP_TASK_REWARD,
       icon: <WalkingIcon className="h-5 w-5" />,
       iconClass: "bg-emerald-500/15 text-emerald-500",
       progressClass: "bg-emerald-400 shadow-[0_4px_12px_rgba(52,211,153,0.35)]",
@@ -297,92 +380,116 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
-              <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
-              {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
-                <img
-                  src={AVATAR_ITEMS[equippedAvatarItem].asset}
-                  alt={AVATAR_ITEMS[equippedAvatarItem].name}
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              )}
-            </div>
-            <div>
-              <p className="text-[18px] font-semibold text-muted-foreground">Hi</p>
-              <h1 className="mt-1 text-[2.1rem] font-black leading-none tracking-tight text-primary">
-                {username}
-              </h1>
-            </div>
+      <div className="relative mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.25rem)]">
+        <button
+          type="button"
+          className="absolute right-4 top-[calc(env(safe-area-inset-top)+0.25rem)] z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white text-foreground shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
+          aria-label="Benachrichtigungen"
+        >
+          <Bell className="h-5 w-5" />
+          <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+        </button>
+
+        <div className="mb-5 flex items-center gap-3 pr-12">
+          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
+            <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
+            {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
+              <img
+                src={AVATAR_ITEMS[equippedAvatarItem].asset}
+                alt={AVATAR_ITEMS[equippedAvatarItem].name}
+                className="absolute inset-0 h-full w-full object-contain"
+              />
+            )}
           </div>
-          <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <p className="flex items-center gap-1 text-2xl font-black text-foreground">
-              {points}
-              <Zap className="h-5 w-5 fill-primary text-primary" />
+          <div className="min-w-0">
+            <h1 className="truncate text-[1.9rem] font-black leading-none tracking-tight text-foreground">
+              Hi {username} 👋
+            </h1>
+            <p className="mt-1 flex items-center gap-1 text-sm font-medium text-muted-foreground">
+              Schön, dass du da bist!
+              <span className="inline-flex items-center gap-0.5 font-bold text-primary">
+                {points}
+                <Zap className="h-3.5 w-3.5 fill-current" />
+              </span>
             </p>
           </div>
         </div>
-        <div className="mb-3 flex items-end justify-between gap-3 px-1">
-          <h2 className="text-base font-black leading-none text-foreground">Meine Woche</h2>
-          <p className="text-sm font-bold text-foreground/80">
-            {weeklyCompleted} von {weeklyTotal} Tagen aktiv
-          </p>
-        </div>
-        <div className="mb-4 overflow-hidden rounded-[28px] border border-primary/35 bg-white px-4 py-4 text-foreground shadow-[0_20px_42px_rgba(31,224,102,0.14),0_10px_24px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.82)]">
-          <div className="grid grid-cols-7 gap-2">
-            {daysOfWeek.map((day) => {
-              const dateKey = format(day, "yyyy-MM-dd");
-              const dayResult = weeklyData.find((entry) => entry.date === dateKey);
-              const isActive = activeDates.includes(dateKey);
-              const isToday = dateKey === format(today, "yyyy-MM-dd");
-              const showStreakStar = starredActiveDate === dateKey && isActive;
-              const showWeeklyBadge = weeklyChallengeCompletedDate === dateKey;
-              const dayBlitze = getDailyBlitze(dayResult);
 
-              return (
-                <div key={dateKey} className="flex flex-col items-center gap-1.5">
-                  <div className="flex flex-col items-center leading-none">
-                    <span className="text-xs font-black uppercase text-foreground/55">
-                      {format(day, "EE", { locale: de })}
-                    </span>
-                    <span className="mt-1 text-[11px] font-semibold text-foreground/35">
-                      {format(day, "d.")}
-                    </span>
-                  </div>
+        <div className="mb-4 overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_28%_78%,rgba(50,255,236,0.45)_0%,transparent_32%),linear-gradient(135deg,#075cff_0%,#078cff_48%,#16c7e9_100%)] text-white shadow-[0_18px_34px_rgba(0,83,255,0.22),0_10px_22px_rgba(0,0,0,0.08)]">
+          <div className="relative grid h-[34vh] min-h-[13.5rem] max-h-[16.5rem] grid-cols-[minmax(0,1fr)_42%] overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_22%,rgba(255,255,255,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_52%_20%,rgba(255,255,255,0.5)_0_2px,transparent_3px),radial-gradient(circle_at_33%_38%,rgba(255,255,255,0.24)_0_1px,transparent_2px)]" />
+            <div className="relative flex items-center justify-center overflow-hidden px-1 py-4">
+              <div className="absolute bottom-8 h-8 w-36 rounded-full border-4 border-cyan-200/70 shadow-[0_0_24px_rgba(103,232,249,0.82),inset_0_0_16px_rgba(103,232,249,0.4)]" />
+              <div className="absolute left-3 top-9 hidden h-28 w-6 rounded-full border border-cyan-200/50 bg-cyan-200/10 shadow-[0_0_18px_rgba(103,232,249,0.5)] sm:block">
+                <div className="absolute bottom-2 left-1/2 h-16 w-2.5 -translate-x-1/2 rounded-full bg-cyan-200/85 shadow-[0_0_16px_rgba(103,232,249,0.95)]" />
+                <span className="absolute -right-9 bottom-1 text-[9px] font-black text-white/85">Lv.1</span>
+                <span className="absolute -right-9 bottom-[3.4rem] text-[9px] font-black text-white/85">Lv.2</span>
+                <span className="absolute -right-9 top-0 text-[9px] font-black text-white/85">Lv.3</span>
+              </div>
+              <img
+                src={activeVoltMood.image}
+                alt={`Volt Status: ${activeVoltMood.label}`}
+                className="relative z-10 h-[12.75rem] w-[12.75rem] object-contain drop-shadow-[0_18px_24px_rgba(0,30,120,0.24)] transition-all duration-700"
+              />
+            </div>
+
+            <div className="relative z-10 flex flex-col justify-between px-3 py-4">
+              <div>
+                <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/90 backdrop-blur">
+                  {activeVoltMood.label}
+                </p>
+                <h2 className="text-[1.38rem] font-black leading-tight tracking-tight">
+                  {activeVoltMood.title}
+                </h2>
+                <p className="mt-2 line-clamp-3 text-sm font-medium leading-snug text-white/90">
+                  {activeVoltMood.copy}
+                </p>
+              </div>
+              <div className="mt-2 flex justify-center">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_8px_rgba(255,255,255,0.12),0_0_24px_rgba(34,211,238,0.3)]">
                   <div
-                    className={`flex h-12 w-full items-center justify-center rounded-2xl border ${
-                      showWeeklyBadge
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : isActive
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : isToday
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-black/8 bg-[#f3f5f8] text-black/25"
-                    } ${isToday ? "ring-2 ring-primary/35 ring-offset-2 ring-offset-white" : ""}`}
-                  >
-                    {showWeeklyBadge ? (
-                      <Crown className="h-5 w-5 fill-current" />
-                    ) : showStreakStar ? (
-                      <Star className="h-5 w-5 fill-current" />
-                    ) : isActive ? (
-                      <Check className="h-5 w-5 stroke-[3]" />
-                    ) : null}
-                  </div>
-                  <div className="flex min-h-[16px] items-center gap-1 text-[11px] font-bold text-foreground/55">
-                    {dayBlitze > 0 ? (
-                      <>
-                        <span>{dayBlitze}</span>
-                        <Zap className="h-3 w-3 fill-warning text-warning" />
-                      </>
-                    ) : (
-                      <span>•</span>
-                    )}
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background: `conic-gradient(rgb(103 232 249) 0% ${dailyProgressPercent}%, rgba(255,255,255,0.18) ${dailyProgressPercent}% 100%)`,
+                    }}
+                  />
+                  <div className="relative flex h-[3.9rem] w-[3.9rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+                    <p className="text-[1.35rem] font-black leading-none">{dailyProgressPercent}%</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-white/86">Ziel</p>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-5 grid grid-cols-3 overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_16px_34px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+          <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-4 text-center">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+              <Footprints className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 max-w-full">
+              <p className="text-[1.05rem] font-black leading-none text-foreground">{Number(todayResult?.steps || 0).toLocaleString("de-DE")}</p>
+              <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Schritte</p>
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-col items-center justify-center gap-2 border-x border-black/6 px-2 py-4 text-center">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+              <Activity className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 max-w-full">
+              <p className="text-[1.05rem] font-black leading-none text-foreground">{estimatedMovementMinutes} <span className="text-[0.75rem]">Min</span></p>
+              <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Bewegung</p>
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-4 text-center">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+              <Flame className="h-5 w-5 fill-orange-500" />
+            </div>
+            <div className="min-w-0 max-w-full">
+              <p className="text-[1.05rem] font-black leading-none text-foreground">{weeklyCompleted} <span className="text-[0.75rem]">Tage</span></p>
+              <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Streaks</p>
+            </div>
           </div>
         </div>
         <div className="mb-3 flex items-center justify-between">

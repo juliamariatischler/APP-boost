@@ -67,11 +67,6 @@ export class HealthService {
       return false;
     }
 
-    const available = await this.provider.isAvailable();
-    if (!available) {
-      return false;
-    }
-
     return this.provider.requestAuthorization();
   }
 

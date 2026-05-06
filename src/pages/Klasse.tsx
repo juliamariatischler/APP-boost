@@ -192,9 +192,9 @@ const Klasse = () => {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-[28px] border border-primary/25 bg-[radial-gradient(circle_at_23%_32%,rgba(6,113,255,0.95)_0%,rgba(8,153,255,0.88)_36%,rgba(24,207,229,0.52)_53%,rgba(213,255,232,0.62)_69%,rgba(255,255,255,0.92)_100%)] text-foreground shadow-[0_20px_42px_rgba(31,224,102,0.14),0_10px_24px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.82)]">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(0,93,255,0.14)_0%,rgba(22,183,241,0.18)_42%,rgba(255,255,255,0.56)_67%,rgba(255,255,255,0.9)_100%)]" />
-            <div className="pointer-events-none absolute right-[-3rem] top-[-4rem] h-64 w-64 rounded-full bg-primary/14 blur-3xl" />
+          <div className="relative overflow-hidden rounded-[28px] border border-sky-300/45 bg-[radial-gradient(circle_at_23%_32%,rgba(6,113,255,0.95)_0%,rgba(8,153,255,0.88)_36%,rgba(24,207,229,0.58)_55%,rgba(185,235,255,0.64)_72%,rgba(245,252,255,0.94)_100%)] text-foreground shadow-[0_20px_42px_rgba(14,165,233,0.16),0_10px_24px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.82)]">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(0,93,255,0.14)_0%,rgba(22,183,241,0.2)_42%,rgba(125,211,252,0.4)_68%,rgba(240,249,255,0.88)_100%)]" />
+            <div className="pointer-events-none absolute right-[-3rem] top-[-4rem] h-64 w-64 rounded-full bg-sky-300/28 blur-3xl" />
             <div className="grid grid-cols-[minmax(0,1fr)_140px]">
               <div className="relative flex min-h-[14.5rem] items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.4)_0_2px,transparent_3px),radial-gradient(circle_at_18%_28%,rgba(255,255,255,0.5)_0_1px,transparent_2px),radial-gradient(circle_at_65%_42%,rgba(255,255,255,0.28)_0_1px,transparent_2px)]" />
@@ -210,11 +210,11 @@ const Klasse = () => {
               </div>
 
               <div className="relative flex flex-col items-center justify-center px-2 py-4">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.68)_0%,rgba(255,255,255,0.42)_48%,transparent_78%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(224,242,254,0.82)_0%,rgba(186,230,253,0.46)_50%,transparent_78%)]" />
                 <div
-                  className="relative flex h-28 w-28 items-center justify-center rounded-full shadow-[0_14px_30px_rgba(31,224,102,0.2),inset_0_2px_0_rgba(255,255,255,0.7)]"
+                  className="relative flex h-28 w-28 items-center justify-center rounded-full shadow-[0_14px_30px_rgba(14,165,233,0.22),inset_0_2px_0_rgba(255,255,255,0.7)]"
                   style={{
-                    background: `conic-gradient(hsl(var(--primary)) 0% ${classQuestPercent}%, rgba(31,224,102,0.18) ${classQuestPercent}% 100%)`,
+                    background: `conic-gradient(rgb(14 165 233) 0% ${classQuestPercent}%, rgba(186,230,253,0.5) ${classQuestPercent}% 100%)`,
                   }}
                 >
                   <div className="flex h-[78px] w-[78px] flex-col items-center justify-center rounded-full bg-white text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
