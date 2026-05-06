@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, Settings2, ShieldCheck, Zap } from "lucide-react";
+import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, Scale, Settings2, ShieldCheck, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import {
   AlertDialog,
@@ -397,6 +397,21 @@ const Profil = () => {
                 <div>
                   <p className="font-medium text-foreground">BOOST-System</p>
                   <p className="text-sm text-muted-foreground">Blitze, Streaks und Klassenlogik</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/legal")}
+              className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
+            >
+              <div className="flex items-center gap-3">
+                <Scale className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Rechtliches</p>
+                  <p className="text-sm text-muted-foreground">Impressum, Datenschutz und Nutzungsbedingungen</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />

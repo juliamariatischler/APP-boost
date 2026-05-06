@@ -93,6 +93,12 @@ const ChallengeDetail = () => {
   };
 
   const challenge = id ? challengeData[id] : null;
+  const headerReward =
+    id === "tryit"
+      ? BOOST_POINT_RULES.tryItCompleted
+      : id === "friend"
+      ? BOOST_POINT_RULES.friendQuestCompleted
+      : BOOST_POINT_RULES.weeklyChallengeCompleted;
 
   if (!challenge) {
     return (
@@ -111,21 +117,45 @@ const ChallengeDetail = () => {
         {id === "daily" && userId ? (
           <DailyChallengeContent userId={userId} />
         ) : (
-          <Card className="overflow-hidden border border-black/5 bg-card p-6 shadow-card">
-            <h1 className="mb-4 text-center text-3xl font-black text-foreground">
-              {challenge.title}
-            </h1>
+          <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_24%_32%,rgba(249,115,22,0.92)_0%,rgba(245,158,11,0.82)_42%,rgba(34,211,238,0.34)_60%,rgba(220,252,231,0.68)_78%,rgba(255,255,255,0.94)_100%)]">
+              <div className="grid grid-cols-[minmax(0,1fr)_136px]">
+                <div className="relative min-h-[13.5rem] overflow-hidden">
+                  <img
+                    src={challenge.image}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover opacity-72 mix-blend-multiply"
+                  />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_36%_28%,rgba(255,255,255,0.35)_0%,transparent_34%),linear-gradient(90deg,rgba(124,45,18,0.18)_0%,rgba(255,255,255,0.08)_70%,rgba(255,255,255,0.62)_100%)]" />
+                  <div className="absolute left-5 top-5 rounded-full bg-white/22 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
+                    {id === "tryit" ? "Neu" : "Quest"}
+                  </div>
+                  <div className="absolute bottom-5 left-5 right-6">
+                    <h1 className="text-[2rem] font-black leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.24)]">
+                      {challenge.title}
+                    </h1>
+                    <p className="mt-2 max-w-[13.5rem] text-sm font-semibold leading-snug text-white/88">
+                      {challenge.description}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="mb-6 overflow-hidden rounded-[28px]">
-              <img
-                src={challenge.image}
-                alt={challenge.title}
-                className="h-auto w-full"
-              />
+                <div className="relative flex flex-col items-center justify-center px-2 py-4">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.42)_50%,transparent_80%)]" />
+                  <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(31,224,102,0.22),inset_0_2px_0_rgba(255,255,255,0.36)]">
+                    {id === "tryit" ? <MapPin className="h-10 w-10" /> : <Sparkles className="h-10 w-10" />}
+                  </div>
+                  <p className="relative mt-3 flex items-center gap-1 text-xs font-black text-foreground/70">
+                    +{headerReward}
+                    <Zap className="h-3.5 w-3.5 fill-warning text-warning" />
+                  </p>
+                </div>
+              </div>
             </div>
 
             {id === "weekly" && (
-              <div className="mb-8">
+              <div className="p-5">
                 <div className="mx-auto mb-6 max-w-xl rounded-[24px] bg-[#f7f9f3] p-5 text-center">
                   <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-black text-primary">
                     <Zap className="h-4 w-4 fill-current" />
@@ -201,12 +231,14 @@ const ChallengeDetail = () => {
             )}
 
             {id !== "weekly" && (
-              <p className="mb-8 text-center text-lg text-muted-foreground">
-                {challenge.description}
-              </p>
+              <div className="bg-white/66 px-5 py-4 backdrop-blur-[2px]" />
             )}
 
-            {id === "tryit" && <TrialSessionsList />}
+            {id === "tryit" && (
+              <div className="px-5 pb-5">
+                <TrialSessionsList />
+              </div>
+            )}
           </Card>
         )}
       </div>

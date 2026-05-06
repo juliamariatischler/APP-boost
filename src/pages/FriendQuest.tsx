@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Swords, Users, Ticket } from 'lucide-react';
+import { UserPlus, Swords, Users, Ticket, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -241,28 +241,56 @@ const FriendQuest = () => {
     <div className="min-h-screen bg-background pb-nav-safe">
       <TopHeader />
 
-      {/* Content */}
-      <div className="max-w-screen-xl mx-auto px-4 pb-8">
-        <Card className="p-6 bg-card shadow-card">
-          <h1 className="text-3xl font-bold mb-4 text-center text-foreground flex items-center justify-center gap-3">
-            <Swords className="h-8 w-8" />
-            Friendquest Challenge
-          </h1>
+      <div className="mx-auto max-w-screen-xl px-4 pb-8">
+        <div className="space-y-5">
+          <div className="relative overflow-hidden rounded-[28px] border border-primary/25 bg-[radial-gradient(circle_at_24%_32%,rgba(139,92,246,0.92)_0%,rgba(14,165,233,0.82)_42%,rgba(34,211,238,0.42)_60%,rgba(220,252,231,0.66)_78%,rgba(255,255,255,0.94)_100%)] text-foreground shadow-[0_20px_42px_rgba(31,224,102,0.14),0_10px_24px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.82)]">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(104deg,rgba(88,28,135,0.16)_0%,rgba(14,165,233,0.2)_45%,rgba(255,255,255,0.58)_69%,rgba(255,255,255,0.9)_100%)]" />
+            <div className="grid grid-cols-[minmax(0,1fr)_140px]">
+              <div className="relative min-h-[13.5rem] overflow-hidden">
+                <img
+                  src={friendImg}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-cover opacity-75 mix-blend-multiply"
+                />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.36)_0%,transparent_34%),linear-gradient(90deg,rgba(21,28,93,0.18)_0%,rgba(255,255,255,0.1)_72%,rgba(255,255,255,0.6)_100%)]" />
+                <div className="absolute left-5 top-5 rounded-full bg-white/18 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
+                  Team
+                </div>
+                <div className="absolute bottom-5 left-5 right-6">
+                  <h1 className="text-[2rem] font-black leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.26)]">
+                    Friendquest
+                  </h1>
+                  <p className="mt-2 max-w-[13rem] text-sm font-semibold leading-snug text-white/86">
+                    Freund:innen herausfordern und gemeinsam Blitze sammeln.
+                  </p>
+                </div>
+              </div>
 
-          <div className="mb-6 rounded-lg overflow-hidden">
-            <img
-              src={friendImg}
-              alt="Friendquest Challenge"
-              className="w-full h-auto"
-            />
+              <div className="relative flex flex-col items-center justify-center px-2 py-4">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.42)_50%,transparent_80%)]" />
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(31,224,102,0.22),inset_0_2px_0_rgba(255,255,255,0.36)]">
+                  <Swords className="h-10 w-10" />
+                </div>
+                <p className="relative mt-3 flex items-center gap-1 text-xs font-black text-foreground/70">
+                  Battle starten
+                  <Zap className="h-3.5 w-3.5 fill-warning text-warning" />
+                </p>
+              </div>
+            </div>
+
+            <div className="relative flex items-center gap-2 overflow-x-auto bg-white/66 px-5 py-4 backdrop-blur-[2px]">
+              {["Erstellen", "Beitreten", "Meine"].map((label) => (
+                <span key={label} className="shrink-0 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-black text-foreground shadow-[0_8px_16px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.5)]">
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <p className="text-lg text-muted-foreground mb-8 text-center">
-            Fordere deine Freunde heraus und habt zusammen Spaß an der Bewegung!
-          </p>
-
+          <Card className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-4 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
           <Tabs defaultValue="create" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid h-auto w-full grid-cols-3 rounded-[18px] bg-muted/60 p-1">
               <TabsTrigger value="create">
                 <UserPlus className="h-4 w-4 mr-1" />
                 Erstellen
@@ -383,7 +411,8 @@ const FriendQuest = () => {
               <ChallengeInvitationsList userId={userId} onStartChallenge={handleStartBattle} />
             </TabsContent>
           </Tabs>
-        </Card>
+          </Card>
+        </div>
       </div>
 
       <BottomNav />

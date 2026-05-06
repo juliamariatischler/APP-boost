@@ -30,6 +30,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Rewards = lazy(() => import("./pages/Rewards"));
 const Activity = lazy(() => import("./pages/Activity"));
 const Boost = lazy(() => import("./pages/Boost"));
+const Legal = lazy(() => import("./pages/Legal"));
 const Settings = lazy(() => import("./pages/Settings"));
 const FriendQuest = lazy(() => import("./pages/FriendQuest"));
 const WeeklyAthleteChallenge = lazy(() => import("./pages/WeeklyAthleteChallenge"));
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="/rewards" element={<Rewards />} />
                 <Route path="/activity" element={<Activity />} />
                 <Route path="/boost" element={<Boost />} />
+                <Route path="/legal" element={<Legal />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/challenge/friend" element={<FriendQuest />} />
                 <Route path="/challenge/weekly/athlete" element={<WeeklyAthleteChallenge />} />

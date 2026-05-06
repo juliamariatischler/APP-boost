@@ -283,20 +283,24 @@ const TrialSessionsList = () => {
     <div className="space-y-6">
       <GrazSportsGallery />
 
-      <Card className="overflow-hidden border-0 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-400 text-white shadow-lg">
-        <div className="p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Try It</p>
-          <h2 className="mt-2 text-2xl font-bold">Ein System, klar differenziert</h2>
-          <p className="mt-3 max-w-3xl text-sm text-white/90">
-            Try It bleibt ein gemeinsames Erlebnis. Die Differenzierung passiert über Vereine, Verbandsbranding
-            und Bildwirkung. Probetrainings bringen {POINTS_PROBETRAINING} Blitze, Kurse {POINTS_KURS} Blitze.
-          </p>
+      <Card className="overflow-hidden rounded-[24px] border border-primary/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(240,253,244,0.9)_54%,rgba(255,247,237,0.82)_100%)] text-foreground shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Try It</p>
+              <h2 className="mt-2 text-2xl font-black leading-none">Sportarten testen</h2>
+              <p className="mt-3 max-w-3xl text-sm font-medium leading-snug text-foreground/65">
+                Probetrainings, Highlights und Vereine in deiner Nähe. Jede Anmeldung bringt Blitze.
+              </p>
+            </div>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_24px_rgba(31,224,102,0.18)]">
+              <MapPin className="h-5 w-5" />
+            </div>
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining</Badge>
-            <Badge className="bg-white/20 text-white hover:bg-white/20">Highlight-Erlebnis</Badge>
-            <Badge className="bg-white/20 text-white hover:bg-white/20">Vereinsbranding</Badge>
-          <Badge className="bg-white/20 text-white hover:bg-white/20">Probetraining: {POINTS_PROBETRAINING}⚡</Badge>
-            <Badge className="bg-white/20 text-white hover:bg-white/20">Kurs: {POINTS_KURS}⚡</Badge>
+            <Badge className="rounded-full bg-white/78 text-foreground hover:bg-white/78">Probetraining: {POINTS_PROBETRAINING}⚡</Badge>
+            <Badge className="rounded-full bg-white/78 text-foreground hover:bg-white/78">Kurs: {POINTS_KURS}⚡</Badge>
+            <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">In deiner Nähe</Badge>
           </div>
         </div>
       </Card>
@@ -305,26 +309,29 @@ const TrialSessionsList = () => {
         <Button
           variant={activeFilter === "all" ? "default" : "outline"}
           onClick={() => setActiveFilter("all")}
+          className="rounded-full"
         >
           Alle
         </Button>
         <Button
           variant={activeFilter === "probetraining" ? "default" : "outline"}
           onClick={() => setActiveFilter("probetraining")}
+          className="rounded-full"
         >
           Probetraining
         </Button>
         <Button
           variant={activeFilter === "highlight" ? "default" : "outline"}
           onClick={() => setActiveFilter("highlight")}
+          className="rounded-full"
         >
           Highlight-Erlebnis
         </Button>
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Weitere verfügbare Schnuppertermine</h2>
-        <Badge variant="secondary" className="flex items-center gap-1">
+        <h2 className="text-xl font-black leading-tight text-foreground">Schnuppertermine</h2>
+        <Badge variant="secondary" className="flex items-center gap-1 rounded-full">
           <Zap className="h-3 w-3 text-yellow-500" />
           {POINTS_PROBETRAINING}–{POINTS_KURS} ⚡
         </Badge>
@@ -343,21 +350,22 @@ const TrialSessionsList = () => {
         const experienceLabel = getExperienceLabel(session);
 
         return (
-          <Card key={session.id} className="overflow-hidden bg-card p-0">
-            <div className="relative border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-6 py-5 text-white">
+          <Card key={session.id} className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <div className="relative bg-[linear-gradient(135deg,#0f172a_0%,#164e63_52%,#f0fdf4_100%)] px-5 py-5 text-white">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.22)_0%,transparent_32%)]" />
               <div className="absolute bottom-4 right-4">
-                <Badge className={`${association.className} shadow-sm`}>
+                <Badge className={`${association.className} rounded-full shadow-sm`}>
                   {association.label}
                 </Badge>
               </div>
-              <div className="pr-28">
+              <div className="relative pr-28">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">{experienceLabel}</p>
-                <h3 className="mt-1 text-2xl font-bold">{session.title}</h3>
+                <h3 className="mt-1 text-2xl font-black leading-tight">{session.title}</h3>
                 <p className="mt-1 text-sm text-white/80">{clubName}</p>
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-5">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Club Info */}
               <div className="flex-shrink-0">
@@ -365,10 +373,10 @@ const TrialSessionsList = () => {
                   <img 
                     src={club.logo_url} 
                     alt={clubName}
-                    className="w-20 h-20 rounded-lg object-cover"
+                    className="h-20 w-20 rounded-[20px] object-cover shadow-[0_12px_24px_rgba(0,0,0,0.08)]"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-[20px] bg-primary/10 shadow-[0_12px_24px_rgba(0,0,0,0.08)]">
                     <span className="text-2xl font-bold text-primary">
                       {clubInitial}
                     </span>
@@ -383,13 +391,13 @@ const TrialSessionsList = () => {
                     <p className="text-primary font-medium">{clubName}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="text-sm">
+                    <Badge variant="secondary" className="rounded-full text-sm">
                       {clubSportType}
                     </Badge>
-                    <Badge variant="outline" className="text-sm">
+                    <Badge variant="outline" className="rounded-full text-sm">
                       {experienceLabel}
                     </Badge>
-                    <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                    <Badge className="rounded-full bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
                       +{pointsReward} Blitze
                     </Badge>
                   </div>
@@ -399,7 +407,7 @@ const TrialSessionsList = () => {
                   <p className="text-muted-foreground">{session.description}</p>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div className="flex items-center gap-2 text-foreground">
                     <Calendar className="h-4 w-4 text-primary" />
                     <span>{formatSessionDate(session.date)}</span>
@@ -445,7 +453,7 @@ const TrialSessionsList = () => {
                 )}
 
                 {/* Club Contact - Only show contact buttons, not raw data */}
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground pt-2 border-t">
+                <div className="flex flex-wrap gap-4 border-t pt-2 text-sm text-muted-foreground">
                   {club?.contact_email && (
                     <a 
                       href={`mailto:${club.contact_email}`}
@@ -508,7 +516,7 @@ const TrialSessionsList = () => {
                     <Button
                       onClick={() => handleRegister(session.id)}
                       disabled={isFull || registering === session.id}
-                      className="min-w-[120px]"
+                      className="min-w-[120px] rounded-full"
                     >
                       {registering === session.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
