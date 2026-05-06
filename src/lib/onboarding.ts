@@ -1,6 +1,6 @@
 export type OnboardingRole = "student" | "teacher";
 
-const ONBOARDING_VERSION = "v1";
+const ONBOARDING_VERSION = "v2";
 
 export const ONBOARDING_OPEN_EVENT = "open-onboarding";
 

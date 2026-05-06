@@ -1,4 +1,4 @@
-import { Health } from '@awesome-cordova-plugins/health';
+import { callCordovaHealth } from '../cordovaHealth';
 import { getHealthPlatformContext } from '../platform';
 import type { HealthProvider } from '../types';
 
@@ -24,7 +24,7 @@ export class IOSHealthProvider implements HealthProvider {
   async isAvailable(): Promise<boolean> {
     if (!this.isSupported()) return false;
     try {
-      return await Health.isAvailable();
+      return await callCordovaHealth<boolean>('isAvailable');
     } catch (error) {
       console.error('iOS HealthKit availability check failed:', error);
       return false;
@@ -35,7 +35,7 @@ export class IOSHealthProvider implements HealthProvider {
     if (!this.isSupported()) return false;
 
     try {
-      await (Health as any).requestAuthorization({ read: ['steps'], write: [] });
+      await callCordovaHealth('requestAuthorization', { read: ['steps'], write: [] });
       return true;
     } catch (error) {
       console.error('iOS HealthKit authorization failed:', error);
@@ -50,20 +50,22 @@ export class IOSHealthProvider implements HealthProvider {
     today.setHours(0, 0, 0, 0);
     const now = new Date();
     try {
-      const aggregated = await Health.queryAggregated({
+      const aggregated = await callCordovaHealth('queryAggregated', {
         startDate: today,
         endDate: now,
         dataType: 'steps',
       });
+      console.log('iOS HealthKit aggregated steps result:', aggregated);
       const aggregatedSteps = normalizeSteps(aggregated);
       if (aggregatedSteps > 0) return aggregatedSteps;
 
-      const result = await Health.query({
+      const result = await callCordovaHealth('query', {
         startDate: today,
         endDate: now,
         dataType: 'steps',
         limit: 1000,
       });
+      console.log('iOS HealthKit raw steps result:', result);
       return normalizeSteps(result);
     } catch (error) {
       console.error('iOS HealthKit step query failed:', error);

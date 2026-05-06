@@ -137,9 +137,24 @@ const Settings = () => {
             )}
           </div>
 
+          <div className="mb-4 rounded-2xl bg-muted/40 p-3 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-3">
+              <span>Plattform</span>
+              <span className="font-medium text-foreground">{HealthService.getPlatformLabel()}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <span>Quelle</span>
+              <span className="font-medium text-foreground">{healthSourceLabel}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <span>Native Health</span>
+              <span className="font-medium text-foreground">{isHealthSupported ? "unterstuetzt" : "nicht unterstuetzt"}</span>
+            </div>
+          </div>
+
           <Button
             onClick={handleConnectHealthData}
-            disabled={connectingHealth || !isHealthSupported || (!checkingHealth && !healthAvailable)}
+            disabled={connectingHealth || !isHealthSupported}
             className="w-full"
           >
             {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}

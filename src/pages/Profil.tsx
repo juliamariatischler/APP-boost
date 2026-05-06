@@ -29,6 +29,12 @@ interface ProfileData {
   username: string;
 }
 
+type HealthSyncInfo = {
+  steps: number;
+  syncedAt: string | null;
+  active: boolean;
+};
+
 const Profil = () => {
   const INITIAL_VISIBLE_AVATAR_ITEMS = 3;
   const navigate = useNavigate();
@@ -36,6 +42,7 @@ const Profil = () => {
   const [loading, setLoading] = useState(true);
   const [checkingHealth, setCheckingHealth] = useState(true);
   const [healthAvailable, setHealthAvailable] = useState(false);
+  const [healthSyncInfo, setHealthSyncInfo] = useState<HealthSyncInfo | null>(null);
   const [connectingHealth, setConnectingHealth] = useState(false);
   const [userId, setUserId] = useState("");
   const [weeklyBlitze, setWeeklyBlitze] = useState(0);
@@ -67,7 +74,10 @@ const Profil = () => {
           HealthService.isAvailable().catch(() => false),
         ]);
 
-        await loadWeeklyBlitze(session.user.id);
+        await Promise.all([
+          loadWeeklyBlitze(session.user.id),
+          loadTodayHealthSyncInfo(session.user.id),
+        ]);
 
         if (profileData) {
           setProfile(profileData);
@@ -127,6 +137,52 @@ const Profil = () => {
     setWeeklyBlitze(total);
   };
 
+  const loadTodayHealthSyncInfo = async (uid: string) => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const { data } = await supabase
+      .from("daily_results")
+      .select("steps, steps_tracking_active, updated_at")
+      .eq("user_id", uid)
+      .eq("date", today)
+      .maybeSingle();
+
+    if (!data) {
+      setHealthSyncInfo(null);
+      return;
+    }
+
+    setHealthSyncInfo({
+      steps: Number(data.steps || 0),
+      syncedAt: data.updated_at ? format(new Date(data.updated_at), "HH:mm") : null,
+      active: !!data.steps_tracking_active,
+    });
+  };
+
+  const syncTodayHealthSteps = async (uid: string) => {
+    const steps = await HealthService.getTodaySteps();
+    const today = format(new Date(), "yyyy-MM-dd");
+    const now = new Date().toISOString();
+
+    await supabase
+      .from("daily_results")
+      .upsert(
+        {
+          user_id: uid,
+          date: today,
+          steps,
+          steps_tracking_active: true,
+          updated_at: now,
+        },
+        { onConflict: "user_id,date" }
+      );
+
+    setHealthSyncInfo({
+      steps,
+      syncedAt: format(new Date(now), "HH:mm"),
+      active: true,
+    });
+  };
+
   const weeklyItemUnlocked = weeklyBlitze >= WEEKLY_AVATAR_ITEM_THRESHOLD;
   const selectedItemIndex = AVATAR_ITEM_LIST.findIndex((item) => item.id === equippedAvatarItem);
   const visibleAvatarItems = showAllAvatarItems
@@ -158,6 +214,9 @@ const Profil = () => {
 
     if (connected) {
       setHealthAvailable(true);
+      if (userId) {
+        await syncTodayHealthSteps(userId);
+      }
       toast.success(`${HealthService.getHealthSourceLabel()} verbunden.`);
       return;
     }
@@ -431,6 +490,30 @@ const Profil = () => {
               <span className="text-sm font-medium text-muted-foreground">
                 {checkingHealth ? "Wird geprüft..." : healthAvailable ? "Verbunden" : "Nicht verbunden"}
               </span>
+            </div>
+            <div className="mt-3 rounded-2xl bg-muted/40 p-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between gap-3">
+                <span>Plattform</span>
+                <span className="font-medium text-foreground">{HealthService.getPlatformLabel()}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <span>Quelle</span>
+                <span className="font-medium text-foreground">{HealthService.getHealthSourceLabel()}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <span>Native Health</span>
+                <span className="font-medium text-foreground">
+                  {HealthService.isHealthPlatformSupported() ? "unterstuetzt" : "nicht unterstuetzt"}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <span>Letzter Sync</span>
+                <span className="font-medium text-foreground">
+                  {healthSyncInfo?.active && healthSyncInfo.syncedAt
+                    ? `${healthSyncInfo.steps.toLocaleString("de-DE")} Schritte, ${healthSyncInfo.syncedAt}`
+                    : "noch nicht synchronisiert"}
+                </span>
+              </div>
             </div>
             <Button className="mt-4 w-full rounded-2xl" onClick={handleConnectHealthData} disabled={connectingHealth}>
               {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}

@@ -30,6 +30,7 @@ type WeeklyResult = {
   sit_ups: number | null;
   steps: number | null;
   steps_tracking_active?: boolean | null;
+  updated_at?: string | null;
 };
 
 const STEP_TASK_REWARD = 5;
@@ -135,9 +136,34 @@ const Dashboard = () => {
     };
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId || !HealthService.isHealthPlatformSupported()) return;
+
+    const refreshHealthSteps = () => {
+      void loadWeeklyProgress(userId);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshHealthSteps();
+      }
+    };
+
+    window.addEventListener("focus", refreshHealthSteps);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    const interval = window.setInterval(refreshHealthSteps, 30000);
+
+    return () => {
+      window.removeEventListener("focus", refreshHealthSteps);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, [userId]);
+
   const getDayProgressPercent = (day?: WeeklyResult) => {
     if (!day) return 0;
 
+    const steps = day.steps_tracking_active ? Number(day.steps || 0) : 0;
     const completedExerciseCount = countCompletedDailyExercises({
       jumping_jacks: day.jumping_jacks || 0,
       push_ups: day.push_ups || 0,
@@ -145,7 +171,7 @@ const Dashboard = () => {
       planks: day.planks || 0,
       sit_ups: day.sit_ups || 0,
     });
-    const completedTaskCount = (Number(day.steps || 0) >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
+    const completedTaskCount = (steps >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
     const taskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
 
     return Math.min(100, Math.round((completedTaskCount / taskCount) * 100));
@@ -226,6 +252,10 @@ const Dashboard = () => {
   const calendarWeek = getISOWeek(today);
   const todayKey = format(today, "yyyy-MM-dd");
   const todayResult = weeklyData.find((day) => day.date === todayKey);
+  const todaySteps = todayResult?.steps_tracking_active ? Number(todayResult.steps || 0) : 0;
+  const todayStepsSyncedAt = todayResult?.steps_tracking_active && todayResult.updated_at
+    ? format(new Date(todayResult.updated_at), "HH:mm")
+    : null;
   const completedExerciseCount = todayResult
     ? countCompletedDailyExercises({
         jumping_jacks: todayResult.jumping_jacks || 0,
@@ -236,7 +266,7 @@ const Dashboard = () => {
       })
     : 0;
   const dailyProgressPercent = getDayProgressPercent(todayResult);
-  const estimatedMovementMinutes = Math.max(0, Math.round(((todayResult?.steps || 0) / 1000) * 4 + completedExerciseCount * 3));
+  const estimatedMovementMinutes = Math.max(0, Math.round((todaySteps / 1000) * 4 + completedExerciseCount * 3));
   const voltMoods = [
     {
       key: "inaktiv",
@@ -284,7 +314,7 @@ const Dashboard = () => {
     {
       key: "steps",
       title: "Schritte",
-      progress: Number(todayResult?.steps || 0),
+      progress: todaySteps,
       goal: DAILY_STEP_GOAL,
       unit: "Schritte",
       reward: STEP_TASK_REWARD,
@@ -469,7 +499,7 @@ const Dashboard = () => {
               <Footprints className="h-5 w-5" />
             </div>
             <div className="min-w-0 max-w-full">
-              <p className="text-[1.05rem] font-black leading-none text-foreground">{Number(todayResult?.steps || 0).toLocaleString("de-DE")}</p>
+              <p className="text-[1.05rem] font-black leading-none text-foreground">{todaySteps.toLocaleString("de-DE")}</p>
               <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Schritte</p>
             </div>
           </div>
@@ -492,6 +522,11 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        <p className="mb-5 text-center text-[11px] font-semibold text-muted-foreground">
+          {todayStepsSyncedAt
+            ? `Apple Health zuletzt synchronisiert: ${todaySteps.toLocaleString("de-DE")} Schritte um ${todayStepsSyncedAt}`
+            : "Apple Health noch nicht synchronisiert"}
+        </p>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-black leading-none text-foreground">Heutige Aufgaben</h2>
           <button

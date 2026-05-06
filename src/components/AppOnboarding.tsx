@@ -22,7 +22,7 @@ type Slide = {
 const STUDENT_SLIDES: Slide[] = [
   {
     title: "Willkommen bei BOOST",
-    text: "Bewege dich, sammle Blitze und hab Spass mit deiner Klasse.",
+    text: "Bewege dich, sammle Blitze und hab Spaß mit deiner Klasse.",
     icon: Sparkles,
     accentClass: "bg-amber-300 text-amber-950",
     panelClass: "from-[#fff8cf] via-[#fff3d4] to-[#eefad0]",
@@ -34,7 +34,7 @@ const STUDENT_SLIDES: Slide[] = [
     icon: Home,
     accentClass: "bg-emerald-300 text-emerald-950",
     panelClass: "from-[#eefce9] via-[#f7fff5] to-[#dff7f0]",
-    points: ["Balken fuellen", "Tagesziele schaffen", "Blitze sammeln"],
+    points: ["Balken füllen", "Tagesziele schaffen", "Blitze sammeln"],
   },
   {
     title: "Quests und Klasse",
@@ -61,11 +61,11 @@ const TEACHER_SLIDES: Slide[] = [
     icon: Sparkles,
     accentClass: "bg-amber-300 text-amber-950",
     panelClass: "from-[#fff7d1] via-[#fff2d8] to-[#edf9d8]",
-    points: ["Schneller Start", "Klare Uebersicht", "Motivierendes System"],
+    points: ["Schneller Start", "Klare Übersicht", "Motivierendes System"],
   },
   {
-    title: "Home und Aktivitaet",
-    text: "Auf Home sehen Sie direkt, was heute passiert und wie aktiv die Woche laeuft.",
+    title: "Home und Aktivität",
+    text: "Auf Home sehen Sie direkt, was heute passiert und wie aktiv die Woche läuft.",
     icon: Home,
     accentClass: "bg-emerald-300 text-emerald-950",
     panelClass: "from-[#edfce7] via-[#f8fff5] to-[#def6f2]",
@@ -81,11 +81,11 @@ const TEACHER_SLIDES: Slide[] = [
   },
   {
     title: "Profil und Einstellungen",
-    text: "Hier finden Sie Punkte, Rewards und spaeter auch diese Einfuehrung wieder.",
+    text: "Hier finden Sie Punkte, Rewards und später auch diese Einführung wieder.",
     icon: User,
     accentClass: "bg-fuchsia-300 text-fuchsia-950",
     panelClass: "from-[#fff0fb] via-[#fff8fe] to-[#f5edff]",
-    points: ["Profil ansehen", "Belohnungen oeffnen", "Onboarding erneut starten"],
+    points: ["Profil ansehen", "Belohnungen öffnen", "Onboarding erneut starten"],
   },
 ];
 
@@ -178,7 +178,7 @@ const AppOnboarding = () => {
             type="button"
             onClick={closeOnboarding}
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-foreground shadow-[0_10px_20px_rgba(0,0,0,0.08)]"
-            aria-label="Onboarding schliessen"
+            aria-label="Onboarding schließen"
           >
             <X className="h-5 w-5" />
           </button>
@@ -186,7 +186,7 @@ const AppOnboarding = () => {
           <div className="pt-2">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-foreground/75">
-                {manualOpen ? "App-Erklaerung" : "Neu in BOOST"}
+                {manualOpen ? "App-Erklärung" : "Neu in BOOST"}
               </div>
               <div className="text-sm font-black text-foreground/70">
                 {currentIndex + 1}/{slides.length}
@@ -235,7 +235,7 @@ const AppOnboarding = () => {
                 onClick={closeOnboarding}
                 className="flex-1 rounded-[20px] bg-white/85 px-4 py-3 text-sm font-black text-foreground shadow-[0_12px_22px_rgba(0,0,0,0.06)]"
               >
-                Ueberspringen
+                Überspringen
               </button>
               <button
                 type="button"

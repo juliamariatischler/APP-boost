@@ -1,4 +1,4 @@
-import { Health } from '@awesome-cordova-plugins/health';
+import { callCordovaHealth } from '../cordovaHealth';
 import { getHealthPlatformContext } from '../platform';
 import type { HealthProvider } from '../types';
 
@@ -25,7 +25,7 @@ export class AndroidHealthProvider implements HealthProvider {
     if (!this.isSupported()) return false;
 
     try {
-      return await Health.isAvailable();
+      return await callCordovaHealth<boolean>('isAvailable');
     } catch (error) {
       console.error('Android health availability check failed:', error);
       return false;
@@ -36,12 +36,7 @@ export class AndroidHealthProvider implements HealthProvider {
     if (!this.isSupported()) return false;
 
     try {
-      await Health.requestAuthorization([
-        {
-          read: ['steps'],
-          write: []
-        }
-      ]);
+      await callCordovaHealth('requestAuthorization', { read: ['steps'], write: [] });
       return true;
     } catch (error) {
       console.error('Android health authorization failed:', error);
@@ -57,7 +52,7 @@ export class AndroidHealthProvider implements HealthProvider {
     const now = new Date();
 
     try {
-      const result = await Health.query({
+      const result = await callCordovaHealth('query', {
         startDate: today,
         endDate: now,
         dataType: 'steps',
