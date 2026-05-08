@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, Scale, Settings2, ShieldCheck, Zap } from "lucide-react";
+import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, MessageSquare, Scale, Send, Settings2, ShieldCheck, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import {
   AlertDialog,
@@ -15,7 +15,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { HealthService } from "@/services/healthService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -49,6 +58,9 @@ const Profil = () => {
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
   const [showAllAvatarItems, setShowAllAvatarItems] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [sendingFeedback, setSendingFeedback] = useState(false);
   const settingsSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -267,6 +279,36 @@ const Profil = () => {
     settingsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const handleSubmitFeedback = async () => {
+    const message = feedbackMessage.trim();
+
+    if (message.length < 3) {
+      toast.error("Bitte schreibe kurz, worum es geht.");
+      return;
+    }
+
+    setSendingFeedback(true);
+    try {
+      const { error } = await (supabase.from as any)("feedback_submissions").insert({
+        user_id: userId,
+        message,
+        page: "profile",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      });
+
+      if (error) throw error;
+
+      setFeedbackMessage("");
+      setFeedbackOpen(false);
+      toast.success("Feedback gespeichert. Danke!");
+    } catch (error) {
+      console.error("Feedback submission failed:", error);
+      toast.error("Feedback konnte nicht gespeichert werden.");
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
+
   if (loading || !profile) {
     return (
       <div className="min-h-screen bg-background pb-nav-safe">
@@ -448,6 +490,21 @@ const Profil = () => {
 
             <button
               type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
+            >
+              <div className="flex items-center gap-3">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Feedback</p>
+                  <p className="text-sm text-muted-foreground">Idee, Problem oder Wunsch senden</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => navigate("/boost")}
               className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
             >
@@ -571,6 +628,47 @@ const Profil = () => {
           </Card>
         </div>
       </div>
+
+      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">
+          <DialogHeader>
+            <DialogTitle>Feedback senden</DialogTitle>
+            <DialogDescription>
+              Schreib kurz, was verbessert werden soll oder wo etwas nicht passt.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={feedbackMessage}
+            onChange={(event) => setFeedbackMessage(event.target.value)}
+            placeholder="Dein Feedback..."
+            className="min-h-32 resize-none rounded-2xl"
+            maxLength={1000}
+          />
+          <div className="text-right text-xs text-muted-foreground">
+            {feedbackMessage.trim().length}/1000
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-2xl"
+              onClick={() => setFeedbackOpen(false)}
+              disabled={sendingFeedback}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              className="rounded-2xl"
+              onClick={() => void handleSubmitFeedback()}
+              disabled={sendingFeedback || feedbackMessage.trim().length < 3}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {sendingFeedback ? "Sendet..." : "Senden"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

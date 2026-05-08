@@ -31,7 +31,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Die App benötigt Camera für die Kontrolle der Ausführung</string>
+	<string>BOOST benötigt die Kamera zum Scannen von QR-Codes und zur Bewegungserkennung bei Übungen.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>BOOST liest deine Schrittzahl aus Apple Health, um deinen täglichen Fortschritt zu berechnen.</string>
 	<key>NSHealthUpdateUsageDescription</key>

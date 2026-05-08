@@ -88,7 +88,7 @@ export default function CodeLogin() {
           ? `Hallo ${session.display_name}, bereit für deine nächste Challenge?`
           : `Willkommen, ${session.display_name}!`
       );
-      navigate(session.user_type === "student" ? "/student-home" : "/teacher-home");
+      navigate(session.user_type === "student" ? "/dashboard" : "/teacher-home");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
       toast.error(msg);

@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   type CodeSession,
+  activateWithQrCode,
   loginWithCode,
   validateSession,
   logout,
@@ -17,6 +18,7 @@ interface CodeAuthContextValue {
   session: CodeSession | null;
   loading: boolean;
   login: (code: string) => Promise<CodeSession>;
+  activate: (code: string) => Promise<CodeSession>;
   signOut: () => Promise<void>;
 }
 
@@ -39,13 +41,19 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
     return s;
   }, []);
 
+  const activate = useCallback(async (code: string): Promise<CodeSession> => {
+    const s = await activateWithQrCode(code);
+    setSession(s);
+    return s;
+  }, []);
+
   const signOut = useCallback(async () => {
     if (session) await logout(session);
     setSession(null);
   }, [session]);
 
   return (
-    <CodeAuthContext.Provider value={{ session, loading, login, signOut }}>
+    <CodeAuthContext.Provider value={{ session, loading, login, activate, signOut }}>
       {children}
     </CodeAuthContext.Provider>
   );

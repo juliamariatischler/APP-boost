@@ -10,16 +10,13 @@ import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import AppOnboarding from "@/components/AppOnboarding";
 
-if (Capacitor.isNativePlatform()) {
-  StatusBar.setOverlaysWebView({ overlay: true });
-  StatusBar.setStyle({ style: Style.Dark });
-}
-
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const CodeLogin = lazy(() => import("./pages/CodeLogin"));
+const Activate = lazy(() => import("./pages/Activate"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
 const TeacherHome = lazy(() => import("./pages/TeacherHome"));
+const TeacherManagement = lazy(() => import("./pages/TeacherManagement"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Quests = lazy(() => import("./pages/Quests"));
 const ClassQuest = lazy(() => import("./pages/ClassQuest"));
@@ -45,6 +42,25 @@ const RouteFallback = () => (
     <p className="text-sm text-muted-foreground">Lade Seite...</p>
   </div>
 );
+
+const NativeChrome = () => {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const configureStatusBar = async () => {
+      try {
+        await StatusBar.setOverlaysWebView({ overlay: true });
+        await StatusBar.setStyle({ style: Style.Dark });
+      } catch (error) {
+        console.warn("StatusBar configuration skipped:", error);
+      }
+    };
+
+    void configureStatusBar();
+  }, []);
+
+  return null;
+};
 
 // Global listener to catch PASSWORD_RECOVERY and redirect
 const RecoveryRedirect = ({ children }: { children: React.ReactNode }) => {
@@ -79,13 +95,16 @@ const App = () => (
       <BrowserRouter>
         <CodeAuthProvider>
           <RecoveryRedirect>
+            <NativeChrome />
             <AppOnboarding />
             <Suspense fallback={<RouteFallback />}>
               <Routes>
                 {/* Code-based login routes */}
                 <Route path="/login" element={<CodeLogin />} />
+                <Route path="/activate" element={<Activate />} />
                 <Route path="/student-home" element={<StudentHome />} />
                 <Route path="/teacher-home" element={<TeacherHome />} />
+                <Route path="/teacher-management" element={<TeacherManagement />} />
                 {/* Legacy email/password routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />

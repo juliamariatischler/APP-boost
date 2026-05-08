@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentAppRole, routeForRole } from "@/lib/roles";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -11,7 +12,13 @@ const Index = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      navigate(session ? "/dashboard" : "/auth", { replace: true });
+      if (!session) {
+        navigate("/auth", { replace: true });
+        return;
+      }
+
+      const role = await getCurrentAppRole();
+      navigate(routeForRole(role), { replace: true });
     };
 
     void resolveEntry();

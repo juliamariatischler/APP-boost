@@ -15,6 +15,21 @@ const readEnv = (key: RequiredEnvKey): string => {
   return value.trim();
 };
 
+const readOptionalUrl = (key: string, fallback: string): string => {
+  const rawValue = import.meta.env[key];
+  const value = typeof rawValue === "string" && rawValue.trim().length > 0 ? rawValue.trim() : fallback;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") {
+      throw new Error();
+    }
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    throw new Error(`Invalid ${key}: expected an HTTPS URL`);
+  }
+};
+
 const readSupabaseUrl = (): string => {
   const value = readEnv("VITE_SUPABASE_URL");
   let url: URL;
@@ -36,4 +51,5 @@ const readSupabaseUrl = (): string => {
 export const env = {
   supabaseUrl: readSupabaseUrl(),
   supabasePublishableKey: readEnv("VITE_SUPABASE_PUBLISHABLE_KEY"),
+  publicAppUrl: readOptionalUrl("VITE_PUBLIC_APP_URL", "https://www.boostschule.at"),
 };

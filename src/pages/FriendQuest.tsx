@@ -1,27 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Swords, Users, Ticket, Zap } from 'lucide-react';
+import {
+  Check,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Link,
+  Play,
+  RefreshCw,
+  Send,
+  Share2,
+  Swords,
+  Ticket,
+  Users,
+  X,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { FriendSearch } from '@/components/FriendSearch';
 import { ChallengeSelector } from '@/components/ChallengeSelector';
-import { InviteCodeDisplay } from '@/components/InviteCodeDisplay';
-import { ChallengeInvitationsList } from '@/components/ChallengeInvitationsList';
 import { LiveBattle } from '@/components/LiveBattle';
 import { TopHeader } from '@/components/TopHeader';
 import { BottomNav } from '@/components/BottomNav';
-import friendImg from '@/assets/challenge-friend.jpg';
-
-interface Profile {
-  id: string;
-  username: string;
-  school: string;
-  class: string;
-}
+import friendImg from '@/assets/quest-friend-emoji.png';
 
 interface Challenge {
   id: string;
@@ -30,6 +36,42 @@ interface Challenge {
   icon: string;
   winner_points: number;
   loser_points: number;
+}
+
+interface FriendquestInvite {
+  id: string;
+  creator_user_id: string;
+  invited_user_id: string | null;
+  status: string;
+  expires_at: string;
+  created_at: string;
+  accepted_at: string | null;
+  challenge_id: string | null;
+  challenge_name: string | null;
+  creator_name: string;
+  invited_name: string | null;
+}
+
+interface Friendquest {
+  id: string;
+  user_a_id: string;
+  user_b_id: string;
+  friend_name: string;
+  status: string;
+  selected_challenge_id: string | null;
+  challenge_name: string | null;
+  challenge_icon: string | null;
+  winner_points: number | null;
+  loser_points: number | null;
+  challenge_invitation_id: string | null;
+  created_at: string;
+}
+
+interface CreatedInvite {
+  invite_id: string;
+  invite_code: string;
+  expires_at: string;
+  challenge_name: string | null;
 }
 
 interface ActiveBattle {
@@ -45,21 +87,33 @@ interface ActiveBattle {
   opponentName: string;
 }
 
+const GENERIC_CODE_ERROR = 'Der Code ist leider ungültig oder abgelaufen.';
+
 const FriendQuest = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
-  const [username, setUsername] = useState<string>('');
-  const [selectedFriend, setSelectedFriend] = useState<Profile | null>(null);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [challengeForStart, setChallengeForStart] = useState<Record<string, Challenge | null>>({});
+  const [createdInvite, setCreatedInvite] = useState<CreatedInvite | null>(null);
   const [joinCode, setJoinCode] = useState('');
+  const [joinStatus, setJoinStatus] = useState<string | null>(null);
+  const [invites, setInvites] = useState<FriendquestInvite[]>([]);
+  const [friendquests, setFriendquests] = useState<Friendquest[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isLoadingMine, setIsLoadingMine] = useState(false);
+  const [busyInviteId, setBusyInviteId] = useState<string | null>(null);
+  const [busyFriendquestId, setBusyFriendquestId] = useState<string | null>(null);
   const [activeBattle, setActiveBattle] = useState<ActiveBattle | null>(null);
 
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    void loadMine();
+  }, [userId]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -68,161 +122,221 @@ const FriendQuest = () => {
       return;
     }
     setUserId(session.user.id);
-    
-    // Load username
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    
-    if (profile) {
-      setUsername(profile.username);
+  };
+
+  const loadMine = async () => {
+    setIsLoadingMine(true);
+    try {
+      const [{ data: inviteData, error: inviteError }, { data: questData, error: questError }] = await Promise.all([
+        (supabase.rpc as any)('get_my_friendquest_invites'),
+        (supabase.rpc as any)('get_my_friendquests'),
+      ]);
+
+      if (inviteError) throw inviteError;
+      if (questError) throw questError;
+
+      setInvites((inviteData || []) as FriendquestInvite[]);
+      setFriendquests((questData || []) as Friendquest[]);
+    } catch (error) {
+      console.error('Friendquest load failed:', error);
+      toast.error('Friendquests konnten nicht geladen werden.');
+    } finally {
+      setIsLoadingMine(false);
     }
   };
 
-  const handleStartBattle = async (invitation: any) => {
-    // Load challenge and profile data
-    const challengeData = invitation.challenge;
-    const isChallenger = invitation.challenger_id === userId;
-    
-    setActiveBattle({
-      invitationId: invitation.id,
-      challengeData: {
-        name: challengeData.name,
-        icon: challengeData.icon,
-        winner_points: challengeData.winner_points,
-        loser_points: challengeData.loser_points,
-      },
-      isChallenger,
-      challengerName: invitation.challenger_profile?.username || 'Spieler 1',
-      opponentName: invitation.opponent_profile?.username || 'Spieler 2',
-    });
-  };
-
-  const generateInviteCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return code;
-  };
-
-  const handleCreateChallenge = async () => {
-    if (!selectedChallenge || !userId) {
-      toast.error('Bitte wähle eine Challenge aus');
-      return;
-    }
-
+  const handleCreateInvite = async () => {
     setIsCreating(true);
     try {
-      const code = generateInviteCode();
-      
-      // Create with a placeholder opponent_id (will be updated when someone joins)
-      const { error } = await supabase
-        .from('challenge_invitations')
-        .insert({
-          challenge_id: selectedChallenge.id,
-          challenger_id: userId,
-          opponent_id: userId, // Temporary, will be updated
-          invite_code: code,
-          status: 'pending',
-        });
+      const { data, error } = await (supabase.rpc as any)('create_friendquest_invite', {
+        p_challenge_id: selectedChallenge?.id ?? null,
+      });
 
       if (error) throw error;
-      
-      setInviteCode(code);
-      toast.success('Challenge erstellt! 🎉');
+
+      const invite = Array.isArray(data) ? data[0] : data;
+      setCreatedInvite(invite as CreatedInvite);
+      toast.success('Einladungscode erstellt!');
+      await loadMine();
     } catch (error) {
-      console.error('Error creating challenge:', error);
-      toast.error('Fehler beim Erstellen');
+      console.error('Create friendquest invite failed:', error);
+      toast.error('Einladung konnte nicht erstellt werden.');
     } finally {
       setIsCreating(false);
     }
   };
 
-  const handleCreateDirectChallenge = async () => {
-    if (!selectedFriend || !selectedChallenge || !userId) {
-      toast.error('Bitte wähle einen Freund und eine Challenge aus');
-      return;
-    }
+  const handleCopyCode = async () => {
+    if (!createdInvite?.invite_code) return;
 
-    setIsCreating(true);
     try {
-      const { error } = await supabase
-        .from('challenge_invitations')
-        .insert({
-          challenge_id: selectedChallenge.id,
-          challenger_id: userId,
-          opponent_id: selectedFriend.id,
-          status: 'pending',
-        });
-
-      if (error) throw error;
-      
-      toast.success(`Challenge an ${selectedFriend.username} gesendet! 🎉`);
-      setSelectedFriend(null);
-      setSelectedChallenge(null);
-    } catch (error) {
-      console.error('Error creating challenge:', error);
-      toast.error('Fehler beim Erstellen');
-    } finally {
-      setIsCreating(false);
+      await navigator.clipboard.writeText(createdInvite.invite_code);
+      toast.success('Code kopiert!');
+    } catch {
+      toast.error('Code konnte nicht kopiert werden.');
     }
   };
 
-  const handleJoinChallenge = async () => {
-    if (!joinCode.trim() || !userId) {
-      toast.error('Bitte gib einen Code ein');
+  const handleShareCode = async () => {
+    if (!createdInvite?.invite_code) return;
+
+    const text = `Teile diesen BOOST-Code mit deiner Freundin: ${createdInvite.invite_code}. Danach bestätigst du die Anfrage in der App.`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'BOOST Friendquest', text });
+        return;
+      } catch {
+        return;
+      }
+    }
+
+    await handleCopyCode();
+  };
+
+  const handleRedeemCode = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (code.length < 8) {
+      toast.error('Bitte gib den Einladungscode ein.');
       return;
     }
 
     setIsJoining(true);
+    setJoinStatus(null);
+
     try {
-      // Find the invitation
-      const { data: invitation, error: findError } = await supabase
-        .from('challenge_invitations')
-        .select('*')
-        .eq('invite_code', joinCode.toUpperCase())
-        .eq('status', 'pending')
-        .maybeSingle();
+      const { error } = await (supabase.rpc as any)('redeem_friendquest_invite', {
+        p_code: code,
+      });
 
-      if (findError) throw findError;
-      if (!invitation) {
-        toast.error('Ungültiger oder bereits verwendeter Code');
+      if (error) throw error;
+
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result || result.status !== 'awaiting_creator_confirmation') {
+        toast.error(GENERIC_CODE_ERROR);
         return;
       }
 
-      if (invitation.challenger_id === userId) {
-        toast.error('Du kannst nicht deiner eigenen Challenge beitreten');
-        return;
-      }
-
-      // Update the invitation with the opponent
-      const { error: updateError } = await supabase
-        .from('challenge_invitations')
-        .update({
-          opponent_id: userId,
-          status: 'accepted',
-        })
-        .eq('id', invitation.id);
-
-      if (updateError) throw updateError;
-
-      toast.success('Challenge beigetreten! 🎉');
       setJoinCode('');
+      setJoinStatus('Anfrage gesendet. Warte auf Bestätigung.');
+      toast.success('Anfrage gesendet!');
+      await loadMine();
     } catch (error) {
-      console.error('Error joining challenge:', error);
-      toast.error('Fehler beim Beitreten');
+      console.error('Redeem friendquest invite failed');
+      toast.error(GENERIC_CODE_ERROR);
     } finally {
       setIsJoining(false);
     }
   };
 
+  const handleConfirmInvite = async (inviteId: string) => {
+    setBusyInviteId(inviteId);
+    try {
+      const { error } = await (supabase.rpc as any)('confirm_friendquest_invite', {
+        p_invite_id: inviteId,
+      });
+
+      if (error) throw error;
+
+      toast.success('Bestätigt! Ihr könnt loslegen.');
+      await loadMine();
+    } catch (error) {
+      console.error('Confirm friendquest invite failed:', error);
+      toast.error('Die Anfrage konnte nicht bestätigt werden.');
+    } finally {
+      setBusyInviteId(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    setBusyInviteId(inviteId);
+    try {
+      const { error } = await (supabase.rpc as any)('decline_friendquest_invite', {
+        p_invite_id: inviteId,
+      });
+
+      if (error) throw error;
+
+      toast.success('Anfrage abgelehnt.');
+      await loadMine();
+    } catch (error) {
+      console.error('Decline friendquest invite failed:', error);
+      toast.error('Die Anfrage konnte nicht abgelehnt werden.');
+    } finally {
+      setBusyInviteId(null);
+    }
+  };
+
+  const handleStartFriendquest = async (friendquest: Friendquest) => {
+    if (friendquest.challenge_invitation_id && friendquest.challenge_name && friendquest.challenge_icon) {
+      setActiveBattle({
+        invitationId: friendquest.challenge_invitation_id,
+        challengeData: {
+          name: friendquest.challenge_name,
+          icon: friendquest.challenge_icon,
+          winner_points: friendquest.winner_points || 50,
+          loser_points: friendquest.loser_points || 20,
+        },
+        isChallenger: true,
+        challengerName: 'Du',
+        opponentName: friendquest.friend_name,
+      });
+      return;
+    }
+
+    const challenge = challengeForStart[friendquest.id];
+    if (!challenge) {
+      toast.error('Bitte wähle zuerst eine Challenge aus.');
+      return;
+    }
+
+    setBusyFriendquestId(friendquest.id);
+    try {
+      const { data, error } = await (supabase.rpc as any)('start_friendquest_challenge', {
+        p_friendquest_id: friendquest.id,
+        p_challenge_id: challenge.id,
+      });
+
+      if (error) throw error;
+
+      setActiveBattle({
+        invitationId: data as string,
+        challengeData: {
+          name: challenge.name,
+          icon: challenge.icon,
+          winner_points: challenge.winner_points,
+          loser_points: challenge.loser_points,
+        },
+        isChallenger: true,
+        challengerName: 'Du',
+        opponentName: friendquest.friend_name,
+      });
+      await loadMine();
+    } catch (error) {
+      console.error('Start friendquest challenge failed:', error);
+      toast.error('Challenge konnte nicht gestartet werden.');
+    } finally {
+      setBusyFriendquestId(null);
+    }
+  };
+
+  const pendingOutgoing = useMemo(
+    () => invites.filter((invite) => invite.creator_user_id === userId && invite.status === 'pending'),
+    [invites, userId],
+  );
+
+  const incomingRequests = useMemo(
+    () => invites.filter((invite) => invite.creator_user_id === userId && invite.status === 'awaiting_creator_confirmation'),
+    [invites, userId],
+  );
+
+  const sentRequests = useMemo(
+    () => invites.filter((invite) => invite.invited_user_id === userId && invite.status === 'awaiting_creator_confirmation'),
+    [invites, userId],
+  );
+
   if (!userId) return null;
 
-  // Show Live Battle if active
   if (activeBattle) {
     return (
       <LiveBattle
@@ -232,7 +346,10 @@ const FriendQuest = () => {
         isChallenger={activeBattle.isChallenger}
         challengerName={activeBattle.challengerName}
         opponentName={activeBattle.opponentName}
-        onClose={() => setActiveBattle(null)}
+        onClose={() => {
+          setActiveBattle(null);
+          void loadMine();
+        }}
       />
     );
   }
@@ -262,7 +379,7 @@ const FriendQuest = () => {
                     Friendquest
                   </h1>
                   <p className="mt-2 max-w-[13rem] text-sm font-semibold leading-snug text-white/86">
-                    Freund:innen herausfordern und gemeinsam Blitze sammeln.
+                    Code teilen, Anfrage bestätigen und gemeinsam starten.
                   </p>
                 </div>
               </div>
@@ -273,14 +390,14 @@ const FriendQuest = () => {
                   <Swords className="h-10 w-10" />
                 </div>
                 <p className="relative mt-3 flex items-center gap-1 text-xs font-black text-foreground/70">
-                  Battle starten
+                  Sicher einladen
                   <Zap className="h-3.5 w-3.5 fill-warning text-warning" />
                 </p>
               </div>
             </div>
 
             <div className="relative flex items-center gap-2 overflow-x-auto bg-white/66 px-5 py-4 backdrop-blur-[2px]">
-              {["Erstellen", "Beitreten", "Meine"].map((label) => (
+              {['Erstellen', 'Beitreten', 'Meine'].map((label) => (
                 <span key={label} className="shrink-0 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-black text-foreground shadow-[0_8px_16px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.5)]">
                   {label}
                 </span>
@@ -289,128 +406,259 @@ const FriendQuest = () => {
           </div>
 
           <Card className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-4 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-          <Tabs defaultValue="create" className="w-full">
-            <TabsList className="grid h-auto w-full grid-cols-3 rounded-[18px] bg-muted/60 p-1">
-              <TabsTrigger value="create">
-                <UserPlus className="h-4 w-4 mr-1" />
-                Erstellen
-              </TabsTrigger>
-              <TabsTrigger value="join">
-                <Ticket className="h-4 w-4 mr-1" />
-                Beitreten
-              </TabsTrigger>
-              <TabsTrigger value="challenges">
-                <Users className="h-4 w-4 mr-1" />
-                Meine
-              </TabsTrigger>
-            </TabsList>
+            <Tabs defaultValue="create" className="w-full">
+              <TabsList className="grid h-auto w-full grid-cols-3 rounded-[18px] bg-muted/60 p-1">
+                <TabsTrigger value="create">
+                  <Link className="h-4 w-4 mr-1" />
+                  Erstellen
+                </TabsTrigger>
+                <TabsTrigger value="join">
+                  <Ticket className="h-4 w-4 mr-1" />
+                  Beitreten
+                </TabsTrigger>
+                <TabsTrigger value="mine">
+                  <Users className="h-4 w-4 mr-1" />
+                  Meine
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Create Challenge Tab */}
-            <TabsContent value="create" className="space-y-6 mt-4">
-              {inviteCode ? (
-                <>
-                  <InviteCodeDisplay 
-                    inviteCode={inviteCode} 
-                    challengeName={selectedChallenge?.name || ''} 
-                  />
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => {
-                      setInviteCode(null);
-                      setSelectedChallenge(null);
-                    }}
-                  >
-                    Neue Challenge erstellen
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <h3 className="font-semibold mb-3 text-foreground">1. Freund suchen (optional)</h3>
-                    <FriendSearch 
-                      currentUserId={userId} 
-                      onFriendSelect={setSelectedFriend} 
-                    />
-                    {selectedFriend && (
-                      <Card className="p-3 mt-3 bg-primary/10 border-primary/20">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-foreground">{selectedFriend.username}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedFriend.school} • Klasse {selectedFriend.class}
-                            </p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => setSelectedFriend(null)}
-                          >
-                            ✕
-                          </Button>
-                        </div>
-                      </Card>
+              <TabsContent value="create" className="space-y-5 mt-4">
+                {createdInvite ? (
+                  <Card className="overflow-hidden rounded-[22px] border-primary/25 bg-primary/5 p-5 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Ticket className="h-6 w-6" />
+                    </div>
+                    <h3 className="mt-3 text-lg font-black text-foreground">Teile diesen Code</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Deine Freundin gibt den Code bei sich ein. Danach bestätigst du die Anfrage.
+                    </p>
+                    <div className="mt-4 rounded-2xl bg-white px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                      <p className="font-mono text-3xl font-black tracking-[0.22em] text-primary">
+                        {createdInvite.invite_code}
+                      </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      Gültig bis {new Date(createdInvite.expires_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    {createdInvite.challenge_name && (
+                      <Badge className="mt-3" variant="secondary">
+                        {createdInvite.challenge_name}
+                      </Badge>
                     )}
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-3 text-foreground">2. Challenge auswählen</h3>
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      <Button onClick={handleCopyCode} variant="outline">
+                        <Copy className="mr-2 h-4 w-4" />
+                        Kopieren
+                      </Button>
+                      <Button onClick={handleShareCode}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Teilen
+                      </Button>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="mt-3 w-full"
+                      onClick={() => {
+                        setCreatedInvite(null);
+                        setSelectedChallenge(null);
+                      }}
+                    >
+                      Neue Einladung
+                    </Button>
+                  </Card>
+                ) : (
+                  <>
+                    <Card className="rounded-[22px] bg-muted/25 p-4">
+                      <h3 className="font-black text-foreground">Challenge optional auswählen</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Du kannst auch erst den Code teilen und die Challenge später starten.
+                      </p>
+                    </Card>
                     <ChallengeSelector
                       selectedChallenge={selectedChallenge}
                       onChallengeSelect={setSelectedChallenge}
                     />
-                  </div>
-
-                  {selectedFriend ? (
                     <Button
-                      onClick={handleCreateDirectChallenge}
-                      disabled={!selectedChallenge || isCreating}
+                      onClick={handleCreateInvite}
+                      disabled={isCreating}
                       className="w-full"
                       size="lg"
                     >
-                      {isCreating ? 'Wird gesendet...' : `${selectedFriend.username} herausfordern 💪`}
+                      {isCreating ? 'Code wird erstellt...' : 'Einladungscode erstellen'}
+                      <Send className="ml-2 h-4 w-4" />
                     </Button>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="join" className="space-y-4 mt-4">
+                <Card className="rounded-[22px] bg-muted/30 p-6">
+                  <h3 className="font-black text-center text-foreground">Code eingeben</h3>
+                  <p className="mx-auto mt-1 max-w-xs text-center text-sm text-muted-foreground">
+                    Gib den Code ein. Die andere Person bestätigt danach deine Anfrage.
+                  </p>
+                  <Input
+                    placeholder="Z.B. A1B2C3D4"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                    className="mt-4 text-center text-2xl tracking-widest font-bold"
+                    maxLength={24}
+                    autoCapitalize="characters"
+                  />
+                  <Button
+                    onClick={handleRedeemCode}
+                    disabled={joinCode.length < 8 || isJoining}
+                    className="w-full mt-4"
+                    size="lg"
+                  >
+                    {isJoining ? 'Anfrage wird gesendet...' : 'Anfrage senden'}
+                  </Button>
+                </Card>
+                {joinStatus && (
+                  <Card className="flex items-center gap-3 rounded-[20px] border-primary/20 bg-primary/5 p-4 text-sm font-semibold text-foreground">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    {joinStatus}
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value="mine" className="space-y-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black text-foreground">Meine Friendquests</h3>
+                  <Button variant="ghost" size="sm" onClick={() => void loadMine()} disabled={isLoadingMine}>
+                    <RefreshCw className={`h-4 w-4 ${isLoadingMine ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+
+                {incomingRequests.length > 0 && (
+                  <section className="space-y-3">
+                    <p className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Anfragen</p>
+                    {incomingRequests.map((invite) => (
+                      <Card key={invite.id} className="rounded-[22px] border-primary/20 bg-primary/5 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black text-foreground">Anfrage von {invite.invited_name || 'einem Freund'}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Möchte deiner Friendquest beitreten.
+                            </p>
+                            {invite.challenge_name && (
+                              <Badge variant="secondary" className="mt-2">{invite.challenge_name}</Badge>
+                            )}
+                          </div>
+                          <Clock className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={() => void handleConfirmInvite(invite.id)}
+                            disabled={busyInviteId === invite.id}
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Bestätigen
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => void handleDeclineInvite(invite.id)}
+                            disabled={busyInviteId === invite.id}
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Ablehnen
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </section>
+                )}
+
+                {sentRequests.length > 0 && (
+                  <section className="space-y-3">
+                    <p className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Gesendet</p>
+                    {sentRequests.map((invite) => (
+                      <Card key={invite.id} className="flex items-center gap-3 rounded-[20px] p-4">
+                        <Clock className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-semibold text-foreground">Anfrage gesendet</p>
+                          <p className="text-sm text-muted-foreground">
+                            Warte auf {invite.creator_name}.
+                          </p>
+                        </div>
+                      </Card>
+                    ))}
+                  </section>
+                )}
+
+                {pendingOutgoing.length > 0 && (
+                  <section className="space-y-3">
+                    <p className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Offene Codes</p>
+                    {pendingOutgoing.map((invite) => (
+                      <Card key={invite.id} className="rounded-[20px] p-4">
+                        <div className="flex items-center gap-3">
+                          <Ticket className="h-5 w-5 text-primary" />
+                          <div>
+                            <p className="font-semibold text-foreground">Code wartet auf Eingabe</p>
+                            <p className="text-sm text-muted-foreground">
+                              Gültig bis {new Date(invite.expires_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </section>
+                )}
+
+                <section className="space-y-3">
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Aktiv</p>
+                  {friendquests.length === 0 ? (
+                    <Card className="rounded-[22px] p-6 text-center">
+                      <p className="font-semibold text-foreground">Noch keine aktive Friendquest</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Erstelle einen Code oder gib einen Code ein.
+                      </p>
+                    </Card>
                   ) : (
-                    <Button
-                      onClick={handleCreateChallenge}
-                      disabled={!selectedChallenge || isCreating}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isCreating ? 'Wird erstellt...' : 'Einladungscode erstellen 🎯'}
-                    </Button>
+                    friendquests.map((friendquest) => (
+                      <Card key={friendquest.id} className="rounded-[22px] p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black text-foreground">Mit {friendquest.friend_name}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Jetzt könnt ihr gemeinsam eine Challenge starten.
+                            </p>
+                            {friendquest.challenge_name && (
+                              <Badge className="mt-2" variant="secondary">
+                                {friendquest.challenge_icon} {friendquest.challenge_name}
+                              </Badge>
+                            )}
+                          </div>
+                          <Swords className="h-5 w-5 text-primary" />
+                        </div>
+
+                        {!friendquest.challenge_invitation_id && (
+                          <div className="mt-4">
+                            <p className="mb-3 text-sm font-semibold text-foreground">Challenge auswählen</p>
+                            <ChallengeSelector
+                              selectedChallenge={challengeForStart[friendquest.id] || null}
+                              onChallengeSelect={(challenge) => {
+                                setChallengeForStart((prev) => ({ ...prev, [friendquest.id]: challenge }));
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <Button
+                          className="mt-4 w-full"
+                          onClick={() => void handleStartFriendquest(friendquest)}
+                          disabled={busyFriendquestId === friendquest.id}
+                        >
+                          <Play className="mr-2 h-4 w-4 fill-current" />
+                          Battle starten
+                        </Button>
+                      </Card>
+                    ))
                   )}
-                </>
-              )}
-            </TabsContent>
-
-            {/* Join Challenge Tab */}
-            <TabsContent value="join" className="space-y-4 mt-4">
-              <Card className="p-6 bg-muted/30">
-                <h3 className="font-semibold text-center mb-4 text-foreground">Code eingeben</h3>
-                <Input
-                  placeholder="Z.B. ABC123"
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  className="text-center text-2xl tracking-widest font-bold"
-                  maxLength={6}
-                />
-                <Button
-                  onClick={handleJoinChallenge}
-                  disabled={joinCode.length < 6 || isJoining}
-                  className="w-full mt-4"
-                  size="lg"
-                >
-                  {isJoining ? 'Wird geladen...' : 'Challenge beitreten ⚡'}
-                </Button>
-              </Card>
-            </TabsContent>
-
-            {/* My Challenges Tab */}
-            <TabsContent value="challenges" className="mt-4">
-              <ChallengeInvitationsList userId={userId} onStartChallenge={handleStartBattle} />
-            </TabsContent>
-          </Tabs>
+                </section>
+              </TabsContent>
+            </Tabs>
           </Card>
         </div>
       </div>

@@ -1,24 +1,25 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Bell, Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
+import { Bell, Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { endOfWeek, format, getISOWeek, startOfWeek } from "date-fns";
+import { endOfWeek, format, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon, WalkingIcon } from "@/components/ExerciseIcons";
 import { getDemoAwarePoints } from "@/lib/demo";
-import { HealthService } from "@/services/healthService";
-import weeklyImg from "@/assets/challenge-weekly.jpg";
+import { getCurrentAppRole } from "@/lib/roles";
 import voltUnder39Img from "@/assets/volt-under-39.png";
 import volt39To59Img from "@/assets/volt-39-59.png";
 import volt60To79Img from "@/assets/volt-60-79.png";
 import volt80To89Img from "@/assets/volt-80-89.png";
 import volt90PlusImg from "@/assets/volt-90-plus.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { getCurrentWeeklyVideo } from "@/lib/weeklyVideo";
 
 type WeeklyResult = {
   id?: string;
@@ -38,6 +39,7 @@ const STREAK_DAY_THRESHOLD_PERCENT = 90;
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [username, setUsername] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [points, setPoints] = useState(0);
@@ -55,7 +57,34 @@ const Dashboard = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
+          if (codeAuthLoading) return;
+
+          if (codeSession?.user_type === "teacher") {
+            navigate("/teacher-home", { replace: true });
+            return;
+          }
+
+          if (codeSession?.user_type === "student") {
+            setUserId("");
+            setUsername(codeSession.display_name || "Spieler");
+            setPoints(0);
+            setUserSchool(codeSession.school_name || "");
+            setUserClass(codeSession.class_name || "");
+            setIsTeacher(false);
+            setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+            setWeeklyData([]);
+            setWeeklyCompleted(0);
+            setLoading(false);
+            return;
+          }
+
           navigate("/");
+          return;
+        }
+
+        const appRole = await getCurrentAppRole();
+        if (appRole === "teacher") {
+          navigate("/teacher-home", { replace: true });
           return;
         }
 
@@ -106,7 +135,7 @@ const Dashboard = () => {
     };
 
     void checkAuthAndLoadProfile();
-  }, [navigate]);
+  }, [codeAuthLoading, codeSession, navigate]);
 
   useEffect(() => {
     const handlePointsUpdated = (event: Event) => {
@@ -133,30 +162,6 @@ const Dashboard = () => {
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleStorage);
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId || !HealthService.isHealthPlatformSupported()) return;
-
-    const refreshHealthSteps = () => {
-      void loadWeeklyProgress(userId);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refreshHealthSteps();
-      }
-    };
-
-    window.addEventListener("focus", refreshHealthSteps);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    const interval = window.setInterval(refreshHealthSteps, 30000);
-
-    return () => {
-      window.removeEventListener("focus", refreshHealthSteps);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.clearInterval(interval);
     };
   }, [userId]);
 
@@ -195,61 +200,11 @@ const Dashboard = () => {
       setWeeklyData(weeklyData);
       const streakDays = weeklyData.filter(isWeeklyStreakDay).length;
       setWeeklyCompleted(streakDays);
-      void syncTodayHealthSteps(currentUserId, weeklyData);
-    }
-  };
-
-  const syncTodayHealthSteps = async (currentUserId: string, currentWeeklyData: WeeklyResult[]) => {
-    if (!HealthService.isHealthPlatformSupported()) return;
-
-    try {
-      const realSteps = await HealthService.getTodaySteps();
-      const todayDate = format(new Date(), "yyyy-MM-dd");
-      const existingToday = currentWeeklyData.find((day) => day.date === todayDate);
-
-      if (realSteps <= 0 && existingToday?.steps && !existingToday.steps_tracking_active) {
-        return;
-      }
-
-      const payload = {
-        steps: realSteps,
-        steps_tracking_active: true,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (existingToday?.id) {
-        const { error } = await supabase
-          .from("daily_results")
-          .update(payload)
-          .eq("id", existingToday.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("daily_results")
-          .insert({
-            user_id: currentUserId,
-            date: todayDate,
-            ...payload,
-            steps_started_at: new Date().toISOString(),
-          });
-
-        if (error) throw error;
-      }
-
-      const nextWeeklyData = existingToday
-        ? currentWeeklyData.map((day) => (day.date === todayDate ? { ...day, ...payload } : day))
-        : [...currentWeeklyData, { date: todayDate, steps: realSteps, steps_tracking_active: true, jumping_jacks: 0, push_ups: 0, squats: 0, planks: 0, sit_ups: 0 }];
-
-      setWeeklyData(nextWeeklyData);
-      setWeeklyCompleted(nextWeeklyData.filter(isWeeklyStreakDay).length);
-    } catch (error) {
-      console.error("Dashboard health step sync failed:", error);
     }
   };
 
   const today = new Date();
-  const calendarWeek = getISOWeek(today);
+  const currentWeeklyVideo = getCurrentWeeklyVideo(today);
   const todayKey = format(today, "yyyy-MM-dd");
   const todayResult = weeklyData.find((day) => day.date === todayKey);
   const todaySteps = todayResult?.steps_tracking_active ? Number(todayResult.steps || 0) : 0;
@@ -265,8 +220,9 @@ const Dashboard = () => {
         sit_ups: todayResult.sit_ups || 0,
       })
     : 0;
+  const dailyTaskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+  const completedDailyTaskCount = (todaySteps >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
   const dailyProgressPercent = getDayProgressPercent(todayResult);
-  const estimatedMovementMinutes = Math.max(0, Math.round((todaySteps / 1000) * 4 + completedExerciseCount * 3));
   const voltMoods = [
     {
       key: "inaktiv",
@@ -329,6 +285,7 @@ const Dashboard = () => {
       progress: Number(todayResult?.jumping_jacks || 0),
       goal: DAILY_EXERCISE_GOALS.jumping_jacks,
       unit: "Wdh.",
+      counterPath: "/jumping-jacks-counter.html",
       reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <JumpingJacksIcon className="h-5 w-5" />,
       iconClass: "bg-amber-500/15 text-amber-500",
@@ -341,6 +298,7 @@ const Dashboard = () => {
       progress: Number(todayResult?.push_ups || 0),
       goal: DAILY_EXERCISE_GOALS.push_ups,
       unit: "Wdh.",
+      counterPath: "/pushup-counter.html",
       reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <PushUpIcon className="h-5 w-5" />,
       iconClass: "bg-sky-500/15 text-sky-500",
@@ -353,6 +311,7 @@ const Dashboard = () => {
       progress: Number(todayResult?.squats || 0),
       goal: DAILY_EXERCISE_GOALS.squats,
       unit: "Wdh.",
+      counterPath: "/squat-counter.html",
       reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <SquatIcon className="h-5 w-5" />,
       iconClass: "bg-orange-500/15 text-orange-500",
@@ -365,6 +324,7 @@ const Dashboard = () => {
       progress: Number(todayResult?.planks || 0),
       goal: DAILY_EXERCISE_GOALS.planks,
       unit: "Sek.",
+      counterPath: "/plank-timer.html",
       reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <PlankIcon className="h-5 w-5" />,
       iconClass: "bg-cyan-500/15 text-cyan-500",
@@ -377,6 +337,7 @@ const Dashboard = () => {
       progress: Number(todayResult?.sit_ups || 0),
       goal: DAILY_EXERCISE_GOALS.sit_ups,
       unit: "Wdh.",
+      counterPath: "/situp-counter.html",
       reward: BOOST_POINT_RULES.exerciseCompleted,
       icon: <SitUpIcon className="h-5 w-5" />,
       iconClass: "bg-fuchsia-500/15 text-fuchsia-500",
@@ -505,11 +466,11 @@ const Dashboard = () => {
           </div>
           <div className="flex min-w-0 flex-col items-center justify-center gap-2 border-x border-black/6 px-2 py-4 text-center">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-              <Activity className="h-5 w-5" />
+              <Check className="h-5 w-5 stroke-[3]" />
             </div>
             <div className="min-w-0 max-w-full">
-              <p className="text-[1.05rem] font-black leading-none text-foreground">{estimatedMovementMinutes} <span className="text-[0.75rem]">Min</span></p>
-              <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Bewegung</p>
+              <p className="text-[1.05rem] font-black leading-none text-foreground">{completedDailyTaskCount}/{dailyTaskCount}</p>
+              <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Aufgaben erledigt</p>
             </div>
           </div>
           <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-4 text-center">
@@ -555,7 +516,11 @@ const Dashboard = () => {
                 >
                   <button
                     type="button"
-                    onClick={() => navigate("/challenge/daily")}
+                    onClick={() => {
+                      if (task.counterPath) {
+                        window.location.href = task.counterPath;
+                      }
+                    }}
                     className="flex w-full flex-col items-start gap-2 p-3 text-left"
                   >
                     <div className="flex w-full items-start gap-2">
@@ -616,13 +581,20 @@ const Dashboard = () => {
             <div className="overflow-hidden rounded-[24px] border border-white/45 bg-[linear-gradient(135deg,hsl(var(--primary)/0.24)_0%,hsl(var(--primary)/0.5)_100%)] shadow-[0_22px_44px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-3px_0_rgba(0,0,0,0.08)]">
               <div className="relative">
                 <div className="relative aspect-[16/8.5]">
-                  <img
-                    src={weeklyImg}
-                    alt="Wochen-Quest Video"
-                    className="h-full w-full object-cover opacity-15 mix-blend-multiply"
+                  <video
+                    key={currentWeeklyVideo.id}
+                    src={currentWeeklyVideo.videoUrl}
+                    poster={currentWeeklyVideo.image}
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                    aria-label={currentWeeklyVideo.title}
+                    className="h-full w-full object-cover opacity-35 mix-blend-multiply"
                   />
                   <div className="absolute left-3 top-3 rounded-full bg-yellow-400 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-zinc-950">
-                    Neu · KW {calendarWeek}
+                    Neu · {currentWeeklyVideo.weekKey}
                   </div>
                   <div className="absolute right-3 top-3 rounded-lg bg-primary/80 px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
                     So 23:58
@@ -633,16 +605,16 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="absolute bottom-3 right-3 rounded-lg bg-primary/80 px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
-                    2:48
+                    {currentWeeklyVideo.duration}
                   </div>
                 </div>
 
                 <div className="border-t border-black/5 bg-primary/50 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">
                   <p className="text-lg font-black leading-tight text-zinc-950">
-                    "So bleibe ich dran, wenn ich keinen Bock habe."
+                    "{currentWeeklyVideo.quote}"
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-zinc-950">Anna Gasser</p>
-                  <p className="text-xs text-zinc-900/70">Snowboard-Olympiasiegerin</p>
+                  <p className="mt-2 text-sm font-semibold text-zinc-950">{currentWeeklyVideo.speakerName}</p>
+                  <p className="text-xs text-zinc-900/70">{currentWeeklyVideo.speakerLabel}</p>
                 </div>
               </div>
             </div>

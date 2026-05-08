@@ -419,63 +419,80 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-5">
       {/* Overall Status */}
-      <Card className={`p-4 ${isDailyChallengeComplete ? 'bg-primary/10 border-primary' : 'bg-muted/30'}`}>
-        <div className="flex items-center gap-3">
+      <Card className={`overflow-hidden rounded-[30px] border p-0 shadow-[0_18px_38px_rgba(0,0,0,0.10),inset_0_1px_0_rgba(255,255,255,0.78)] ${
+        isDailyChallengeComplete
+          ? "border-primary/20 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] text-white"
+          : "border-black/5 bg-[linear-gradient(135deg,#22c55e_0%,#61d96b_48%,#f7f8e9_100%)] text-white"
+      }`}>
+        <div className="relative overflow-hidden p-5">
+          <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/18" />
+          <div className="absolute right-10 bottom-0 h-20 w-20 rounded-full bg-yellow-300/25" />
           {isDailyChallengeComplete ? (
-            <>
-              <Trophy className="h-8 w-8 text-primary" />
+            <div className="relative flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-white/20 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+                <Trophy className="h-6 w-6" />
+              </div>
               <div>
-                <h2 className="text-lg font-bold text-primary">🎉 Tageschallenge geschafft!</h2>
-                <p className="text-sm text-primary/80">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/75">BOOST Tagesziel</p>
+                <h2 className="mt-1 text-2xl font-black leading-tight text-white">Tageschallenge geschafft!</h2>
+                <p className="mt-1 text-sm font-semibold leading-snug text-white/82">
                   Du hast dein Tagesziel erreicht und dir +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze gesichert.
                 </p>
               </div>
-            </>
+            </div>
           ) : (
-            <>
-              <Circle className="h-8 w-8 text-muted-foreground" />
+            <div className="relative flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-white/20 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+                <Circle className="h-7 w-7" />
+              </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Tageschallenge</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/75">BOOST Tagesziel</p>
+                <h2 className="mt-1 text-2xl font-black leading-tight text-white">Tageschallenge</h2>
+                <p className="mt-1 text-sm font-semibold leading-snug text-white/82">
                   Schließe Übungen ab und knacke dein Tagesziel für +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze.
                 </p>
               </div>
-            </>
+            </div>
           )}
         </div>
       </Card>
 
       {/* PART 1: Steps */}
-      <Card className={`p-5 ${isStepsComplete ? 'border-primary bg-primary/5' : ''}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+      <Card className={`overflow-hidden rounded-[30px] border p-0 shadow-[0_18px_38px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.78)] ${
+        isStepsComplete ? "border-primary/20 bg-[linear-gradient(180deg,#f0fff4_0%,#ffffff_72%)]" : "border-black/5 bg-white"
+      }`}>
+        <div className="p-4 sm:p-5">
+          <div className="mb-5 flex items-start gap-3 sm:gap-4">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] text-base font-black shadow-[0_10px_20px_rgba(31,224,102,0.18)] ${
             isStepsComplete ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
           }`}>
-            {isStepsComplete ? <CheckCircle2 className="h-5 w-5" /> : "1"}
+            {isStepsComplete ? <CheckCircle2 className="h-6 w-6" /> : "1"}
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-foreground">Challenge 1: Gehen</h3>
-            <p className="text-xs text-muted-foreground">Mindestens {DAILY_STEP_GOAL.toLocaleString()} Schritte sammeln</p>
+            <h3 className="text-xl font-black leading-tight text-foreground">Challenge 1: Gehen</h3>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">Mindestens {DAILY_STEP_GOAL.toLocaleString()} Schritte sammeln</p>
           </div>
           {isStepsComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
         </div>
 
         {!stepsActive ? (
-          <Button onClick={activateStepTracking} className="w-full" size="lg">
+          <Button onClick={activateStepTracking} className="h-12 w-full rounded-full font-black" size="lg">
             <Play className="h-5 w-5 mr-2" />
             Schrittzähler starten
           </Button>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
-              <WalkingIcon className="h-12 w-12 text-primary" />
-              <div className="flex-1">
-                <div className={`text-4xl font-bold ${isStepsComplete ? 'text-primary' : 'text-foreground'}`}>
+          <div className="space-y-5">
+            <div className="grid grid-cols-[4rem_minmax(0,1fr)_2.75rem] items-center gap-3 rounded-[26px] bg-[linear-gradient(135deg,#f6f8f3_0%,#eefbf0_100%)] px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] sm:grid-cols-[5rem_minmax(0,1fr)_3rem] sm:gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-white text-primary shadow-[0_10px_24px_rgba(0,0,0,0.06)] sm:h-20 sm:w-20">
+                <WalkingIcon className="h-10 w-10 sm:h-12 sm:w-12" />
+              </div>
+              <div className="min-w-0">
+                <div className={`text-4xl font-black leading-none sm:text-5xl ${isStepsComplete ? 'text-primary' : 'text-foreground'}`}>
                   {steps.toLocaleString()}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="mt-1 text-sm font-semibold text-muted-foreground sm:text-base">
                   von {DAILY_STEP_GOAL.toLocaleString()} Schritten
                 </div>
               </div>
@@ -484,49 +501,54 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
                 size="icon"
                 onClick={fetchSteps}
                 disabled={refreshing}
+                className="h-11 w-11 rounded-full bg-white/80"
+                aria-label="Schritte aktualisieren"
               >
                 <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
-            <Progress value={stepsProgress} className="h-3" />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <Progress value={stepsProgress} className="h-3 rounded-full bg-neutral-200" />
+            <div className="flex justify-between px-0.5 text-sm font-semibold text-muted-foreground">
               <span>{steps.toLocaleString()}</span>
               <span>{DAILY_STEP_GOAL.toLocaleString()}</span>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">Warum Schritte wichtig sind</span>
+            <div className="mt-2 rounded-[24px] border border-black/5 bg-white px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.04)]">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-base font-black text-foreground">Warum Schritte wichtig sind</span>
                 <Zap className={`h-5 w-5 ${isStepsComplete ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/30"}`} />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base font-medium leading-relaxed text-muted-foreground">
                 Die Schritte sind Teil deines Tagesziels. Sobald Schritte und alle Übungen geschafft sind, bekommst du
                 einmalig +{BOOST_POINT_RULES.dailyGoalCompleted} Blitze.
               </p>
             </div>
           </div>
         )}
+        </div>
       </Card>
 
       {/* PART 2: Exercises */}
-      <Card className={`p-5 ${allExercisesComplete ? 'border-primary bg-primary/5' : ''}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+      <Card className={`overflow-hidden rounded-[30px] border p-4 shadow-[0_18px_38px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.78)] sm:p-5 ${
+        allExercisesComplete ? 'border-primary/20 bg-[linear-gradient(180deg,#f0fff4_0%,#ffffff_72%)]' : 'border-black/5 bg-white'
+      }`}>
+        <div className="mb-5 flex items-start gap-3 sm:gap-4">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] text-base font-black shadow-[0_10px_20px_rgba(31,224,102,0.18)] ${
             allExercisesComplete ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
           }`}>
-            {allExercisesComplete ? <CheckCircle2 className="h-5 w-5" /> : "2"}
+            {allExercisesComplete ? <CheckCircle2 className="h-6 w-6" /> : "2"}
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-foreground">Challenge 2: Übungen</h3>
-            <p className="text-xs text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
-            <p className="text-xs text-muted-foreground/80">
+            <h3 className="text-xl font-black leading-tight text-foreground">Challenge 2: Übungen</h3>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
+            <p className="text-xs font-medium text-muted-foreground/80">
               1 Wiederholung bzw. 1 Sekunde Plank = {BOOST_POINT_RULES.repOrSecond} Blitz.
             </p>
           </div>
           {allExercisesComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {exercises.map((exercise) => {
             const isComplete = isExerciseComplete(exercise.name);
             const current = results[exercise.name] || 0;
@@ -535,20 +557,20 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
               <button
                 key={exercise.name}
                 onClick={() => handleExerciseClick(exercise.name)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                className={`flex w-full items-center gap-3 rounded-[18px] border p-3 text-left transition-all ${
                   isComplete 
-                    ? 'bg-primary/10 border border-primary' 
-                    : 'bg-muted/50 hover:bg-muted border border-transparent'
+                    ? 'border-primary/25 bg-primary/10 shadow-[0_8px_20px_rgba(31,224,102,0.1)]' 
+                    : 'border-black/5 bg-[#f7f8f3] hover:bg-[#eefbf0]'
                 }`}
               >
-                <div className={`p-2 rounded-lg ${isComplete ? 'bg-primary/20' : 'bg-background'}`}>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] ${isComplete ? 'bg-primary/20 text-primary' : 'bg-white text-foreground'}`}>
                   {exercise.icon}
                 </div>
                 <div className="flex-1 text-left">
-                  <div className={`font-medium ${isComplete ? 'text-primary' : 'text-foreground'}`}>
+                  <div className={`font-black ${isComplete ? 'text-primary' : 'text-foreground'}`}>
                     {exercise.name}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs font-semibold text-muted-foreground">
                     {current} / {exercise.goal} {exercise.name === "Planks" ? "Sek." : ""}
                   </div>
                 </div>
@@ -568,11 +590,13 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
         </div>
       </Card>
 
-      <Card className="border-primary/20 bg-primary/5 p-5">
+      <Card className="rounded-[30px] border-primary/15 bg-[linear-gradient(135deg,hsl(var(--primary)/0.12)_0%,#ffffff_72%)] p-5 shadow-[0_14px_32px_rgba(0,0,0,0.06)]">
         <div className="flex items-start gap-3">
-          <Zap className="mt-0.5 h-5 w-5 text-primary" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/12 text-primary">
+            <Zap className="h-5 w-5 fill-current" />
+          </div>
           <div className="space-y-2">
-            <h3 className="font-semibold text-foreground">
+            <h3 className="font-black text-foreground">
               Info zu Kraft und Knochen
               {userAge !== null ? ` für ${userAge}-Jährige` : ""}
             </h3>
@@ -588,8 +612,8 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
 
       {/* Native hint */}
       {!isHealthSupported && (
-        <div className="p-3 bg-muted/50 rounded-lg text-center">
-          <p className="text-xs text-muted-foreground">
+        <div className="rounded-[18px] bg-muted/50 p-3 text-center">
+          <p className="text-xs font-medium text-muted-foreground">
             💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Health Connect).
           </p>
         </div>

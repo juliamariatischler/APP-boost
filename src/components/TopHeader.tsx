@@ -136,13 +136,13 @@ export const TopHeader = ({ backTo = "/dashboard" }: TopHeaderProps) => {
 
   if (!profile) {
     return (
-      <div className="bg-card shadow-sm px-4 pb-3 mb-6" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
+      <div className="border-b border-black/5 bg-white/95 px-4 pb-3 shadow-[0_8px_24px_rgba(0,0,0,0.05)] backdrop-blur mb-5" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
         <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
-          <Skeleton className="h-10 w-28 rounded-lg" />
+          <Skeleton className="h-10 w-28 rounded-full" />
           <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-20 rounded-lg" />
-            <Skeleton className="h-12 w-24 rounded-lg" />
-            <Skeleton className="h-9 w-9 rounded-md" />
+            <Skeleton className="h-11 w-24 rounded-full" />
+            <Skeleton className="h-11 w-20 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
           </div>
         </div>
       </div>
@@ -150,35 +150,35 @@ export const TopHeader = ({ backTo = "/dashboard" }: TopHeaderProps) => {
   }
 
   return (
-    <div className="bg-card shadow-sm px-4 pb-3 mb-6" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
-      <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
+    <div className="border-b border-black/5 bg-white/95 px-4 pb-3 shadow-[0_8px_24px_rgba(0,0,0,0.05)] backdrop-blur mb-5" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
+      <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {!isDashboard && (
             <Button
               variant="outline"
               onClick={() => navigate(backTo)}
-              className="h-10 px-3 shrink-0"
+              className="h-10 shrink-0 rounded-full border-black/10 bg-white px-3 text-sm font-bold shadow-[0_8px_20px_rgba(0,0,0,0.04)] sm:h-11 sm:px-4 sm:text-base"
             >
-              <ArrowLeft className="h-5 w-5 mr-1" />
-              Zurück
+              <ArrowLeft className="h-5 w-5" />
+              <span>Zurück</span>
             </Button>
           )}
 
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-lg shrink-0">
-            <Zap className="h-5 w-5 text-primary fill-primary" />
-            <span className="font-bold text-primary">{profile.points}</span>
-            <span className="text-xs font-medium text-primary/80">gesamt</span>
+          <div className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-primary/10 px-3 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:h-11 sm:gap-2 sm:px-4">
+            <Zap className="h-[18px] w-[18px] text-primary fill-primary sm:h-5 sm:w-5" />
+            <span className="text-base font-black text-primary sm:text-lg">{profile.points}</span>
+            <span className="hidden text-xs font-bold text-primary/75 sm:inline">gesamt</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 sm:gap-2">
           {isAdmin && (
             <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
               <Settings className="h-4 w-4 mr-2" />
               Admin
             </Button>
           )}
-          <img src={boostLogo} alt="BOOST Logo" className="h-12 w-auto" />
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <img src={boostLogo} alt="BOOST Logo" className="h-9 w-auto sm:h-11" />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 rounded-full sm:h-10 sm:w-10">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

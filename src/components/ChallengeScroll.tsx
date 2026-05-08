@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
-import friendImg from "@/assets/challenge-friend.jpg";
+import friendImg from "@/assets/quest-friend-emoji.png";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 
@@ -69,7 +69,7 @@ export const ChallengeScroll = () => {
             </p>
             <Card
               className="bg-card shadow-card overflow-hidden cursor-pointer hover:shadow-lg transition-all relative"
-              onClick={() => navigate(`/challenge/${challenge.id}`)}
+              onClick={() => navigate(challenge.id === "daily" ? "/dashboard" : `/challenge/${challenge.id}`)}
             >
               <div className="relative aspect-[4/3]">
                 <img

@@ -191,15 +191,9 @@ export const LiveBattle = ({
   }, [phase]);
 
   const handleReady = async () => {
-    const updateField = isChallenger ? 'challenger_ready' : 'opponent_ready';
-    
-    const { error } = await supabase
-      .from('challenge_invitations')
-      .update({ 
-        [updateField]: true,
-        status: 'in_progress',
-      })
-      .eq('id', invitationId);
+    const { error } = await (supabase.rpc as any)('mark_friendquest_battle_ready', {
+      p_invitation_id: invitationId,
+    });
 
     if (error) {
       toast.error('Fehler beim Bereitwerden');
@@ -210,16 +204,6 @@ export const LiveBattle = ({
   };
 
   const startBattle = async () => {
-    // Only challenger triggers the battle start
-    if (isChallenger) {
-      await supabase
-        .from('challenge_invitations')
-        .update({ 
-          battle_started_at: new Date().toISOString(),
-          status: 'in_progress',
-        })
-        .eq('id', invitationId);
-    }
     startCountdown();
   };
 
@@ -231,13 +215,11 @@ export const LiveBattle = ({
 
   const submitResult = async () => {
     setPhase('submitting');
-    
-    const resultField = isChallenger ? 'challenger_result' : 'opponent_result';
-    
-    const { error } = await supabase
-      .from('challenge_invitations')
-      .update({ [resultField]: myResult })
-      .eq('id', invitationId);
+
+    const { error } = await (supabase.rpc as any)('submit_friendquest_battle_result', {
+      p_invitation_id: invitationId,
+      p_result: myResult,
+    });
 
     if (error) {
       toast.error('Fehler beim Speichern');
@@ -258,30 +240,6 @@ export const LiveBattle = ({
         : data.opponent_result > data.challenger_result 
           ? data.opponent_id 
           : null; // Tie
-
-      await supabase
-        .from('challenge_invitations')
-        .update({ 
-          status: 'completed',
-          winner_id: winner,
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', invitationId);
-
-      // Award points to the current user only (opponent gets points when they view results)
-      if (winner) {
-        const currentUserId = (await supabase.auth.getUser()).data.user?.id;
-        const isWinner = currentUserId === winner;
-        const pointsToAward = isWinner ? challengeData.winner_points : challengeData.loser_points;
-        
-        try {
-          await (supabase.rpc as any)('increment_points', { 
-            points_to_add: pointsToAward 
-          });
-        } catch (e) {
-          console.error('Error updating points:', e);
-        }
-      }
 
       setPhase('completed');
       setWinnerId(winner);

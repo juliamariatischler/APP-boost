@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
-import friendImg from "@/assets/challenge-friend.jpg";
+import friendImg from "@/assets/quest-friend-emoji.png";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import TrialSessionsList from "@/components/TrialSessionsList";
 import { DailyChallengeContent } from "@/components/DailyChallengeContent";

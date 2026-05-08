@@ -253,7 +253,9 @@ const ClassQuest = () => {
 
             <Button
               type="button"
-              onClick={() => navigate("/challenge/daily")}
+              onClick={() => {
+                window.location.href = "/squat-counter.html";
+              }}
               className="mt-6 h-14 w-full rounded-[22px] text-base font-black shadow-[0_16px_30px_rgba(34,197,94,0.22)]"
             >
               Kniebeugen eintragen

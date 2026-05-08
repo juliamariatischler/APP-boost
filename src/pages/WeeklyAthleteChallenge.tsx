@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { getISOWeek, getISOWeekYear } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, MapPin, Mountain, Play, Route, Trophy, Video, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -14,30 +13,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TopHeader } from "@/components/TopHeader";
-import weeklyImg from "@/assets/challenge-weekly.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
+import { getCurrentWeeklyVideo, WEEKLY_VIDEO_REWARD_STORAGE_KEY, type WeeklyVideo } from "@/lib/weeklyVideo";
 
 const REWARD_POINTS = BOOST_POINT_RULES.weeklyChallengeCompleted;
-const WEEKLY_VIDEO_REWARD_STORAGE_KEY = "weekly_video_rewards";
-
-type WeeklyVideo = {
-  id: string;
-  weekKey: string;
-  title: string;
-  speakerName: string;
-  speakerLabel: string;
-  quote: string;
-  challengeText: string;
-  reward: string;
-  duration: string;
-  videoUrl: string;
-  image: string;
-  missionTitle: string;
-  missionSubtitle: string;
-  missionStats: { label: string; value: string }[];
-  missionStops: { id: string; title: string; label: string; done?: boolean }[];
-};
 
 type WeeklyRewardMap = Record<string, boolean>;
 
@@ -48,36 +28,7 @@ const WeeklyAthleteChallenge = () => {
   const [rewardingVideo, setRewardingVideo] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  const currentWeeklyVideo = useMemo<WeeklyVideo>(() => {
-    const now = new Date();
-    const isoWeek = getISOWeek(now);
-    const isoWeekYear = getISOWeekYear(now);
-    const weekKey = `${isoWeekYear}-KW${String(isoWeek).padStart(2, "0")}`;
-
-    return {
-      id: `weekly-video-${weekKey}`,
-      weekKey,
-      title: "Video der Woche: Wanderung zum Alpengasthof am Schöckl",
-      speakerName: "Anna Gasser",
-      speakerLabel: "Snowboard-Olympiasiegerin",
-      quote: "So bleibe ich dran, wenn ich keinen Bock habe.",
-      challengeText: "Schau das Video an, bleib in Bewegung und hol dir die Belohnung einmal pro Woche.",
-      reward: `+${REWARD_POINTS} Blitze`,
-      duration: "2:48",
-      videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-      image: weeklyImg,
-      missionTitle: "Wanderung: Alpengasthof am Schöckl",
-      missionSubtitle: "Unsere erste Wochenchallenge kombiniert Video-Motivation mit einer echten Tour vor Ort.",
-      missionStats: [
-        { label: "Distanz", value: "12,5 km" },
-        { label: "Höhenmeter", value: "1052 m" },
-      ],
-      missionStops: [
-        { id: "1", title: "am Start", label: "#1 Find me & scan me", done: true },
-        { id: "2", title: "am Weg", label: "#2 Find me & scan me" },
-      ],
-    };
-  }, []);
+  const currentWeeklyVideo = useMemo<WeeklyVideo>(() => getCurrentWeeklyVideo(), []);
 
   useEffect(() => {
     const loadUser = async () => {

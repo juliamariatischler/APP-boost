@@ -7,7 +7,7 @@ export const BottomNav = () => {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/dashboard", matches: ["/dashboard"] },
-    { icon: ClipboardCheck, label: "Quests", path: "/quests", matches: ["/quests"] },
+    { icon: ClipboardCheck, label: "Quests", path: "/quests", matches: ["/quests", "/challenge"] },
     { icon: Users, label: "Klasse", path: "/klasse", matches: ["/klasse"] },
     { icon: User, label: "Profil", path: "/profil", matches: ["/profil", "/settings", "/rewards", "/boost"] },
   ];

@@ -288,7 +288,7 @@ const Rewards = () => {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => navigate("/challenge/daily")}
+                            onClick={() => navigate("/dashboard")}
                           >
                             Mehr ⚡
                           </Button>
@@ -311,7 +311,7 @@ const Rewards = () => {
               <div className="grid grid-cols-2 gap-3">
                 {/* Tageschallenge */}
                 <button 
-                  onClick={() => navigate("/challenge/daily")}
+                  onClick={() => navigate("/dashboard")}
                   className="flex flex-col items-center gap-2 p-4 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors border-2 border-primary/30"
                 >
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
@@ -460,7 +460,7 @@ const Rewards = () => {
               <div className="grid grid-cols-2 gap-3">
                 {/* Tageschallenge */}
                 <button 
-                  onClick={() => navigate("/challenge/daily")}
+                  onClick={() => navigate("/dashboard")}
                   className="flex flex-col items-center gap-2 p-4 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors border-2 border-primary/30"
                 >
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">

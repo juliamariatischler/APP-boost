@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import weeklyAvatarImg from "@/assets/quest-weekly-avatar.svg";
 import classAvatarImg from "@/assets/quest-class-avatar.svg";
-import friendAvatarImg from "@/assets/quest-friend-avatar.svg";
+import friendAvatarImg from "@/assets/quest-friend-emoji.png";
 import tryitAvatarImg from "@/assets/quest-tryit-avatar.svg";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
@@ -148,11 +148,11 @@ const Quests = () => {
                       onClick={() => navigate(quest.id === "class" ? "/class-quest" : `/challenge/${quest.id}`)}
                       className="flex w-full flex-col text-left"
                     >
-                      <div className="flex h-32 items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)] px-4 py-4">
+                      <div className="flex h-36 items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)] px-2 py-2">
                         <img
                           src={quest.image}
                           alt={quest.title}
-                          className="max-h-full w-auto max-w-[82%] object-contain object-center mix-blend-multiply"
+                          className="max-h-full w-auto max-w-[96%] object-contain object-center mix-blend-multiply"
                         />
                       </div>
                       <div className="flex flex-1 flex-col justify-between p-4">

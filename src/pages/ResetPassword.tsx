@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
 import { Loader2 } from "lucide-react";
+import { getCurrentAppRole, routeForRole } from "@/lib/roles";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -56,7 +57,8 @@ const ResetPassword = () => {
         toast.error("Fehler beim Zurücksetzen: " + error.message);
       } else {
         toast.success("Passwort erfolgreich geändert!");
-        navigate("/dashboard");
+        const role = await getCurrentAppRole();
+        navigate(routeForRole(role));
       }
     } catch {
       toast.error("Ein Fehler ist aufgetreten.");

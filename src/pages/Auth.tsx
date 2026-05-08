@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
-import { Loader2 } from "lucide-react";
+import { Loader2, QrCode } from "lucide-react";
 import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
 import { DEMO_MIN_POINTS } from "@/lib/demo";
+import { getCurrentAppRole, routeForRole } from "@/lib/roles";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
+import jsQR from "jsqr";
 
 const REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY = "boost:get_registered_schools_unavailable";
+const ACTIVATION_CODE_PATTERN = /^[A-Z0-9]{20}$/;
 
 // Input validation schemas
 const loginSchema = z.object({
@@ -60,9 +71,17 @@ const signupSchema = z.object({
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { activate } = useCodeAuth();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scannerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [qrScannerError, setQrScannerError] = useState("");
+  const [manualQrCode, setManualQrCode] = useState("");
   const [demoStudentLoading, setDemoStudentLoading] = useState(false);
   const [demoTeacherLoading, setDemoTeacherLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [schoolsLoading, setSchoolsLoading] = useState(true);
   const [registeredSchools, setRegisteredSchools] = useState<string[]>([]);
   const [showSchoolRequest, setShowSchoolRequest] = useState(false);
@@ -94,6 +113,65 @@ const Auth = () => {
     username: "DemoLehrkraft",
   };
 
+  const normalizeActivationCode = (value: string) => value.replace(/\s+/g, "").trim().toUpperCase();
+
+  const extractActivationCode = (value: string) => {
+    const trimmed = value.trim();
+    try {
+      const parsed = new URL(trimmed);
+      const code = normalizeActivationCode(parsed.searchParams.get("code") || "");
+      return ACTIVATION_CODE_PATTERN.test(code) ? code : "";
+    } catch {
+      const directCode = normalizeActivationCode(trimmed);
+      if (ACTIVATION_CODE_PATTERN.test(directCode)) return directCode;
+      const embeddedCode = directCode.match(/[A-Z0-9]{20}/)?.[0] || "";
+      return ACTIVATION_CODE_PATTERN.test(embeddedCode) ? embeddedCode : "";
+    }
+  };
+
+  const getActivationErrorMessage = (error: unknown) => {
+    const message = error instanceof Error ? error.message : "Dieser QR-Code ist nicht gültig.";
+    const lower = message.toLowerCase();
+
+    if (lower.includes("used") || lower.includes("bereits verwendet")) {
+      return "Dieser QR-Code wurde bereits verwendet.";
+    }
+    if (lower.includes("expired") || lower.includes("abgelaufen")) {
+      return "Dieser QR-Code ist abgelaufen. Bitte bitte deine Lehrkraft um einen neuen Code.";
+    }
+    if (lower.includes("device") || lower.includes("gerät")) {
+      return "Dieses Profil ist bereits mit einem Gerät verbunden. Bitte wende dich an deine Lehrkraft.";
+    }
+    if (lower.includes("student") || lower.includes("schüler")) {
+      return message;
+    }
+
+    return "Dieser QR-Code ist nicht gültig.";
+  };
+
+  const activateScannedCode = async (rawValue: string) => {
+    const code = extractActivationCode(rawValue);
+    if (!code) {
+      toast.error("Dieser QR-Code ist nicht gültig.");
+      return;
+    }
+
+    setQrLoading(true);
+    try {
+      const session = await activate(code);
+      if (session.user_type !== "student") {
+        throw new Error("Dieser QR-Code gehört nicht zu einem Schülerprofil.");
+      }
+      toast.success("Profil erfolgreich aktiviert.");
+      setQrScannerOpen(false);
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      toast.error(getActivationErrorMessage(error));
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
   const isMissingInfraError = (error: any) => {
     const code = error?.code ?? "";
     const text = `${error?.message ?? ""} ${error?.details ?? ""} ${error?.hint ?? ""}`.toLowerCase();
@@ -114,6 +192,7 @@ const Auth = () => {
     accountType: "student" | "teacher";
     points: number;
     includeAge?: boolean;
+    includeRole?: boolean;
   }) => {
     const basePayload = {
       username: params.username,
@@ -122,12 +201,19 @@ const Auth = () => {
       points: params.points,
     };
 
+    const withRole = params.includeRole
+      ? {
+          ...basePayload,
+          role: params.accountType,
+        }
+      : basePayload;
+
     if (!params.includeAge) {
-      return basePayload;
+      return withRole;
     }
 
     return {
-      ...basePayload,
+      ...withRole,
       age: params.accountType === "student" ? 10 : null,
     };
   };
@@ -136,7 +222,9 @@ const Auth = () => {
     // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard", { replace: true });
+        getCurrentAppRole().then((role) => {
+          navigate(routeForRole(role), { replace: true });
+        });
       }
     });
   }, [location.search, navigate]);
@@ -193,6 +281,104 @@ const Auth = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
+  useEffect(() => {
+    if (!qrScannerOpen) return;
+
+    let cancelled = false;
+    let animationFrame = 0;
+    let stream: MediaStream | null = null;
+
+    const stopStream = () => {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+
+    const startScanner = async () => {
+      setQrScannerError("");
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setQrScannerError("Diese Kamera-Funktion wird auf diesem Gerät nicht unterstützt. Gib den Code bitte manuell ein.");
+        return;
+      }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stopStream();
+          return;
+        }
+
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+
+        const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+        const detector = BarcodeDetectorCtor ? new BarcodeDetectorCtor({ formats: ["qr_code"] }) : null;
+
+        const scan = async () => {
+          if (cancelled || qrLoading) return;
+
+          try {
+            let rawValue = "";
+            if (detector) {
+              const results = await detector.detect(video);
+              rawValue = String(results?.[0]?.rawValue || "");
+            }
+
+            if (!rawValue) {
+              const canvas = scannerCanvasRef.current;
+              const context = canvas?.getContext("2d", { willReadFrequently: true });
+              const width = video.videoWidth;
+              const height = video.videoHeight;
+
+              if (canvas && context && width > 0 && height > 0) {
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(video, 0, 0, width, height);
+                const imageData = context.getImageData(0, 0, width, height);
+                rawValue = jsQR(imageData.data, width, height)?.data || "";
+              }
+            }
+
+            if (rawValue) {
+              cancelled = true;
+              stopStream();
+              await activateScannedCode(rawValue);
+              return;
+            }
+          } catch {
+            setQrScannerError("Der QR-Code konnte nicht gelesen werden. Richte die Kamera direkt auf den Code oder gib ihn manuell ein.");
+          }
+
+          if (!cancelled) {
+            animationFrame = window.requestAnimationFrame(scan);
+          }
+        };
+
+        animationFrame = window.requestAnimationFrame(scan);
+      } catch {
+        setQrScannerError("Bitte erlaube den Kamerazugriff, damit du deinen BOOST QR-Code scannen kannst.");
+      }
+    };
+
+    void startScanner();
+
+    return () => {
+      cancelled = true;
+      stopStream();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrScannerOpen]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -220,7 +406,8 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich angemeldet!");
-        navigate("/dashboard", { replace: true });
+        const role = await getCurrentAppRole();
+        navigate(routeForRole(role), { replace: true });
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -233,6 +420,11 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualQrSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void activateScannedCode(manualQrCode);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -276,12 +468,13 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
-        navigate("/dashboard", { replace: true });
+        const role = await getCurrentAppRole();
+        navigate(routeForRole(role), { replace: true });
       } else if (data.user) {
         // User created but needs email confirmation
         toast.success("Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach.");
         // Auto-confirm is enabled, so this shouldn't happen, but handle it gracefully
-        setTimeout(() => navigate("/dashboard", { replace: true }), 2000);
+        setTimeout(() => navigate(routeForRole(validatedData.accountType), { replace: true }), 2000);
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -322,6 +515,7 @@ const Auth = () => {
             accountType: params.accountType,
             points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
             includeAge: true,
+            includeRole: true,
           })
         )
         .eq("id", signInResult.data.user.id);
@@ -335,6 +529,7 @@ const Auth = () => {
               accountType: params.accountType,
               points: Math.max(Number(existingProfile?.points || 0), DEMO_MIN_POINTS),
               includeAge: false,
+              includeRole: false,
             })
           )
           .eq("id", signInResult.data.user.id);
@@ -390,6 +585,7 @@ const Auth = () => {
           accountType: params.accountType,
           points: DEMO_MIN_POINTS,
           includeAge: true,
+          includeRole: true,
         })
       )
       .eq("id", signUpResult.data.user.id);
@@ -403,6 +599,7 @@ const Auth = () => {
             accountType: params.accountType,
             points: DEMO_MIN_POINTS,
             includeAge: false,
+            includeRole: false,
           })
         )
         .eq("id", signUpResult.data.user.id);
@@ -467,6 +664,8 @@ const Auth = () => {
       text.includes("could not find the table") ||
       text.includes("could not find the function") ||
       (text.includes("relation") && text.includes("does not exist")) ||
+      text.includes("is_demo_user") ||
+      text.includes("is_demo_profile") ||
       text.includes("teacher_student_assignments")
     );
   };
@@ -530,11 +729,11 @@ const Auth = () => {
       } else {
         toast.success("Demo-Lehrkraft-Login erfolgreich! Demoschüler ist der Demo-Lehrkraft zugeordnet.");
       }
-      navigate("/dashboard", { replace: true });
+      navigate("/teacher-home", { replace: true });
     } catch (error: any) {
       if (isAssignmentInfraMissing(error)) {
         toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.");
-        navigate("/dashboard", { replace: true });
+        navigate("/teacher-home", { replace: true });
         return;
       }
       toast.error("Demo-Lehrkraft-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
@@ -584,11 +783,36 @@ const Auth = () => {
           <img src={boostLogo} alt="BOOST Logo" className="h-16 w-auto" />
         </div>
         
-        <h1 className="text-2xl font-bold text-center mb-6 text-foreground">
-          BOOST Challenge
+        <h1 className="text-2xl font-bold text-center mb-2 text-foreground">
+          Willkommen bei BOOST
         </h1>
+        <p className="mb-6 text-center text-sm text-muted-foreground">
+          Scanne deinen QR-Code oder melde dich unten an.
+        </p>
 
-        <Tabs defaultValue="login" className="w-full">
+        <div className="mb-6 space-y-3">
+          <Button
+            type="button"
+            className="h-12 w-full text-base font-bold"
+            onClick={() => {
+              setManualQrCode("");
+              setQrScannerOpen(true);
+            }}
+            disabled={qrLoading}
+          >
+            {qrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-5 w-5" />}
+            QR-Code scannen
+          </Button>
+
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            oder
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+        </div>
+
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "signup")} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="login">Anmelden</TabsTrigger>
             <TabsTrigger value="signup">Registrieren</TabsTrigger>
@@ -633,24 +857,14 @@ const Auth = () => {
                     placeholder="••••••••"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div>
                   <Button
                     type="submit"
-                    className="flex-1"
+                    className="w-full"
                     disabled={loading || demoStudentLoading || demoTeacherLoading}
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Anmelden
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={loginType === "teacher" ? handleDemoTeacherLogin : handleDemoStudentLogin}
-                    disabled={loading || demoStudentLoading || demoTeacherLoading}
-                  >
-                    {(demoStudentLoading || demoTeacherLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {loginType === "teacher" ? "Demo Lehrkraft" : "Demo Schüler:in"}
                   </Button>
                 </div>
                 <Button
@@ -811,6 +1025,54 @@ const Auth = () => {
           </TabsContent>
         </Tabs>
       </Card>
+
+      <Dialog open={qrScannerOpen} onOpenChange={(open) => !qrLoading && setQrScannerOpen(open)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>QR-Code scannen</DialogTitle>
+            <DialogDescription>
+              Scanne den QR-Code deiner Lehrkraft. Danach öffnet sich automatisch deine BOOST App.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-2xl border border-border bg-black">
+              <video
+                ref={videoRef}
+                className="aspect-square w-full object-cover"
+                muted
+                playsInline
+                aria-label="QR-Code Kamera"
+              />
+              <canvas ref={scannerCanvasRef} className="hidden" aria-hidden="true" />
+            </div>
+
+            {qrScannerError && (
+              <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">{qrScannerError}</p>
+            )}
+
+            <form onSubmit={handleManualQrSubmit} className="space-y-3">
+              <div>
+                <Label htmlFor="manual-qr-code">Code manuell eingeben</Label>
+                <Input
+                  id="manual-qr-code"
+                  value={manualQrCode}
+                  onChange={(event) => setManualQrCode(normalizeActivationCode(event.target.value))}
+                  placeholder="20-stelliger Aktivierungscode"
+                  autoCapitalize="characters"
+                  autoComplete="one-time-code"
+                  className="mt-2 font-semibold tracking-[0.12em]"
+                  disabled={qrLoading}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={qrLoading || !manualQrCode.trim()}>
+                {qrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
+                Aktivieren
+              </Button>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
