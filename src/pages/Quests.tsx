@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Sparkles, Users } from "lucide-react";
+import { MapPin, Sparkles, Users, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import weeklyAvatarImg from "@/assets/quest-weekly-avatar.svg";
-import classAvatarImg from "@/assets/quest-class-avatar.svg";
+import weeklyAvatarImg from "@/assets/quest-weekly-avatar.png";
+import blueMascotImg from "@/assets/boost-mascot-blue.png";
 import friendAvatarImg from "@/assets/quest-friend-emoji.png";
-import tryitAvatarImg from "@/assets/quest-tryit-avatar.svg";
+import tryitAvatarImg from "@/assets/quest-tryit-avatar.png";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
@@ -21,6 +21,28 @@ type QuestCard = {
   meta: string;
   image: string;
   icon: typeof Sparkles;
+  bgClass?: string;
+  imgClass?: string;
+};
+
+const Blitz3D = () => (
+  <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(145deg,#baff76_0%,#61dc70_46%,#22a64a_100%)] text-white shadow-[0_9px_14px_rgba(31,224,102,0.34),0_3px_0_rgba(20,120,52,0.28),inset_0_2px_2px_rgba(255,255,255,0.68),inset_0_-3px_5px_rgba(0,0,0,0.18)]">
+    <span className="absolute left-1.5 top-1 h-2 w-3 rounded-full bg-white/45 blur-[1px]" />
+    <Zap className="relative h-[18px] w-[18px] fill-current drop-shadow-[0_2px_2px_rgba(0,0,0,0.24)]" />
+  </span>
+);
+
+const RewardDisplay = ({ reward }: { reward: string }) => {
+  if (!reward.includes("⚡")) {
+    return <span className="block text-sm font-bold text-foreground">{reward}</span>;
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-2.5 pr-1.5 text-sm font-black text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
+      {reward.replace("⚡", "").trim()}
+      <Blitz3D />
+    </span>
+  );
 };
 
 const quests: QuestCard[] = [
@@ -41,7 +63,7 @@ const quests: QuestCard[] = [
     description: "1.000 Kniebeugen gemeinsam schaffen und sehen, wer am meisten beigetragen hat.",
     reward: "Für deine Klasse",
     meta: "1 Monat aktiv",
-    image: classAvatarImg,
+    image: blueMascotImg,
     icon: Sparkles,
   },
   {
@@ -148,11 +170,11 @@ const Quests = () => {
                       onClick={() => navigate(quest.id === "class" ? "/class-quest" : `/challenge/${quest.id}`)}
                       className="flex w-full flex-col text-left"
                     >
-                      <div className="flex h-36 items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)] px-2 py-2">
+                      <div className={`flex h-36 items-center justify-center overflow-hidden px-2 py-2 ${quest.bgClass ?? "bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
                         <img
                           src={quest.image}
                           alt={quest.title}
-                          className="max-h-full w-auto max-w-[96%] object-contain object-center mix-blend-multiply"
+                          className={quest.imgClass ?? "max-h-full w-auto max-w-[96%] object-contain object-center mix-blend-multiply"}
                         />
                       </div>
                       <div className="flex flex-1 flex-col justify-between p-4">
@@ -167,7 +189,7 @@ const Quests = () => {
                           <p className="mt-1 text-sm leading-snug text-muted-foreground">{quest.description}</p>
                         </div>
                         <div className="mt-4 space-y-1">
-                          <span className="block text-sm font-bold text-foreground">{quest.reward}</span>
+                          <RewardDisplay reward={quest.reward} />
                           <span className="block text-xs text-muted-foreground">{quest.meta}</span>
                         </div>
                       </div>

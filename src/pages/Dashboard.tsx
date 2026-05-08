@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
+import { Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -11,8 +11,7 @@ import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countComplete
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon, WalkingIcon } from "@/components/ExerciseIcons";
-import { getDemoAwarePoints } from "@/lib/demo";
-import { getCurrentAppRole } from "@/lib/roles";
+import { getDemoAwarePoints, isDemoEmail } from "@/lib/demo";
 import voltUnder39Img from "@/assets/volt-under-39.png";
 import volt39To59Img from "@/assets/volt-39-59.png";
 import volt60To79Img from "@/assets/volt-60-79.png";
@@ -82,50 +81,51 @@ const Dashboard = () => {
           return;
         }
 
-        const appRole = await getCurrentAppRole();
-        if (appRole === "teacher") {
+        // Fast path: metadata check avoids any DB call for teachers
+        const metaAccountType = String(session.user.user_metadata?.account_type || "").toLowerCase();
+        if (metaAccountType === "teacher") {
           navigate("/teacher-home", { replace: true });
           return;
         }
 
-        setUserId(session.user.id);
-        setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
+        const uid = session.user.id;
+        setUserId(uid);
+        setEquippedAvatarItem(loadEquippedAvatarItem(uid));
 
-        const [{ data: roleData }, { data: profileData, error: profileError }] = await Promise.all([
-          supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .maybeSingle(),
+        // Kick off weekly progress fetch immediately — runs in parallel with profile queries
+        void loadWeeklyProgress(uid, isDemoEmail(session.user.email));
+
+        const [{ data: profileData, error: profileError }, { data: adminRoleData }] = await Promise.all([
           supabase
             .from("profiles")
             .select("username, points, school, class")
-            .eq("id", session.user.id)
+            .eq("id", uid)
             .single(),
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", uid)
+            .eq("role", "admin")
+            .maybeSingle(),
         ]);
 
-        const metaAccountType = String(session.user.user_metadata?.account_type || "").toLowerCase();
-        setIsTeacher(!!roleData || metaAccountType === "teacher");
-
-        if (profileError) {
+        if (profileError || !profileData) {
           console.error("Error loading profile:", profileError);
           navigate("/");
           return;
         }
 
-        if (!profileData) {
-          console.error("No profile found for user:", session.user.id);
-          navigate("/");
+        // Redirect DB-role teachers (not caught by metadata check above)
+        if (!!adminRoleData) {
+          navigate("/teacher-home", { replace: true });
           return;
         }
 
+        setIsTeacher(false);
         setUsername(profileData.username || "Spieler");
         setPoints(getDemoAwarePoints(profileData.points, session.user.email));
         setUserSchool(profileData.school || "");
         setUserClass(profileData.class || "");
-
-        void loadWeeklyProgress(session.user.id);
       } catch (error) {
         console.error("Error loading dashboard:", error);
         navigate("/");
@@ -184,23 +184,49 @@ const Dashboard = () => {
 
   const isWeeklyStreakDay = (day: WeeklyResult) => getDayProgressPercent(day) > STREAK_DAY_THRESHOLD_PERCENT;
 
-  const loadWeeklyProgress = async (currentUserId: string) => {
+  const loadWeeklyProgress = async (currentUserId: string, isDemo = false) => {
     const today = new Date();
     const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
     const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
-    
-    const { data: weeklyData } = await supabase
+
+    const { data: rawData } = await supabase
       .from("daily_results")
       .select("*")
       .eq("user_id", currentUserId)
       .gte("date", format(weekStart, "yyyy-MM-dd"))
       .lte("date", format(weekEnd, "yyyy-MM-dd"));
 
-    if (weeklyData) {
-      setWeeklyData(weeklyData);
-      const streakDays = weeklyData.filter(isWeeklyStreakDay).length;
-      setWeeklyCompleted(streakDays);
+    let finalData: WeeklyResult[] = rawData ?? [];
+
+    if (isDemo) {
+      const todayStr = format(today, "yyyy-MM-dd");
+      const existingDates = new Set(finalData.map((r) => r.date));
+      const d = new Date(weekStart);
+      while (d <= today && d <= weekEnd) {
+        const dateStr = format(d, "yyyy-MM-dd");
+        if (!existingDates.has(dateStr)) {
+          const isToday = dateStr === todayStr;
+          finalData = [
+            ...finalData,
+            {
+              date: dateStr,
+              push_ups: 10,
+              squats: 10,
+              planks: 10,
+              sit_ups: 25,
+              jumping_jacks: 40,
+              steps: isToday ? 0 : 3000,
+              steps_tracking_active: !isToday,
+            },
+          ];
+        }
+        d.setDate(d.getDate() + 1);
+      }
     }
+
+    setWeeklyData(finalData);
+    const streakDays = finalData.filter(isWeeklyStreakDay).length;
+    setWeeklyCompleted(streakDays);
   };
 
   const today = new Date();
@@ -372,16 +398,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
       <div className="relative mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.25rem)]">
-        <button
-          type="button"
-          className="absolute right-4 top-[calc(env(safe-area-inset-top)+0.25rem)] z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white text-foreground shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
-          aria-label="Benachrichtigungen"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-        </button>
-
-        <div className="mb-5 flex items-center gap-3 pr-12">
+        <div className="mb-5 flex items-center gap-3">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
             <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
             {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
@@ -410,7 +427,12 @@ const Dashboard = () => {
           <div className="relative grid h-[34vh] min-h-[13.5rem] max-h-[16.5rem] grid-cols-[minmax(0,1fr)_42%] overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_22%,rgba(255,255,255,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_52%_20%,rgba(255,255,255,0.5)_0_2px,transparent_3px),radial-gradient(circle_at_33%_38%,rgba(255,255,255,0.24)_0_1px,transparent_2px)]" />
             <div className="relative flex items-center justify-center overflow-hidden px-1 py-4">
-              <div className="absolute bottom-8 h-8 w-36 rounded-full border-4 border-cyan-200/70 shadow-[0_0_24px_rgba(103,232,249,0.82),inset_0_0_16px_rgba(103,232,249,0.4)]" />
+              <div className="absolute bottom-8 h-3 w-36 overflow-hidden rounded-full bg-white/20">
+                <div
+                  className="h-full rounded-full bg-cyan-300/90 shadow-[0_0_12px_rgba(103,232,249,0.9)] transition-all duration-700"
+                  style={{ width: `${dailyProgressPercent}%` }}
+                />
+              </div>
               <div className="absolute left-3 top-9 hidden h-28 w-6 rounded-full border border-cyan-200/50 bg-cyan-200/10 shadow-[0_0_18px_rgba(103,232,249,0.5)] sm:block">
                 <div className="absolute bottom-2 left-1/2 h-16 w-2.5 -translate-x-1/2 rounded-full bg-cyan-200/85 shadow-[0_0_16px_rgba(103,232,249,0.95)]" />
                 <span className="absolute -right-9 bottom-1 text-[9px] font-black text-white/85">Lv.1</span>
@@ -424,29 +446,29 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="relative z-10 flex flex-col justify-between px-3 py-4">
+            <div className="relative z-10 flex flex-col px-3 pt-4 pb-3">
               <div>
                 <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/90 backdrop-blur">
                   {activeVoltMood.label}
                 </p>
-                <h2 className="text-[1.38rem] font-black leading-tight tracking-tight">
+                <h2 className="text-[1.25rem] font-black leading-tight tracking-tight">
                   {activeVoltMood.title}
                 </h2>
-                <p className="mt-2 line-clamp-3 text-sm font-medium leading-snug text-white/90">
+                <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-snug text-white/90">
                   {activeVoltMood.copy}
                 </p>
               </div>
-              <div className="mt-2 flex justify-center">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_8px_rgba(255,255,255,0.12),0_0_24px_rgba(34,211,238,0.3)]">
+              <div className="mt-auto pt-2 flex justify-center">
+                <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_7px_rgba(255,255,255,0.12),0_0_24px_rgba(34,211,238,0.3)]">
                   <div
                     className="absolute inset-0 rounded-full"
                     style={{
                       background: `conic-gradient(rgb(103 232 249) 0% ${dailyProgressPercent}%, rgba(255,255,255,0.18) ${dailyProgressPercent}% 100%)`,
                     }}
                   />
-                  <div className="relative flex h-[3.9rem] w-[3.9rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
-                    <p className="text-[1.35rem] font-black leading-none">{dailyProgressPercent}%</p>
-                    <p className="mt-0.5 text-[10px] font-semibold text-white/86">Ziel</p>
+                  <div className="relative flex h-[3.3rem] w-[3.3rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+                    <p className="text-[1.15rem] font-black leading-none">{dailyProgressPercent}%</p>
+                    <p className="mt-0.5 text-[9px] font-semibold text-white/86">Ziel</p>
                   </div>
                 </div>
               </div>

@@ -1,32 +1,166 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, ClipboardList, LogOut, QrCode, Users, Zap } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ArrowRight, BarChart2, CheckCircle2, ClipboardList, Flame, Footprints, Loader2, LogOut, Medal, MessageSquare, QrCode, Send, Trophy, Users, XCircle, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAppRole } from "@/lib/roles";
+import { DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
+import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon } from "@/components/ExerciseIcons";
 import {
   getTeacherClasses,
   getTeacherClassesAuth,
+  getClassStudents,
+  getClassStudentsAuth,
+  type ClassStudent,
   type TeacherClass,
 } from "@/services/codeAuthService";
+import { DEMO_STUDENT_DISPLAY_NAME } from "@/lib/demo";
 
 type AuthMode = "supabase" | "code";
+type ActiveTab = "home" | "uebersicht" | "wertung" | "mitmachen";
+
+type SchoolRegistrationRequest = {
+  id: string;
+  requested_school: string;
+  requester_email: string | null;
+  requester_name: string | null;
+  request_note: string | null;
+  status: string;
+  created_at: string;
+};
+
+type TeacherProgress = {
+  push_ups: number;
+  squats: number;
+  planks: number;
+  sit_ups: number;
+  jumping_jacks: number;
+  steps: number;
+};
+
+const EMPTY_PROGRESS: TeacherProgress = {
+  push_ups: 0, squats: 0, planks: 0, sit_ups: 0, jumping_jacks: 0, steps: 0,
+};
+
+const teacherStorageKey = (uid: string, date: string) => `boost:teacher-daily:${uid}:${date}`;
+
+const loadTeacherDailyProgress = (uid: string, date: string): TeacherProgress => {
+  try {
+    const raw = localStorage.getItem(teacherStorageKey(uid, date));
+    return raw ? { ...EMPTY_PROGRESS, ...(JSON.parse(raw) as Partial<TeacherProgress>) } : { ...EMPTY_PROGRESS };
+  } catch {
+    return { ...EMPTY_PROGRESS };
+  }
+};
+
+type DailyRow = {
+  user_id: string;
+  date: string;
+  jumping_jacks: number | null;
+  push_ups: number | null;
+  squats: number | null;
+  planks: number | null;
+  sit_ups: number | null;
+  steps: number | null;
+  steps_tracking_active: boolean | null;
+};
+
+type StudentStat = {
+  studentId: string;
+  name: string;
+  todayPercent: number;
+  weekActiveDays: number;
+};
+
+type DayStat = {
+  date: string;
+  label: string;
+  activeCount: number;
+  totalCount: number;
+};
+
+type StudentRank = {
+  id: string;
+  name: string;
+  points: number;
+};
+
+const STREAK_THRESHOLD = 90;
+
+function getDayProgress(row: DailyRow): number {
+  const steps = row.steps_tracking_active ? Number(row.steps || 0) : 0;
+  const done = countCompletedDailyExercises({
+    jumping_jacks: row.jumping_jacks || 0,
+    push_ups: row.push_ups || 0,
+    squats: row.squats || 0,
+    planks: row.planks || 0,
+    sit_ups: row.sit_ups || 0,
+  });
+  const completed = (steps >= DAILY_STEP_GOAL ? 1 : 0) + done;
+  const total = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+  return Math.min(100, Math.round((completed / total) * 100));
+}
+
+function getRankBadge(rank: number) {
+  if (rank === 1) return <span className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-500 text-xs font-black text-white">1</span>;
+  if (rank === 2) return <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-400 text-xs font-black text-white">2</span>;
+  if (rank === 3) return <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-600 text-xs font-black text-white">3</span>;
+  return <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{rank}</span>;
+}
 
 export default function TeacherHome() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session: codeSession, loading: codeLoading, signOut } = useCodeAuth();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [teacherName, setTeacherName] = useState("Lehrkraft");
   const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const initialTab = (location.state as { tab?: ActiveTab } | null)?.tab ?? "home";
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+
+  // Mitmachen tab state
+  const [teacherId, setTeacherId] = useState<string>("");
+  const [teacherProgress, setTeacherProgress] = useState<TeacherProgress>({ ...EMPTY_PROGRESS });
+
+  // School requests state (supabase-auth teachers only)
+  const [schoolRequests, setSchoolRequests] = useState<SchoolRegistrationRequest[]>([]);
+  const [handlingRequestId, setHandlingRequestId] = useState<string | null>(null);
+
+  // Feedback state
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+
+  // Overview tab state
+  const [students, setStudents] = useState<ClassStudent[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentStats, setStudentStats] = useState<StudentStat[]>([]);
+  const [dayStats, setDayStats] = useState<DayStat[]>([]);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+
+  // Ranking tab state
+  const [studentRanks, setStudentRanks] = useState<StudentRank[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
 
   const totalStudents = useMemo(
     () => classes.reduce((sum, cls) => sum + Number(cls.student_count || 0), 0),
     [classes],
+  );
+
+  const selectedClass = useMemo(
+    () => classes.find((c) => c.class_id === selectedClassId),
+    [classes, selectedClassId],
   );
 
   const loadClasses = useCallback(async (mode: AuthMode) => {
@@ -36,10 +170,28 @@ export default function TeacherHome() {
         ? await getTeacherClasses(codeSession)
         : await getTeacherClassesAuth();
       setClasses(nextClasses);
+      if (nextClasses.length > 0 && !selectedClassId) {
+        setSelectedClassId(nextClasses[0].class_id);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Klassen konnten nicht geladen werden");
     } finally {
       setLoading(false);
+    }
+  }, [codeSession, selectedClassId]);
+
+  const loadStudents = useCallback(async (mode: AuthMode, classId: string) => {
+    if (!classId) return;
+    setStudentsLoading(true);
+    try {
+      const next = mode === "code" && codeSession
+        ? await getClassStudents(codeSession, classId)
+        : await getClassStudentsAuth(classId);
+      setStudents(next);
+    } catch {
+      setStudents([]);
+    } finally {
+      setStudentsLoading(false);
     }
   }, [codeSession]);
 
@@ -50,6 +202,7 @@ export default function TeacherHome() {
       if (codeSession?.user_type === "teacher") {
         setAuthMode("code");
         setTeacherName(codeSession.display_name || "Lehrkraft");
+        setTeacherId(codeSession.user_id);
         await loadClasses("code");
         return;
       }
@@ -70,11 +223,223 @@ export default function TeacherHome() {
       setTeacherName(
         String(session.user.user_metadata?.username || session.user.email?.split("@")[0] || "Lehrkraft"),
       );
-      await loadClasses("supabase");
+      setTeacherId(session.user.id);
+      await Promise.all([loadClasses("supabase"), loadSchoolRequests()]);
     };
 
     void resolveTeacher();
   }, [codeLoading, codeSession, loadClasses, navigate]);
+
+  // Load students when class or tab changes
+  useEffect(() => {
+    if (!authMode || !selectedClassId) return;
+    void loadStudents(authMode, selectedClassId);
+  }, [authMode, selectedClassId, loadStudents]);
+
+  // Load weekly overview data
+  useEffect(() => {
+    if (activeTab !== "uebersicht" || students.length === 0) return;
+    void loadOverview();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, students]);
+
+  // Load ranking data
+  useEffect(() => {
+    if (activeTab !== "wertung" || students.length === 0) return;
+    void loadRanking();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, students]);
+
+  // Load teacher's own daily progress from localStorage
+  useEffect(() => {
+    if (activeTab !== "mitmachen" || !teacherId) return;
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    setTeacherProgress(loadTeacherDailyProgress(teacherId, todayStr));
+  }, [activeTab, teacherId]);
+
+  const loadOverview = async () => {
+    setOverviewLoading(true);
+    try {
+      const today = new Date();
+      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+      const weekStartStr = format(weekStart, "yyyy-MM-dd");
+      const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+      const todayStr = format(today, "yyyy-MM-dd");
+      const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
+      const studentIds = students.map((s) => s.student_id);
+
+      const { data: rows, error } = await supabase
+        .from("daily_results")
+        .select("user_id, date, jumping_jacks, push_ups, squats, planks, sit_ups, steps, steps_tracking_active")
+        .in("user_id", studentIds)
+        .gte("date", weekStartStr)
+        .lte("date", weekEndStr);
+
+      if (error) {
+        setStudentStats([]);
+        setDayStats([]);
+        return;
+      }
+
+      const allRows = (rows ?? []) as DailyRow[];
+
+      // Inject synthetic data for the demo student: 100% on past days, ~83% today
+      const demoStudent = students.find((s) => s.display_name === DEMO_STUDENT_DISPLAY_NAME);
+      if (demoStudent) {
+        const pastDays = daysOfWeek.filter((d) => d <= today);
+        for (const day of pastDays) {
+          const dateStr = format(day, "yyyy-MM-dd");
+          if (!allRows.some((r) => r.user_id === demoStudent.student_id && r.date === dateStr)) {
+            const isToday = dateStr === todayStr;
+            allRows.push({
+              user_id: demoStudent.student_id,
+              date: dateStr,
+              push_ups: 10,
+              squats: 10,
+              planks: 10,
+              sit_ups: 25,
+              jumping_jacks: 40,
+              steps: isToday ? 0 : 3000,
+              steps_tracking_active: !isToday,
+            });
+          }
+        }
+      }
+
+      // Group by student
+      const byStudent = new Map<string, DailyRow[]>();
+      for (const r of allRows) {
+        const list = byStudent.get(r.user_id) ?? [];
+        list.push(r);
+        byStudent.set(r.user_id, list);
+      }
+
+      const stats: StudentStat[] = students.map((s) => {
+        const sRows = byStudent.get(s.student_id) ?? [];
+        const todayRow = sRows.find((r) => r.date === todayStr);
+        const todayPercent = todayRow ? getDayProgress(todayRow) : 0;
+        const weekActiveDays = sRows.filter((r) => getDayProgress(r) > STREAK_THRESHOLD).length;
+        return { studentId: s.student_id, name: s.display_name, todayPercent, weekActiveDays };
+      });
+      stats.sort((a, b) => b.todayPercent - a.todayPercent || b.weekActiveDays - a.weekActiveDays);
+      setStudentStats(stats);
+
+      const days: DayStat[] = daysOfWeek.map((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const dayRows = allRows.filter((r) => r.date === dateStr);
+        const activeCount = dayRows.filter((r) => getDayProgress(r) > STREAK_THRESHOLD).length;
+        return {
+          date: dateStr,
+          label: format(day, "EEE", { locale: de }),
+          activeCount,
+          totalCount: students.length,
+        };
+      });
+      setDayStats(days);
+    } finally {
+      setOverviewLoading(false);
+    }
+  };
+
+  const loadRanking = async () => {
+    setRankingLoading(true);
+    try {
+      const studentIds = students.map((s) => s.student_id);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, points")
+        .in("id", studentIds)
+        .order("points", { ascending: false });
+
+      if (error || !data) {
+        // Fallback: use student names with 0 points
+        setStudentRanks(students.map((s) => ({ id: s.student_id, name: s.display_name, points: 0 })));
+        return;
+      }
+
+      // Merge with students list for display names (profiles might have different names)
+      const rankMap = new Map(data.map((p: { id: string; username: string; points: number }) => [p.id, p]));
+      const ranks: StudentRank[] = students
+        .map((s) => {
+          const profile = rankMap.get(s.student_id);
+          return {
+            id: s.student_id,
+            name: profile?.username || s.display_name,
+            points: Number(profile?.points ?? 0),
+          };
+        })
+        .sort((a, b) => b.points - a.points);
+      setStudentRanks(ranks);
+    } finally {
+      setRankingLoading(false);
+    }
+  };
+
+  const updateExercise = (field: keyof TeacherProgress, delta: number) => {
+    setTeacherProgress((prev) => {
+      const cap = field === "steps" ? DAILY_STEP_GOAL * 2 : (DAILY_EXERCISE_GOALS[field as keyof typeof DAILY_EXERCISE_GOALS] ?? 99) * 2;
+      const next = { ...prev, [field]: Math.max(0, Math.min(cap, prev[field] + delta)) };
+      if (teacherId) {
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        localStorage.setItem(teacherStorageKey(teacherId, todayStr), JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const handleSubmitFeedback = async () => {
+    const message = feedbackMessage.trim();
+    if (message.length < 3) {
+      toast.error("Bitte schreibe kurz, worum es geht.");
+      return;
+    }
+    setSendingFeedback(true);
+    try {
+      const { error } = await (supabase.from as any)("feedback_submissions").insert({
+        user_id: teacherId || null,
+        message,
+        page: "teacher-home",
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      });
+      if (error) throw error;
+      setFeedbackMessage("");
+      setFeedbackOpen(false);
+      toast.success("Feedback gespeichert. Danke!");
+    } catch (error) {
+      console.error("Feedback submission failed:", error);
+      toast.error("Feedback konnte nicht gespeichert werden.");
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
+
+  const loadSchoolRequests = async () => {
+    const { data, error } = await (supabase as any)
+      .from("school_registration_requests")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+    if (!error) {
+      setSchoolRequests((data || []) as SchoolRegistrationRequest[]);
+    }
+  };
+
+  const handleSchoolRequestDecision = async (requestId: string, status: "approved" | "rejected") => {
+    setHandlingRequestId(requestId);
+    const { error } = await (supabase.rpc as any)("review_school_registration_request", {
+      p_request_id: requestId,
+      p_status: status,
+    });
+    setHandlingRequestId(null);
+    if (error) {
+      toast.error("Anfrage konnte nicht aktualisiert werden");
+      return;
+    }
+    toast.success(status === "approved" ? "Schule freigegeben" : "Anfrage abgelehnt");
+    await loadSchoolRequests();
+  };
 
   const handleLogout = async () => {
     if (authMode === "code") {
@@ -82,9 +447,542 @@ export default function TeacherHome() {
       navigate("/login", { replace: true });
       return;
     }
-
     await supabase.auth.signOut();
     navigate("/auth", { replace: true });
+  };
+
+  const renderMitmachenTab = () => {
+    const todayLabel = format(new Date(), "EEEE, d. MMMM", { locale: de });
+    const exerciseDone = countCompletedDailyExercises({
+      push_ups: teacherProgress.push_ups,
+      squats: teacherProgress.squats,
+      planks: teacherProgress.planks,
+      sit_ups: teacherProgress.sit_ups,
+      jumping_jacks: teacherProgress.jumping_jacks,
+    });
+    const stepsDone = teacherProgress.steps >= DAILY_STEP_GOAL ? 1 : 0;
+    const totalDone = exerciseDone + stepsDone;
+    const totalTasks = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+    const progressPct = Math.round((totalDone / totalTasks) * 100);
+
+    const exercises: {
+      field: keyof Omit<TeacherProgress, "steps">;
+      label: string;
+      icon: React.ReactNode;
+      goal: number;
+      unit: string;
+      step: number;
+    }[] = [
+      { field: "push_ups", label: "Liegestütze", icon: <PushUpIcon />, goal: DAILY_EXERCISE_GOALS.push_ups, unit: "×", step: 1 },
+      { field: "squats", label: "Kniebeugen", icon: <SquatIcon />, goal: DAILY_EXERCISE_GOALS.squats, unit: "×", step: 1 },
+      { field: "planks", label: "Plank", icon: <PlankIcon />, goal: DAILY_EXERCISE_GOALS.planks, unit: "s", step: 5 },
+      { field: "sit_ups", label: "Sit-Ups", icon: <SitUpIcon />, goal: DAILY_EXERCISE_GOALS.sit_ups, unit: "×", step: 5 },
+      { field: "jumping_jacks", label: "Hampelmänner", icon: <JumpingJacksIcon />, goal: DAILY_EXERCISE_GOALS.jumping_jacks, unit: "×", step: 5 },
+    ];
+
+    return (
+      <div className="space-y-4">
+        {/* Header / progress summary */}
+        <Card className="overflow-hidden rounded-[28px] border-0 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] p-5 text-white shadow-[0_20px_44px_rgba(34,197,94,0.22)]">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">{todayLabel}</p>
+          <h2 className="mt-1 text-2xl font-black leading-tight">Tägliche Challenge</h2>
+          <div className="mt-4 flex items-end gap-4">
+            <div>
+              <p className="text-5xl font-black leading-none">{progressPct}%</p>
+              <p className="mt-1 text-sm font-semibold text-white/80">{totalDone} von {totalTasks} Aufgaben erledigt</p>
+            </div>
+            <div className="flex-1">
+              <div className="h-3 w-full overflow-hidden rounded-full bg-white/25">
+                <div
+                  className="h-full rounded-full bg-white transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Exercise grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {exercises.map(({ field, label, icon, goal, unit, step }) => {
+            const current = teacherProgress[field];
+            const done = current >= goal;
+            return (
+              <Card
+                key={field}
+                className={`rounded-[20px] border-black/5 p-4 shadow-[0_8px_18px_rgba(0,0,0,0.06)] transition ${
+                  done ? "bg-primary/8 border-primary/30" : "bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-muted">{icon}</div>
+                  {done && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-black text-foreground leading-tight">{label}</p>
+                <p className="text-xs font-semibold text-muted-foreground">{current} / {goal} {unit}</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateExercise(field, -step)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${done ? "bg-primary" : "bg-primary/50"}`}
+                      style={{ width: `${Math.min(100, Math.round((current / goal) * 100))}%` }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateExercise(field, step)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95"
+                  >
+                    +
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Steps card */}
+        <Card className={`rounded-[20px] border-black/5 p-4 shadow-[0_8px_18px_rgba(0,0,0,0.06)] ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary/8 border-primary/30" : "bg-white"}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-muted">
+                <Footprints className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-black text-foreground">Schritte</p>
+                <p className="text-xs font-semibold text-muted-foreground">{teacherProgress.steps.toLocaleString("de")} / {DAILY_STEP_GOAL.toLocaleString("de")}</p>
+              </div>
+            </div>
+            {teacherProgress.steps >= DAILY_STEP_GOAL && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>
+            )}
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => updateExercise("steps", -500)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95"
+            >
+              −
+            </button>
+            <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary" : "bg-primary/50"}`}
+                style={{ width: `${Math.min(100, Math.round((teacherProgress.steps / DAILY_STEP_GOAL) * 100))}%` }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => updateExercise("steps", 500)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95"
+            >
+              +
+            </button>
+          </div>
+          <p className="mt-2 text-center text-[10px] text-muted-foreground">+500 Schritte pro Tipp</p>
+        </Card>
+      </div>
+    );
+  };
+
+  // ── Render helpers ──────────────────────────────────────────
+
+  const renderClassSelector = () => {
+    if (classes.length <= 1) return null;
+    return (
+      <div className="flex flex-wrap gap-2">
+        {classes.map((cls) => (
+          <button
+            key={cls.class_id}
+            type="button"
+            onClick={() => setSelectedClassId(cls.class_id)}
+            className={`rounded-full px-3 py-1.5 text-sm font-bold transition ${
+              cls.class_id === selectedClassId
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {cls.class_name}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderHomeTab = () => (
+    <>
+      <Card className="overflow-hidden rounded-[28px] border-0 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] p-5 text-white shadow-[0_20px_44px_rgba(34,197,94,0.22)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <Badge className="border-0 bg-white/18 text-white hover:bg-white/18">
+              BOOST Verwaltung
+            </Badge>
+            <h2 className="mt-5 text-4xl font-black leading-[0.95] tracking-tight">
+              Willkommen
+              <br />
+              im Lehrerbereich
+            </h2>
+            <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-white/82">
+              Behalte deine Klassen im Blick und öffne die Verwaltung, wenn du Schüler:innen, QR-Codes oder Geräte bearbeiten möchtest.
+            </p>
+          </div>
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[24px] bg-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+            <Users className="h-8 w-8" />
+          </div>
+        </div>
+      </Card>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+          <Users className="mx-auto h-5 w-5 text-primary" />
+          <p className="mt-1 text-xl font-black">{loading ? "..." : classes.length}</p>
+          <p className="text-[11px] font-bold text-muted-foreground">Klassen</p>
+        </Card>
+        <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+          <ClipboardList className="mx-auto h-5 w-5 text-sky-500" />
+          <p className="mt-1 text-xl font-black">{loading ? "..." : totalStudents}</p>
+          <p className="text-[11px] font-bold text-muted-foreground">Schüler:innen</p>
+        </Card>
+        <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+          <QrCode className="mx-auto h-5 w-5 text-amber-500" />
+          <p className="mt-1 text-xl font-black">QR</p>
+          <p className="text-[11px] font-bold text-muted-foreground">Aktivierung</p>
+        </Card>
+      </div>
+
+      {schoolRequests.length > 0 && (
+        <section className="mt-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-black text-foreground">Schulanfragen</h2>
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-black text-white">
+              {schoolRequests.length}
+            </span>
+          </div>
+          {schoolRequests.map((req) => {
+            const isBusy = handlingRequestId === req.id;
+            return (
+              <Card key={req.id} className="rounded-[20px] border border-amber-200 bg-amber-50 p-4 shadow-[0_8px_20px_rgba(245,158,11,0.10)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-foreground">{req.requested_school}</p>
+                    {req.requester_name && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {req.requester_name}{req.requester_email ? ` · ${req.requester_email}` : ""}
+                      </p>
+                    )}
+                    {req.request_note && (
+                      <p className="mt-1 text-xs italic text-muted-foreground">"{req.request_note}"</p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => handleSchoolRequestDecision(req.id, "approved")}
+                      className="flex items-center gap-1.5 rounded-[12px] bg-primary px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-50"
+                    >
+                      {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Freigeben
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => handleSchoolRequestDecision(req.id, "rejected")}
+                      className="flex items-center gap-1.5 rounded-[12px] border border-black/10 bg-white px-3 py-2 text-xs font-bold text-muted-foreground disabled:opacity-50"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      Ablehnen
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </section>
+      )}
+
+      <section className="mt-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-black text-foreground">Schnellzugriff</h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate("/teacher-management")}
+          className="flex w-full items-center gap-4 rounded-[24px] border border-primary/15 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-primary/40"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/12 text-primary">
+            <ClipboardList className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-black text-foreground">Verwaltung öffnen</h3>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">
+              Schüler:innen hinzufügen, QR-Codes anzeigen, Geräte zurücksetzen.
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFeedbackOpen(true)}
+          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-primary/20"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/12 text-primary">
+            <MessageSquare className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-black text-foreground">Feedback senden</h3>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">
+              Idee, Problem oder Wunsch mitteilen.
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        </button>
+
+        {classes.map((cls) => (
+          <button
+            key={cls.class_id}
+            type="button"
+            onClick={() => { setSelectedClassId(cls.class_id); setActiveTab("uebersicht"); }}
+            className="flex w-full items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.05)]"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/10 text-primary">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-black text-foreground">Klasse {cls.class_name}</p>
+              <p className="truncate text-xs font-semibold text-muted-foreground">{cls.school_name}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{cls.student_count}</Badge>
+              <BarChart2 className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </button>
+        ))}
+
+        {!loading && classes.length === 0 && (
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
+            Noch keine Klasse verfügbar. Öffne die Verwaltung, um deine erste Klasse vorzubereiten.
+          </Card>
+        )}
+      </section>
+    </>
+  );
+
+  const renderUebersichtTab = () => {
+    const today = new Date();
+    const todayStr = format(today, "yyyy-MM-dd");
+
+    if (studentsLoading || overviewLoading) {
+      return (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-[20px] bg-muted" />
+          ))}
+        </div>
+      );
+    }
+
+    if (students.length === 0) {
+      return (
+        <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
+          Für diese Klasse sind noch keine Schüler:innen aktiviert.
+        </Card>
+      );
+    }
+
+    const todayStats = dayStats.find((d) => d.date === todayStr);
+    const todayPct = todayStats && todayStats.totalCount > 0
+      ? Math.round((todayStats.activeCount / todayStats.totalCount) * 100)
+      : 0;
+    const weekPct = students.length > 0 && studentStats.length > 0
+      ? Math.round(studentStats.reduce((s, x) => s + x.weekActiveDays, 0) / (students.length * 5) * 100)
+      : 0;
+
+    return (
+      <div className="space-y-4">
+        {renderClassSelector()}
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Heute aktiv</p>
+            <p className="mt-1 text-3xl font-black text-foreground">{todayPct}%</p>
+            <p className="text-xs font-semibold text-muted-foreground">
+              {todayStats?.activeCount ?? 0} von {students.length} Schüler:innen
+            </p>
+          </Card>
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Ø Wochenleistung</p>
+            <p className="mt-1 text-3xl font-black text-foreground">{weekPct}%</p>
+            <p className="text-xs font-semibold text-muted-foreground">Ø Tagesziele erreicht</p>
+          </Card>
+        </div>
+
+        {/* Weekly heatmap */}
+        {dayStats.length > 0 && (
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+            <p className="mb-3 text-sm font-black text-foreground">Wochenaktivität der Klasse</p>
+            <div className="grid grid-cols-7 gap-1.5">
+              {dayStats.map((day) => {
+                const pct = day.totalCount > 0 ? Math.round((day.activeCount / day.totalCount) * 100) : 0;
+                const isToday = day.date === todayStr;
+                return (
+                  <div key={day.date} className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-bold text-muted-foreground">{day.label}</span>
+                    <div
+                      className={`flex h-10 w-full items-center justify-center rounded-xl text-[11px] font-black transition ${
+                        isToday ? "ring-2 ring-primary ring-offset-1" : ""
+                      } ${
+                        pct >= 75 ? "bg-primary/85 text-white" :
+                        pct >= 50 ? "bg-primary/50 text-foreground" :
+                        pct >= 25 ? "bg-primary/20 text-foreground" :
+                        "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {pct}%
+                    </div>
+                    <span className="text-[9px] text-muted-foreground">{day.activeCount}/{day.totalCount}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[10px] text-muted-foreground text-center">
+              Prozent der Schüler:innen die &gt;90% des Tagesziels erreicht haben
+            </p>
+          </Card>
+        )}
+
+        {/* Student list */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-black uppercase tracking-wide text-muted-foreground">Schüler:innen im Detail</h3>
+          {studentStats.map((s) => (
+            <Card key={s.studentId} className="rounded-[18px] border-black/5 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-foreground">{s.name}</p>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="mb-0.5 flex items-center justify-between">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Heute</span>
+                        <span className="text-[10px] font-black text-foreground">{s.todayPercent}%</span>
+                      </div>
+                      <Progress value={s.todayPercent} className="h-1.5" />
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[10px] font-semibold text-muted-foreground">Diese Woche</span>
+                      <span className="text-[10px] font-black text-foreground">{s.weekActiveDays}/5 Tage</span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                    s.todayPercent >= 90
+                      ? "bg-primary/15 text-primary"
+                      : s.todayPercent >= 50
+                      ? "bg-amber-500/15 text-amber-600"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {s.todayPercent}%
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderWertungTab = () => {
+    if (studentsLoading || rankingLoading) {
+      return (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-[18px] bg-muted" />
+          ))}
+        </div>
+      );
+    }
+
+    if (students.length === 0) {
+      return (
+        <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
+          Für diese Klasse sind noch keine Schüler:innen aktiviert.
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {renderClassSelector()}
+
+        <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-black text-foreground">
+                Klasse {selectedClass?.class_name ?? ""}
+              </p>
+              <p className="text-xs text-muted-foreground">{selectedClass?.school_name}</p>
+            </div>
+            <Trophy className="h-5 w-5 text-yellow-500" />
+          </div>
+
+          <div className="space-y-1.5">
+            {studentRanks.map((student, i) => {
+              const rank = i + 1;
+              return (
+                <div
+                  key={student.id}
+                  className="flex items-center justify-between rounded-[14px] bg-muted/50 p-2.5"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {getRankBadge(rank)}
+                    <span className="text-sm font-bold text-foreground">{student.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-black">{student.points}</span>
+                    <Zap className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Teacher entry */}
+            <div className="mt-2 flex items-center justify-between rounded-[14px] border border-primary/20 bg-primary/8 p-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
+                  <Medal className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-sm font-black text-primary">{teacherName}</span>
+                  <Badge variant="outline" className="ml-2 border-primary/30 text-[10px] text-primary">
+                    Lehrer:in
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                Mitmachen
+                <Zap className="h-3 w-3" />
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-3 border-t border-border pt-3 text-[11px] text-center text-muted-foreground">
+            Als Lehrer:in kannst du mit deiner Klasse mittrainieren — nutze die Zähler auf dem Schüler-Dashboard.
+          </p>
+        </Card>
+      </div>
+    );
   };
 
   return (
@@ -102,91 +1000,10 @@ export default function TeacherHome() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-5 pb-24">
-        <Card className="overflow-hidden rounded-[28px] border-0 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] p-5 text-white shadow-[0_20px_44px_rgba(34,197,94,0.22)]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <Badge className="border-0 bg-white/18 text-white hover:bg-white/18">
-                BOOST Verwaltung
-              </Badge>
-              <h2 className="mt-5 text-4xl font-black leading-[0.95] tracking-tight">
-                Willkommen
-                <br />
-                im Lehrerbereich
-              </h2>
-              <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-white/82">
-                Behalte deine Klassen im Blick und öffne die Verwaltung, wenn du Schüler:innen, QR-Codes oder Geräte bearbeiten möchtest.
-              </p>
-            </div>
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[24px] bg-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
-              <Users className="h-8 w-8" />
-            </div>
-          </div>
-        </Card>
-
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-            <Users className="mx-auto h-5 w-5 text-primary" />
-            <p className="mt-1 text-xl font-black">{loading ? "..." : classes.length}</p>
-            <p className="text-[11px] font-bold text-muted-foreground">Klassen</p>
-          </Card>
-          <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-            <ClipboardList className="mx-auto h-5 w-5 text-sky-500" />
-            <p className="mt-1 text-xl font-black">{loading ? "..." : totalStudents}</p>
-            <p className="text-[11px] font-bold text-muted-foreground">Schüler:innen</p>
-          </Card>
-          <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-            <QrCode className="mx-auto h-5 w-5 text-amber-500" />
-            <p className="mt-1 text-xl font-black">QR</p>
-            <p className="text-[11px] font-bold text-muted-foreground">Aktivierung</p>
-          </Card>
-        </div>
-
-        <section className="mt-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-black text-foreground">Schnellzugriff</h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate("/teacher-management")}
-            className="flex w-full items-center gap-4 rounded-[24px] border border-primary/15 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-primary/40"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/12 text-primary">
-              <ClipboardList className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-black text-foreground">Verwaltung öffnen</h3>
-              <p className="mt-1 text-sm font-semibold text-muted-foreground">
-                Schüler:innen hinzufügen, QR-Codes anzeigen, Geräte zurücksetzen.
-              </p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
-          </button>
-
-          {classes.map((cls) => (
-            <button
-              key={cls.class_id}
-              type="button"
-              onClick={() => navigate("/teacher-management")}
-              className="flex w-full items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.05)]"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/10 text-primary">
-                <Users className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-black text-foreground">Klasse {cls.class_name}</p>
-                <p className="truncate text-xs font-semibold text-muted-foreground">{cls.school_name}</p>
-              </div>
-              <Badge variant="secondary">{cls.student_count}</Badge>
-            </button>
-          ))}
-
-          {!loading && classes.length === 0 && (
-            <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
-              Noch keine Klasse verfügbar. Öffne die Verwaltung, um deine erste Klasse vorzubereiten.
-            </Card>
-          )}
-        </section>
+        {activeTab === "home" && renderHomeTab()}
+        {activeTab === "uebersicht" && renderUebersichtTab()}
+        {activeTab === "wertung" && renderWertungTab()}
+        {activeTab === "mitmachen" && renderMitmachenTab()}
       </main>
 
       <nav
@@ -194,12 +1011,46 @@ export default function TeacherHome() {
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-around px-2">
-          <button className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-foreground">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]">
+          <button
+            onClick={() => setActiveTab("home")}
+            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "home" ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "home" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
               <Zap className="h-[18px] w-[18px]" />
             </div>
-            <span className="text-xs">Home</span>
+            <span className="text-[10px]">Home</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab("uebersicht")}
+            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "uebersicht" ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "uebersicht" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
+              <BarChart2 className="h-[18px] w-[18px]" />
+            </div>
+            <span className="text-[10px]">Übersicht</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("wertung")}
+            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "wertung" ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "wertung" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
+              <Trophy className="h-[18px] w-[18px]" />
+            </div>
+            <span className="text-[10px]">Wertung</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("mitmachen")}
+            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "mitmachen" ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "mitmachen" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
+              <Flame className="h-[18px] w-[18px]" />
+            </div>
+            <span className="text-[10px]">Aktiv</span>
+          </button>
+
           <button
             onClick={() => navigate("/teacher-management")}
             className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
@@ -207,10 +1058,51 @@ export default function TeacherHome() {
             <div className="flex h-8 w-8 items-center justify-center rounded-full">
               <ClipboardList className="h-[18px] w-[18px]" />
             </div>
-            <span className="text-xs">Verwaltung</span>
+            <span className="text-[10px]">Verw.</span>
           </button>
         </div>
       </nav>
+
+      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">
+          <DialogHeader>
+            <DialogTitle>Feedback senden</DialogTitle>
+            <DialogDescription>
+              Schreib kurz, was verbessert werden soll oder wo etwas nicht passt.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={feedbackMessage}
+            onChange={(e) => setFeedbackMessage(e.target.value)}
+            placeholder="Dein Feedback..."
+            className="min-h-32 resize-none rounded-2xl"
+            maxLength={1000}
+          />
+          <div className="text-right text-xs text-muted-foreground">
+            {feedbackMessage.trim().length}/1000
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-2xl"
+              onClick={() => setFeedbackOpen(false)}
+              disabled={sendingFeedback}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              className="rounded-2xl"
+              onClick={() => void handleSubmitFeedback()}
+              disabled={sendingFeedback || feedbackMessage.trim().length < 3}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {sendingFeedback ? "Sendet..." : "Senden"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

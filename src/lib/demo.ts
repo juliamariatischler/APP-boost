@@ -1,4 +1,5 @@
 export const DEMO_MIN_POINTS = 40;
+export const DEMO_STUDENT_DISPLAY_NAME = "Demo Schüler";
 
 const DEMO_EMAILS = new Set([
   "demo@boost-challenge.de",

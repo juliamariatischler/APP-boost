@@ -8,6 +8,18 @@
   }
 }
 
+/* Prevent iOS rubber-band bounce without disabling scrolling */
+html {
+  overscroll-behavior: none;
+  height: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+  height: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

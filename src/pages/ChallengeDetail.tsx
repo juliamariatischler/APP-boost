@@ -15,6 +15,7 @@ import { CheckCircle2, MapPin, Play, Sparkles, Zap } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { isDemoEmail } from "@/lib/demo";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
+import { AVATAR_BASE_ASSET } from "@/lib/avatarItems";
 
 const challengeData: Record<string, { title: string; image: string; description: string }> = {
   daily: {
@@ -37,6 +38,46 @@ const challengeData: Record<string, { title: string; image: string; description:
     image: tryitImg,
     description: `Ein gemeinsames Try-It-System mit echten Sportarten, Vereinsnähe und +${BOOST_POINT_RULES.tryItCompleted} Blitzen pro neuem Erlebnis.`,
   },
+};
+
+const Blitz3D = ({ className = "" }: { className?: string }) => (
+  <span className={`relative inline-flex shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(145deg,#baff76_0%,#61dc70_46%,#22a64a_100%)] text-white shadow-[0_9px_14px_rgba(31,224,102,0.34),0_3px_0_rgba(20,120,52,0.28),inset_0_2px_2px_rgba(255,255,255,0.68),inset_0_-3px_5px_rgba(0,0,0,0.18)] ${className}`}>
+    <span className="absolute left-1.5 top-1 h-2 w-3 rounded-full bg-white/45 blur-[1px]" />
+    <Zap className="relative h-[62%] w-[62%] fill-current drop-shadow-[0_2px_2px_rgba(0,0,0,0.24)]" />
+  </span>
+);
+
+const QuestBuddy = ({ type }: { type: string }) => {
+  const isTryIt = type === "tryit";
+
+  return (
+    <div className="relative flex h-32 w-32 items-center justify-center">
+      <div className="absolute inset-2 rounded-[36px] bg-[radial-gradient(circle_at_36%_28%,rgba(255,255,255,0.95)_0%,rgba(255,255,255,0.72)_34%,rgba(97,220,112,0.16)_100%)] shadow-[0_18px_34px_rgba(31,224,102,0.20),inset_0_2px_0_rgba(255,255,255,0.85),inset_0_-4px_10px_rgba(0,0,0,0.08)]" />
+      <div className="absolute right-0 top-2 h-9 w-9 rounded-full bg-[linear-gradient(145deg,#ffcf5a_0%,#ff8a3d_100%)] shadow-[0_8px_16px_rgba(249,115,22,0.28),inset_0_2px_0_rgba(255,255,255,0.65)]">
+        <span className="absolute left-2 top-2 h-2 w-3 rounded-full bg-white/55 blur-[1px]" />
+      </div>
+      <div className="absolute left-2 top-5 h-5 w-10 -rotate-12 rounded-full border-2 border-white/80 bg-sky-300/80 shadow-[0_8px_14px_rgba(14,165,233,0.18)]" />
+      {isTryIt && (
+        <>
+          <div className="absolute left-1 bottom-9 h-8 w-8 rounded-full bg-[linear-gradient(145deg,#ffffff_0%,#d9f99d_42%,#61dc70_100%)] shadow-[0_8px_16px_rgba(31,224,102,0.2),inset_0_2px_0_rgba(255,255,255,0.85)]">
+            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-primary/45" />
+            <span className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-primary/45" />
+          </div>
+          <div className="absolute right-3 bottom-7 h-2 w-8 rotate-[-24deg] rounded-full bg-primary/35" />
+          <div className="absolute right-7 bottom-4 h-2 w-7 rotate-[-10deg] rounded-full bg-primary/25" />
+        </>
+      )}
+      <img
+        src={AVATAR_BASE_ASSET}
+        alt=""
+        aria-hidden="true"
+        className="relative z-10 h-[5.7rem] w-[5.7rem] object-contain drop-shadow-[0_14px_18px_rgba(15,23,42,0.18)]"
+      />
+      <div className="absolute bottom-2 right-4 z-20">
+        <Blitz3D className="h-8 w-8 rotate-6" />
+      </div>
+    </div>
+  );
 };
 
 const ChallengeDetail = () => {
@@ -118,37 +159,37 @@ const ChallengeDetail = () => {
           <DailyChallengeContent userId={userId} />
         ) : (
           <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_24%_32%,rgba(249,115,22,0.92)_0%,rgba(245,158,11,0.82)_42%,rgba(34,211,238,0.34)_60%,rgba(220,252,231,0.68)_78%,rgba(255,255,255,0.94)_100%)]">
-              <div className="grid grid-cols-[minmax(0,1fr)_136px]">
+            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.72)_0%,transparent_34%),linear-gradient(135deg,#8ee6ff_0%,#7ce582_48%,#fff3a3_100%)]">
+              <div className="grid grid-cols-[minmax(0,1fr)_132px]">
                 <div className="relative min-h-[13.5rem] overflow-hidden">
                   <img
                     src={challenge.image}
                     alt=""
                     aria-hidden="true"
-                    className="absolute inset-0 h-full w-full object-cover opacity-72 mix-blend-multiply"
+                    className="absolute inset-0 h-full w-full object-cover opacity-58 mix-blend-multiply saturate-125"
                   />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_36%_28%,rgba(255,255,255,0.35)_0%,transparent_34%),linear-gradient(90deg,rgba(124,45,18,0.18)_0%,rgba(255,255,255,0.08)_70%,rgba(255,255,255,0.62)_100%)]" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_24%,rgba(255,255,255,0.46)_0%,transparent_32%),linear-gradient(90deg,rgba(15,23,42,0.34)_0%,rgba(15,23,42,0.08)_66%,rgba(255,255,255,0.72)_100%)]" />
+                  <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/45 blur-2xl" />
+                  <div className="absolute bottom-4 right-5 h-9 w-9 rounded-full bg-yellow-300/75 shadow-[0_8px_18px_rgba(250,204,21,0.25)]" />
                   <div className="absolute left-5 top-5 rounded-full bg-white/22 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
-                    {id === "tryit" ? "Neu" : "Quest"}
+                    {id === "tryit" ? "Ausprobieren" : "Quest"}
                   </div>
                   <div className="absolute bottom-5 left-5 right-6">
-                    <h1 className="text-[2rem] font-black leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.24)]">
+                    <h1 className="max-w-[12.5rem] text-[1.72rem] font-black leading-[0.95] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.28)]">
                       {challenge.title}
                     </h1>
-                    <p className="mt-2 max-w-[13.5rem] text-sm font-semibold leading-snug text-white/88">
+                    <p className="mt-2 max-w-[13rem] text-sm font-bold leading-snug text-white/92">
                       {challenge.description}
                     </p>
                   </div>
                 </div>
 
                 <div className="relative flex flex-col items-center justify-center px-2 py-4">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.42)_50%,transparent_80%)]" />
-                  <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_14px_30px_rgba(31,224,102,0.22),inset_0_2px_0_rgba(255,255,255,0.36)]">
-                    {id === "tryit" ? <MapPin className="h-10 w-10" /> : <Sparkles className="h-10 w-10" />}
-                  </div>
-                  <p className="relative mt-3 flex items-center gap-1 text-xs font-black text-foreground/70">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.48)_54%,transparent_84%)]" />
+                  <QuestBuddy type={id || "weekly"} />
+                  <p className="relative -mt-1 flex items-center gap-1 text-xs font-black text-foreground/70">
                     +{headerReward}
-                    <Zap className="h-3.5 w-3.5 fill-warning text-warning" />
+                    <Blitz3D className="h-6 w-6" />
                   </p>
                 </div>
               </div>
@@ -157,9 +198,9 @@ const ChallengeDetail = () => {
             {id === "weekly" && (
               <div className="p-5">
                 <div className="mx-auto mb-6 max-w-xl rounded-[24px] bg-[#f7f9f3] p-5 text-center">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-black text-primary">
-                    <Zap className="h-4 w-4 fill-current" />
+                  <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-3 pr-1.5 text-sm font-black text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
                     +{BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze
+                    <Blitz3D className="h-7 w-7" />
                   </div>
                   <p className="mt-4 text-2xl font-black text-foreground">Schaffe 5 aktive Tage</p>
                   <p className="mt-2 text-sm font-medium text-muted-foreground">Such dir eine Mission aus und sammle jeden Tag Bewegung.</p>

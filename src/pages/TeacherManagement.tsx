@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, Home, LogOut, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Users } from "lucide-react";
+import { BarChart2, ClipboardList, Flame, LogOut, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Trophy, Users, Zap } from "lucide-react";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -482,7 +482,7 @@ export default function TeacherManagement() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
+      <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 pb-24 lg:grid-cols-[19rem_minmax(0,1fr)]">
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Klassen</h2>
@@ -644,15 +644,42 @@ export default function TeacherManagement() {
             className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full">
-              <Home className="h-[18px] w-[18px]" />
+              <Zap className="h-[18px] w-[18px]" />
             </div>
-            <span className="text-xs">Home</span>
+            <span className="text-[10px]">Home</span>
+          </button>
+          <button
+            onClick={() => navigate("/teacher-home", { state: { tab: "uebersicht" } })}
+            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full">
+              <BarChart2 className="h-[18px] w-[18px]" />
+            </div>
+            <span className="text-[10px]">Übersicht</span>
+          </button>
+          <button
+            onClick={() => navigate("/teacher-home", { state: { tab: "wertung" } })}
+            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full">
+              <Trophy className="h-[18px] w-[18px]" />
+            </div>
+            <span className="text-[10px]">Wertung</span>
+          </button>
+          <button
+            onClick={() => navigate("/teacher-home", { state: { tab: "mitmachen" } })}
+            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full">
+              <Flame className="h-[18px] w-[18px]" />
+            </div>
+            <span className="text-[10px]">Aktiv</span>
           </button>
           <button className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-foreground">
             <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]">
               <ClipboardList className="h-[18px] w-[18px]" />
             </div>
-            <span className="text-xs">Verwaltung</span>
+            <span className="text-[10px]">Verwaltung</span>
           </button>
         </div>
       </nav>

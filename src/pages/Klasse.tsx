@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import avatarPlaceholder from "@/assets/avatar-placeholder.svg";
+import avatarPlaceholder from "@/assets/avatar-placeholder.png";
 import boostMascotBlue from "@/assets/boost-mascot-blue.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
@@ -192,13 +192,11 @@ const Klasse = () => {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-[28px] border border-sky-300/45 bg-[radial-gradient(circle_at_23%_32%,rgba(6,113,255,0.95)_0%,rgba(8,153,255,0.88)_36%,rgba(24,207,229,0.58)_55%,rgba(185,235,255,0.64)_72%,rgba(245,252,255,0.94)_100%)] text-foreground shadow-[0_20px_42px_rgba(14,165,233,0.16),0_10px_24px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.82)]">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(0,93,255,0.14)_0%,rgba(22,183,241,0.2)_42%,rgba(125,211,252,0.4)_68%,rgba(240,249,255,0.88)_100%)]" />
-            <div className="pointer-events-none absolute right-[-3rem] top-[-4rem] h-64 w-64 rounded-full bg-sky-300/28 blur-3xl" />
+          <div className="relative overflow-hidden rounded-[28px] border border-sky-200/40 bg-[linear-gradient(110deg,#1e3a8a_0%,#0284c7_38%,#38bdf8_68%,#bae6fd_88%,#f0f9ff_100%)] text-foreground shadow-[0_20px_42px_rgba(14,165,233,0.22),0_10px_24px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)]">
+            <div className="pointer-events-none absolute right-[-2rem] top-[-3rem] h-56 w-56 rounded-full bg-sky-400/20 blur-3xl" />
             <div className="grid grid-cols-[minmax(0,1fr)_140px]">
               <div className="relative flex min-h-[14.5rem] items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.4)_0_2px,transparent_3px),radial-gradient(circle_at_18%_28%,rgba(255,255,255,0.5)_0_1px,transparent_2px),radial-gradient(circle_at_65%_42%,rgba(255,255,255,0.28)_0_1px,transparent_2px)]" />
-                <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-r from-transparent via-white/12 to-white/62" />
                 <div className="absolute bottom-4 left-1/2 h-8 w-40 -translate-x-1/2 rounded-full border-4 border-cyan-200/80 shadow-[0_0_24px_rgba(103,232,249,0.85),inset_0_0_18px_rgba(103,232,249,0.45)]" />
                 <div className="absolute right-7 top-9 text-3xl text-yellow-200 drop-shadow-[0_0_12px_rgba(254,240,138,0.9)]">✦</div>
                 <img
@@ -210,14 +208,13 @@ const Klasse = () => {
               </div>
 
               <div className="relative flex flex-col items-center justify-center px-2 py-4">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(224,242,254,0.82)_0%,rgba(186,230,253,0.46)_50%,transparent_78%)]" />
                 <div
-                  className="relative flex h-28 w-28 items-center justify-center rounded-full shadow-[0_14px_30px_rgba(14,165,233,0.22),inset_0_2px_0_rgba(255,255,255,0.7)]"
+                  className="relative flex h-28 w-28 items-center justify-center rounded-full shadow-[0_14px_30px_rgba(14,165,233,0.28),inset_0_2px_0_rgba(255,255,255,0.5)]"
                   style={{
-                    background: `conic-gradient(rgb(14 165 233) 0% ${classQuestPercent}%, rgba(186,230,253,0.5) ${classQuestPercent}% 100%)`,
+                    background: `conic-gradient(rgb(14 165 233) 0% ${classQuestPercent}%, rgba(148,216,255,0.35) ${classQuestPercent}% 100%)`,
                   }}
                 >
-                  <div className="flex h-[78px] w-[78px] flex-col items-center justify-center rounded-full bg-white text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+                  <div className="flex h-[78px] w-[78px] flex-col items-center justify-center rounded-full bg-white text-center shadow-[0_4px_14px_rgba(14,165,233,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]">
                     <p className="text-[10px] font-bold text-foreground/55">Fortschritt {classQuestPercent}%</p>
                     <p className="mt-0.5 text-[1.8rem] font-black leading-none text-foreground">
                       {classQuestProgress}

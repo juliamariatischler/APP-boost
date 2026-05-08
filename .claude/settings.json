@@ -6,7 +6,16 @@
       "Bash(supabase db:*)",
       "Bash(gh auth:*)",
       "Bash(find \"/Users/juliatischler/Desktop/Mein Ordner/boost-main Kopie/supabase/migrations\" -name \"*.sql\" -exec grep -l \"RLS\\\\|POLICY\\\\|Row Level\" {} \\\\;)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(cwebp -version)",
+      "Bash(ffmpeg -version)",
+      "Bash(convert --version)",
+      "Bash(sips --listFormats)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('devDependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(sips --help)",
+      "Bash(sort -k5 -rh)",
+      "Bash(awk '$5 ~ /[0-9]+K/ {size=$5+0; if\\(size > 100\\) print}')",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }

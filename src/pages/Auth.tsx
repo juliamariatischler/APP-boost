@@ -806,8 +806,31 @@ const Auth = () => {
 
           <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <div className="h-px flex-1 bg-border" />
-            oder
+            oder Demo ausprobieren
             <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 text-sm font-bold"
+              onClick={handleDemoStudentLogin}
+              disabled={demoStudentLoading || demoTeacherLoading}
+            >
+              {demoStudentLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+              Demo Schüler
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 text-sm font-bold"
+              onClick={handleDemoTeacherLogin}
+              disabled={demoStudentLoading || demoTeacherLoading}
+            >
+              {demoTeacherLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+              Demo Lehrer
+            </Button>
           </div>
 
         </div>
