@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -7,7 +7,15 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
-import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
+import {
+  BOOST_POINT_RULES,
+  DAILY_EXERCISE_GOALS,
+  DAILY_STEP_GOAL,
+  countCompletedDailyExercises,
+  getDailyProgressPercent,
+  isStreakEligibleDay,
+  isDailyGoalComplete,
+} from "@/lib/gamification";
 import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon, WalkingIcon } from "@/components/ExerciseIcons";
@@ -19,6 +27,8 @@ import volt80To89Img from "@/assets/volt-80-89.png";
 import volt90PlusImg from "@/assets/volt-90-plus.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 import { getCurrentWeeklyVideo } from "@/lib/weeklyVideo";
+import { getCodeStudentDashboard, saveCodeStudentCounterResults, type CodeSession } from "@/services/codeAuthService";
+import { formatDisplayName } from "@/lib/formatName";
 
 type WeeklyResult = {
   id?: string;
@@ -34,7 +44,13 @@ type WeeklyResult = {
 };
 
 const STEP_TASK_REWARD = 5;
-const STREAK_DAY_THRESHOLD_PERCENT = 90;
+const COUNTER_STORAGE_KEYS = [
+  { key: "jumpingjacks_result", dbKey: "jumping_jacks", max: 500 },
+  { key: "squats_result", dbKey: "squats", max: 300 },
+  { key: "situps_result", dbKey: "sit_ups", max: 300 },
+  { key: "pushups_result", dbKey: "push_ups", max: 200 },
+  { key: "planks_result", dbKey: "planks", max: 600 },
+] as const;
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -49,6 +65,7 @@ const Dashboard = () => {
   const [weeklyData, setWeeklyData] = useState<WeeklyResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const pendingCounterProcessedRef = useRef(false);
 
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
@@ -64,15 +81,14 @@ const Dashboard = () => {
           }
 
           if (codeSession?.user_type === "student") {
-            setUserId("");
+            setUserId(codeSession.user_id);
             setUsername(codeSession.display_name || "Spieler");
-            setPoints(0);
+            setPoints(Number(codeSession.points || 0));
             setUserSchool(codeSession.school_name || "");
             setUserClass(codeSession.class_name || "");
             setIsTeacher(false);
             setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
-            setWeeklyData([]);
-            setWeeklyCompleted(0);
+            void loadCodeStudentProgress(codeSession);
             setLoading(false);
             return;
           }
@@ -165,24 +181,15 @@ const Dashboard = () => {
     };
   }, [userId]);
 
-  const getDayProgressPercent = (day?: WeeklyResult) => {
-    if (!day) return 0;
+  useEffect(() => {
+    if (!userId || pendingCounterProcessedRef.current) return;
+    pendingCounterProcessedRef.current = true;
+    void processPendingCounterResults(userId, codeSession?.user_type === "student" ? codeSession : null);
+  }, [userId, codeSession]);
 
-    const steps = day.steps_tracking_active ? Number(day.steps || 0) : 0;
-    const completedExerciseCount = countCompletedDailyExercises({
-      jumping_jacks: day.jumping_jacks || 0,
-      push_ups: day.push_ups || 0,
-      squats: day.squats || 0,
-      planks: day.planks || 0,
-      sit_ups: day.sit_ups || 0,
-    });
-    const completedTaskCount = (steps >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
-    const taskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+  const getDayProgressPercent = (day?: WeeklyResult) => getDailyProgressPercent(day);
 
-    return Math.min(100, Math.round((completedTaskCount / taskCount) * 100));
-  };
-
-  const isWeeklyStreakDay = (day: WeeklyResult) => getDayProgressPercent(day) > STREAK_DAY_THRESHOLD_PERCENT;
+  const isWeeklyStreakDay = (day: WeeklyResult) => isStreakEligibleDay(day);
 
   const loadWeeklyProgress = async (currentUserId: string, isDemo = false) => {
     const today = new Date();
@@ -229,6 +236,145 @@ const Dashboard = () => {
     setWeeklyCompleted(streakDays);
   };
 
+  const loadCodeStudentProgress = async (session: CodeSession) => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
+
+    try {
+      const dashboard = await getCodeStudentDashboard(
+        session,
+        format(weekStart, "yyyy-MM-dd"),
+        format(weekEnd, "yyyy-MM-dd")
+      );
+      const rows = dashboard.daily_results.map((row) => ({
+        ...row,
+        jumping_jacks: row.jumping_jacks ?? 0,
+        push_ups: row.push_ups ?? 0,
+        squats: row.squats ?? 0,
+        planks: row.planks ?? 0,
+        sit_ups: row.sit_ups ?? 0,
+        steps: row.steps ?? 0,
+      }));
+
+      setPoints(dashboard.points);
+      setWeeklyData(rows);
+      setWeeklyCompleted(rows.filter(isWeeklyStreakDay).length);
+    } catch (error) {
+      console.error("Error loading code student dashboard:", error);
+      setWeeklyData([]);
+      setWeeklyCompleted(0);
+    }
+  };
+
+  const awardFlashes = async (delta: number) => {
+    if (delta <= 0) return false;
+
+    const { error } = await supabase.rpc("increment_points", { points_to_add: delta });
+    if (error) {
+      console.error("Error awarding daily flashes from dashboard:", error);
+      return false;
+    }
+
+    setPoints((prev) => prev + delta);
+    window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta } }));
+    return true;
+  };
+
+  const processPendingCounterResults = async (currentUserId: string, session: CodeSession | null) => {
+    const pending: Partial<Record<(typeof COUNTER_STORAGE_KEYS)[number]["dbKey"], number>> = {};
+
+    for (const item of COUNTER_STORAGE_KEYS) {
+      const raw = localStorage.getItem(item.key);
+      if (raw === null) continue;
+      const value = Number.parseInt(raw, 10);
+      if (Number.isFinite(value) && value >= 0 && value <= item.max) {
+        pending[item.dbKey] = (pending[item.dbKey] || 0) + value;
+      }
+    }
+
+    if (Object.keys(pending).length === 0) return;
+
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+
+    if (session) {
+      try {
+        const result = await saveCodeStudentCounterResults(session, todayStr, pending);
+        for (const item of COUNTER_STORAGE_KEYS) {
+          localStorage.removeItem(item.key);
+        }
+        setPoints(result.total_points);
+        if (result.points_awarded > 0) {
+          window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: result.points_awarded } }));
+        }
+        await loadCodeStudentProgress(session);
+      } catch (error) {
+        console.error("Error saving code student counter results:", error);
+      }
+      return;
+    }
+
+    const { data: existingRow, error: existingError } = await supabase
+      .from("daily_results")
+      .select("jumping_jacks, push_ups, squats, planks, sit_ups, steps")
+      .eq("user_id", currentUserId)
+      .eq("date", todayStr)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("Error loading existing daily result before counter import:", existingError);
+      return;
+    }
+
+    const previous = {
+      jumping_jacks: Number(existingRow?.jumping_jacks || 0),
+      push_ups: Number(existingRow?.push_ups || 0),
+      squats: Number(existingRow?.squats || 0),
+      planks: Number(existingRow?.planks || 0),
+      sit_ups: Number(existingRow?.sit_ups || 0),
+    };
+    const next = {
+      jumping_jacks: previous.jumping_jacks + Number(pending.jumping_jacks || 0),
+      push_ups: previous.push_ups + Number(pending.push_ups || 0),
+      squats: previous.squats + Number(pending.squats || 0),
+      planks: previous.planks + Number(pending.planks || 0),
+      sit_ups: previous.sit_ups + Number(pending.sit_ups || 0),
+    };
+
+    const { error: saveError } = await supabase
+      .from("daily_results")
+      .upsert(
+        {
+          user_id: currentUserId,
+          date: todayStr,
+          ...next,
+        },
+        { onConflict: "user_id,date" }
+      );
+
+    if (saveError) {
+      console.error("Error saving counter results from dashboard:", saveError);
+      return;
+    }
+
+    for (const item of COUNTER_STORAGE_KEYS) {
+      localStorage.removeItem(item.key);
+    }
+
+    const steps = Number(existingRow?.steps || 0);
+    const completedDelta = Math.max(0, countCompletedDailyExercises(next) - countCompletedDailyExercises(previous));
+    const dailyGoalDelta = !isDailyGoalComplete(steps, previous) && isDailyGoalComplete(steps, next)
+      ? BOOST_POINT_RULES.dailyGoalCompleted
+      : 0;
+    const flashDelta = completedDelta * BOOST_POINT_RULES.exerciseCompleted + dailyGoalDelta;
+
+    if (flashDelta > 0) {
+      await awardFlashes(flashDelta);
+    }
+
+    await loadWeeklyProgress(currentUserId);
+  };
+
   const today = new Date();
   const currentWeeklyVideo = getCurrentWeeklyVideo(today);
   const todayKey = format(today, "yyyy-MM-dd");
@@ -253,7 +399,7 @@ const Dashboard = () => {
     {
       key: "inaktiv",
       min: 0,
-      title: "Volt ist inaktiv.",
+      title: "Flash ist inaktiv.",
       copy: "Erledige eine Aufgabe, damit dein Buddy wieder Energie bekommt.",
       label: "Inaktiv",
       image: voltUnder39Img,
@@ -261,7 +407,7 @@ const Dashboard = () => {
     {
       key: "bereit",
       min: 39,
-      title: "Volt ist bereit!",
+      title: "Flash ist bereit!",
       copy: "Du bist gut gestartet. Jetzt fehlt nicht mehr viel.",
       label: "Bereit",
       image: volt39To59Img,
@@ -269,7 +415,7 @@ const Dashboard = () => {
     {
       key: "aktiv",
       min: 60,
-      title: "Volt ist aktiv!",
+      title: "Flash ist aktiv!",
       copy: "Dein Buddy sammelt Energie und bleibt mit dir dran.",
       label: "Aktiv",
       image: volt60To79Img,
@@ -277,7 +423,7 @@ const Dashboard = () => {
     {
       key: "aufgeladen",
       min: 80,
-      title: "Volt ist aufgeladen!",
+      title: "Flash ist aufgeladen!",
       copy: "Starker Fortschritt. Dein Tagesziel ist fast geschafft.",
       label: "Aufgeladen",
       image: volt80To89Img,
@@ -285,8 +431,8 @@ const Dashboard = () => {
     {
       key: "mega-boost",
       min: 90,
-      title: "Volt im Mega Boost!",
-      copy: "Mega Tag. Volt ist voll da und wächst mit dir.",
+      title: "Flash im Mega Boost!",
+      copy: "Mega Tag. Flash ist voll da und wächst mit dir.",
       label: "Mega Boost",
       image: volt90PlusImg,
     },
@@ -394,11 +540,12 @@ const Dashboard = () => {
   }
 
   if (!username) return null;
+  const displayUsername = formatDisplayName(username) || username;
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
       <div className="relative mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.25rem)]">
-        <div className="mb-5 flex items-center gap-3">
+        <div className="mb-5 flex items-start gap-3">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
             <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
             {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
@@ -409,25 +556,25 @@ const Dashboard = () => {
               />
             )}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="truncate text-[1.9rem] font-black leading-none tracking-tight text-foreground">
-              Hi {username} 👋
+              Hi {displayUsername} 👋
             </h1>
-            <p className="mt-1 flex items-center gap-1 text-sm font-medium text-muted-foreground">
+            <p className="mt-1 text-sm font-medium text-muted-foreground">
               Schön, dass du da bist!
-              <span className="inline-flex items-center gap-0.5 font-bold text-primary">
-                {points}
-                <Zap className="h-3.5 w-3.5 fill-current" />
-              </span>
             </p>
+          </div>
+          <div className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1.5 text-sm font-black text-primary shadow-[0_10px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.8)]">
+            {points}
+            <Zap className="h-4 w-4 fill-current" />
           </div>
         </div>
 
         <div className="mb-4 overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_28%_78%,rgba(50,255,236,0.45)_0%,transparent_32%),linear-gradient(135deg,#075cff_0%,#078cff_48%,#16c7e9_100%)] text-white shadow-[0_18px_34px_rgba(0,83,255,0.22),0_10px_22px_rgba(0,0,0,0.08)]">
-          <div className="relative grid h-[34vh] min-h-[13.5rem] max-h-[16.5rem] grid-cols-[minmax(0,1fr)_42%] overflow-hidden">
+          <div className="relative grid h-[36vh] min-h-[14.5rem] max-h-[18rem] grid-cols-[minmax(0,1fr)_45%] overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_22%,rgba(255,255,255,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_52%_20%,rgba(255,255,255,0.5)_0_2px,transparent_3px),radial-gradient(circle_at_33%_38%,rgba(255,255,255,0.24)_0_1px,transparent_2px)]" />
             <div className="relative flex items-center justify-center overflow-hidden px-1 py-4">
-              <div className="absolute bottom-8 h-3 w-36 overflow-hidden rounded-full bg-white/20">
+              <div className="absolute bottom-[3.625rem] h-3 w-36 overflow-hidden rounded-full bg-white/20">
                 <div
                   className="h-full rounded-full bg-cyan-300/90 shadow-[0_0_12px_rgba(103,232,249,0.9)] transition-all duration-700"
                   style={{ width: `${dailyProgressPercent}%` }}
@@ -441,34 +588,34 @@ const Dashboard = () => {
               </div>
               <img
                 src={activeVoltMood.image}
-                alt={`Volt Status: ${activeVoltMood.label}`}
-                className="relative z-10 h-[12.75rem] w-[12.75rem] object-contain drop-shadow-[0_18px_24px_rgba(0,30,120,0.24)] transition-all duration-700"
+                alt={`Flash Status: ${activeVoltMood.label}`}
+                className="relative z-10 h-[12.75rem] w-[12.75rem] -translate-y-[1.625rem] object-contain drop-shadow-[0_18px_24px_rgba(0,30,120,0.24)] transition-all duration-700"
               />
             </div>
 
-            <div className="relative z-10 flex flex-col px-3 pt-4 pb-3">
+            <div className="relative z-10 flex flex-col justify-between px-4 py-4">
               <div>
-                <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/90 backdrop-blur">
+                <p className="mb-2 inline-flex rounded-full bg-white/16 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/90 backdrop-blur">
                   {activeVoltMood.label}
                 </p>
-                <h2 className="text-[1.25rem] font-black leading-tight tracking-tight">
+                <h2 className="text-[1.45rem] font-black leading-tight tracking-tight">
                   {activeVoltMood.title}
                 </h2>
-                <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-snug text-white/90">
+                <p className="mt-2 line-clamp-3 text-[0.9rem] font-medium leading-snug text-white/92">
                   {activeVoltMood.copy}
                 </p>
               </div>
-              <div className="mt-auto pt-2 flex justify-center">
-                <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_7px_rgba(255,255,255,0.12),0_0_24px_rgba(34,211,238,0.3)]">
+              <div className="flex -translate-y-2 justify-center pt-1">
+                <div className="relative flex h-[6rem] w-[6rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_9px_rgba(255,255,255,0.12),0_0_28px_rgba(34,211,238,0.34)]">
                   <div
                     className="absolute inset-0 rounded-full"
                     style={{
                       background: `conic-gradient(rgb(103 232 249) 0% ${dailyProgressPercent}%, rgba(255,255,255,0.18) ${dailyProgressPercent}% 100%)`,
                     }}
                   />
-                  <div className="relative flex h-[3.3rem] w-[3.3rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
-                    <p className="text-[1.15rem] font-black leading-none">{dailyProgressPercent}%</p>
-                    <p className="mt-0.5 text-[9px] font-semibold text-white/86">Ziel</p>
+                  <div className="relative flex h-[4.35rem] w-[4.35rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+                    <p className="text-[1.55rem] font-black leading-none">{dailyProgressPercent}%</p>
+                    <p className="mt-1 text-[11px] font-bold text-white/88">Ziel</p>
                   </div>
                 </div>
               </div>

@@ -497,10 +497,10 @@
     document.getElementById("finish-button").addEventListener("click", () => {
       if(counter === 0){
         localStorage.setItem("situps_result", 0);
-        window.location.href = "/challenge/daily";
+        window.location.href = "/dashboard";
         return;
       }
-      createCelebration(counter, 'SIT-UPS!', 'situps_result', '/challenge/daily');
+      createCelebration(counter, 'SIT-UPS!', 'situps_result', '/dashboard');
     });
 
     async function main(){

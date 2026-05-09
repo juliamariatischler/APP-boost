@@ -5,10 +5,10 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import weeklyAvatarImg from "@/assets/quest-weekly-avatar.png";
-import blueMascotImg from "@/assets/boost-mascot-blue.png";
-import friendAvatarImg from "@/assets/quest-friend-emoji.png";
-import tryitAvatarImg from "@/assets/quest-tryit-avatar.png";
+import weeklyAvatarImg from "@/assets/quest-weekly-bike-avatar.png";
+import classAvatarImg from "@/assets/quest-class-avatar.png";
+import friendAvatarImg from "@/assets/quest-friend-highfive.png";
+import tryitAvatarImg from "@/assets/quest-tryit-football-avatar.png";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
@@ -23,6 +23,7 @@ type QuestCard = {
   icon: typeof Sparkles;
   bgClass?: string;
   imgClass?: string;
+  shadowClass?: string;
 };
 
 const Blitz3D = () => (
@@ -45,16 +46,33 @@ const RewardDisplay = ({ reward }: { reward: string }) => {
   );
 };
 
+const QuestAvatar = ({ quest }: { quest: QuestCard }) => (
+  <div className={`relative flex h-36 items-center justify-center overflow-hidden px-2 py-2 ${quest.bgClass ?? "bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.58)_34%,transparent_66%),linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
+    <div className="absolute bottom-3 h-7 w-[72%] rounded-full bg-black/18 blur-xl" />
+    <div className="absolute bottom-5 h-3 w-[56%] rounded-full bg-black/14 blur-md" />
+    <img
+      src={quest.image}
+      alt={quest.title}
+      className={
+        quest.imgClass ??
+        "relative z-10 max-h-[118%] w-auto max-w-[108%] object-contain object-center drop-shadow-[0_22px_20px_rgba(15,23,42,0.32)] saturate-[1.08] contrast-[1.04]"
+      }
+    />
+    <div className={`pointer-events-none absolute inset-x-6 top-4 h-10 rounded-full bg-white/35 blur-xl ${quest.shadowClass ?? ""}`} />
+  </div>
+);
+
 const quests: QuestCard[] = [
   {
     id: "weekly",
     title: "Wochen-Quest",
     eyebrow: "WOCHENZIEL",
-    description: "5 aktive Tage schaffen und dir die Wochenbelohnung sichern.",
+    description: `Bewältige die 2 Wochenchallenge und hole dir die ${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze.`,
     reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡`,
     meta: "Endet Sonntag 23:59",
     image: weeklyAvatarImg,
     icon: Sparkles,
+    imgClass: "relative z-10 max-h-[112%] w-auto max-w-[110%] translate-y-0 object-contain object-center drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
   },
   {
     id: "class",
@@ -63,8 +81,9 @@ const quests: QuestCard[] = [
     description: "1.000 Kniebeugen gemeinsam schaffen und sehen, wer am meisten beigetragen hat.",
     reward: "Für deine Klasse",
     meta: "1 Monat aktiv",
-    image: blueMascotImg,
+    image: classAvatarImg,
     icon: Sparkles,
+    imgClass: "relative z-10 max-h-[112%] w-auto max-w-[110%] object-contain object-center drop-shadow-[0_24px_22px_rgba(15,23,42,0.34)] saturate-[1.08] contrast-[1.04]",
   },
   {
     id: "friend",
@@ -75,6 +94,7 @@ const quests: QuestCard[] = [
     meta: "Gemeinsam spielen",
     image: friendAvatarImg,
     icon: Users,
+    imgClass: "relative z-10 max-h-[116%] w-auto max-w-[108%] object-contain object-center drop-shadow-[0_22px_20px_rgba(15,23,42,0.30)] saturate-[1.08] contrast-[1.04]",
   },
   {
     id: "tryit",
@@ -85,6 +105,7 @@ const quests: QuestCard[] = [
     meta: "In deiner Nähe",
     image: tryitAvatarImg,
     icon: MapPin,
+    imgClass: "relative z-10 max-h-[131%] w-auto max-w-[123%] -translate-y-1 object-contain object-center drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
   },
 ];
 
@@ -170,13 +191,7 @@ const Quests = () => {
                       onClick={() => navigate(quest.id === "class" ? "/class-quest" : `/challenge/${quest.id}`)}
                       className="flex w-full flex-col text-left"
                     >
-                      <div className={`flex h-36 items-center justify-center overflow-hidden px-2 py-2 ${quest.bgClass ?? "bg-[linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
-                        <img
-                          src={quest.image}
-                          alt={quest.title}
-                          className={quest.imgClass ?? "max-h-full w-auto max-w-[96%] object-contain object-center mix-blend-multiply"}
-                        />
-                      </div>
+                      <QuestAvatar quest={quest} />
                       <div className="flex flex-1 flex-col justify-between p-4">
                         <div>
                           <div className="mb-2 flex items-center justify-between gap-2">

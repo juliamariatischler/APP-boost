@@ -26,7 +26,7 @@ import { ChallengeSelector } from '@/components/ChallengeSelector';
 import { LiveBattle } from '@/components/LiveBattle';
 import { TopHeader } from '@/components/TopHeader';
 import { BottomNav } from '@/components/BottomNav';
-import friendImg from '@/assets/quest-friend-emoji.png';
+import friendHighfiveImg from '@/assets/quest-friend-highfive.png';
 
 interface Challenge {
   id: string;
@@ -366,25 +366,26 @@ const FriendQuest = () => {
 
       <div className="mx-auto max-w-screen-xl px-4 pb-8">
         <div className="space-y-5">
-          <div className="relative min-h-[13.5rem] overflow-hidden rounded-[28px] border border-primary/20 bg-white text-foreground shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.82)]">
-            <img
-              src={friendImg}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.46)_0%,rgba(0,0,0,0.18)_54%,rgba(255,255,255,0.08)_100%)]" />
-            <div className="relative flex min-h-[13.5rem] flex-col justify-between p-5">
-              <div className="w-fit rounded-full bg-white/18 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
-                Team
-              </div>
-              <div>
-                <h1 className="text-[2rem] font-black leading-none tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.32)]">
+          <div className="overflow-hidden rounded-[28px] border border-black/5 bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <div className="grid min-h-[13.5rem] grid-cols-[minmax(0,1fr)_46%] overflow-hidden bg-[#f6fbf2]">
+              <div className="flex flex-col justify-center gap-3 px-5 py-6">
+                <span className="w-fit rounded-full bg-primary/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                  Team
+                </span>
+                <h1 className="text-[2rem] font-black leading-[0.92] tracking-tight text-foreground">
                   Friendquest
                 </h1>
-                <p className="mt-2 max-w-[15rem] text-sm font-semibold leading-snug text-white/90">
+                <p className="max-w-[13rem] text-sm leading-snug text-muted-foreground">
                   Code teilen, Anfrage bestätigen und gemeinsam starten.
                 </p>
+              </div>
+              <div className="flex items-end justify-center overflow-hidden">
+                <img
+                  src={friendHighfiveImg}
+                  alt=""
+                  aria-hidden="true"
+                  className="w-full object-contain object-bottom drop-shadow-[0_18px_24px_rgba(15,23,42,0.14)]"
+                />
               </div>
             </div>
           </div>

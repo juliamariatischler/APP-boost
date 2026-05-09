@@ -11,7 +11,7 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "7.4.3"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "7.6.4"),
         .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
         .package(name: "CordovaPluginHealth", path: "../../capacitor-cordova-ios-plugins/sources/CordovaPluginHealth")
     ],

@@ -1,6 +1,7 @@
 import { useState, useRef, type KeyboardEvent, type ClipboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
+import { formatDisplayName } from "@/lib/formatName";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
 import { Loader2 } from "lucide-react";
@@ -85,8 +86,8 @@ export default function CodeLogin() {
       const session = await login(code);
       toast.success(
         session.user_type === "student"
-          ? `Hallo ${session.display_name}, bereit für deine nächste Challenge?`
-          : `Willkommen, ${session.display_name}!`
+          ? `Hallo ${formatDisplayName(session.display_name)}, bereit für deine nächste Challenge?`
+          : `Willkommen, ${formatDisplayName(session.display_name)}!`
       );
       navigate(session.user_type === "student" ? "/dashboard" : "/teacher-home");
     } catch (err: unknown) {

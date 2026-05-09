@@ -17,9 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Capacitor } from "@capacitor/core";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { env } from "@/lib/env";
+import { formatDisplayName } from "@/lib/formatName";
 import { getCurrentAppRole } from "@/lib/roles";
 import {
   addStudentAuth,
@@ -47,9 +49,6 @@ type ExportTicket = {
 const getActivationUrl = (code: string) => {
   return `${env.publicAppUrl}/activate?code=${encodeURIComponent(code)}`;
 };
-
-const getQrImageUrl = (code: string, size = 220) =>
-  `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(getActivationUrl(code))}`;
 
 const sanitizeFilenamePart = (value: string) =>
   value
@@ -108,7 +107,22 @@ const createActivationPdf = async (tickets: ExportTicket[]) => {
 
   const firstTicket = tickets[0];
   const filename = `boost-qr-${sanitizeFilenamePart(firstTicket.className)}-${new Date().toISOString().slice(0, 10)}.pdf`;
-  pdf.save(filename);
+
+  const blob = pdf.output("blob");
+  const file = new File([blob], filename, { type: "application/pdf" });
+
+  if (navigator.canShare?.({ files: [file] })) {
+    // iOS + Android 9+: nativer Teilen-Dialog (Dateien sichern, AirDrop, …)
+    await navigator.share({ files: [file], title: "BOOST Aktivierungszettel" });
+  } else if (Capacitor.isNativePlatform()) {
+    // Android-Fallback: PDF als Object-URL im System-Viewer öffnen
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  } else {
+    // Browser (Desktop): direkter Download
+    pdf.save(filename);
+  }
 };
 
 export default function TeacherManagement() {
@@ -121,6 +135,7 @@ export default function TeacherManagement() {
   const [students, setStudents] = useState<ClassStudent[]>([]);
   const [newStudentName, setNewStudentName] = useState("");
   const [activationCode, setActivationCode] = useState("");
+  const [activationQrDataUrl, setActivationQrDataUrl] = useState("");
   const [activationStudentName, setActivationStudentName] = useState("");
   const [loading, setLoading] = useState(true);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -226,6 +241,17 @@ export default function TeacherManagement() {
     navigate("/auth", { replace: true });
   };
 
+  const showActivationQr = async (code: string, studentName: string) => {
+    const qrDataUrl = await QRCode.toDataURL(getActivationUrl(code), {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 720,
+    });
+    setActivationCode(code);
+    setActivationQrDataUrl(qrDataUrl);
+    setActivationStudentName(studentName);
+  };
+
   const handleAddStudent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (authMode !== "supabase") {
@@ -236,8 +262,7 @@ export default function TeacherManagement() {
 
     try {
       const result = await addStudentAuth(selectedClassId, newStudentName);
-      setActivationCode(result.activation_code);
-      setActivationStudentName(newStudentName.trim());
+      await showActivationQr(result.activation_code, formatDisplayName(newStudentName));
       setNewStudentName("");
       toast.success("Schüler:in angelegt und QR-Code erstellt.");
       await loadClasses(authMode);
@@ -256,8 +281,7 @@ export default function TeacherManagement() {
     setBusyStudentId(student.student_id);
     try {
       const result = await generateActivationCodeAuth(student.student_id);
-      setActivationCode(result.activation_code);
-      setActivationStudentName(student.display_name);
+      await showActivationQr(result.activation_code, formatDisplayName(student.display_name));
       toast.success("Neuer QR-Code erstellt.");
       await loadStudents(authMode, selectedClassId);
     } catch (error) {
@@ -272,8 +296,13 @@ export default function TeacherManagement() {
 
     setBusyStudentId(student.student_id);
     try {
-      await resetStudentDeviceAuth(student.student_id);
-      toast.success("Gerät zurückgesetzt.");
+      const result = await resetStudentDeviceAuth(student.student_id);
+      if (result.activation_code) {
+        await showActivationQr(result.activation_code, formatDisplayName(student.display_name));
+        toast.success("Gerät zurückgesetzt und neuer QR-Code erstellt.");
+      } else {
+        toast.success("Gerät zurückgesetzt.");
+      }
       await loadStudents(authMode, selectedClassId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gerät konnte nicht zurückgesetzt werden");
@@ -353,7 +382,7 @@ export default function TeacherManagement() {
           const result = await generateActivationCodeAuth(student.student_id);
           return {
             studentId: student.student_id,
-            studentName: student.display_name,
+            studentName: formatDisplayName(student.display_name),
             className: selectedClass.class_name,
             schoolName: selectedClass.school_name,
             activationCode: result.activation_code,
@@ -553,26 +582,26 @@ export default function TeacherManagement() {
             )}
           </Card>
 
-          {activationCode && (
+          {activationCode && activationQrDataUrl && (
             <Card className="rounded-lg p-4">
               <div className="grid gap-4 md:grid-cols-[15rem_minmax(0,1fr)]">
                 <div className="flex items-center justify-center rounded-lg border border-border bg-white p-3">
-                  <img src={getQrImageUrl(activationCode)} alt="QR-Code zur Schüleraktivierung" className="h-52 w-52" />
+                  <img src={activationQrDataUrl} alt="QR-Code zur Schüleraktivierung" className="h-52 w-52" />
                 </div>
                 <div className="min-w-0 space-y-3">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Aktivierung</p>
-                    <h3 className="text-xl font-black text-foreground">{activationStudentName}</h3>
+                    <h3 className="text-xl font-black text-foreground">{formatDisplayName(activationStudentName)}</h3>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground">Code</p>
-                    <p className="break-all rounded-lg bg-muted px-3 py-2 font-mono text-lg font-bold tracking-[0.12em]">
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-muted-foreground">Manueller Code</p>
+                    <p className="break-all rounded-lg bg-muted px-3 py-2 font-mono text-lg font-black tracking-[0.12em] text-foreground">
                       {activationCode}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground">QR-Link</p>
-                    <p className="break-all rounded-lg bg-muted px-3 py-2 text-sm">{getActivationUrl(activationCode)}</p>
+                  <div className="space-y-1 text-sm font-medium text-muted-foreground">
+                    <p>Nur der neueste QR-Code ist gültig.</p>
+                    <p>Wenn Scannen nicht klappt, Code manuell eingeben.</p>
                   </div>
                 </div>
               </div>
@@ -598,7 +627,7 @@ export default function TeacherManagement() {
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="truncate text-lg font-black text-foreground">{student.display_name}</h4>
+                        <h4 className="truncate text-lg font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
                         <Badge variant={student.active === false ? "destructive" : isActivated ? "default" : "secondary"}>
                           {student.active === false ? "deaktiviert" : isActivated ? "aktiviert" : "offen"}
                         </Badge>
@@ -608,8 +637,8 @@ export default function TeacherManagement() {
                         {isActivated
                           ? "Ein Gerät ist verbunden."
                           : codeAvailable
-                            ? "Aktivierungscode ist vorbereitet."
-                            : "Noch kein offener Aktivierungscode."}
+                            ? "QR-Code ist vorbereitet."
+                            : "Noch kein offener QR-Code."}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -718,7 +747,7 @@ export default function TeacherManagement() {
                     onCheckedChange={(checked) => toggleExportStudent(student.student_id, checked === true)}
                     disabled={exporting}
                   />
-                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{student.display_name}</span>
+                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{formatDisplayName(student.display_name)}</span>
                   <Badge variant="outline">offen</Badge>
                 </label>
               ))}

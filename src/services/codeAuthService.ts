@@ -10,6 +10,7 @@ export interface CodeSession {
   session_token: string;
   device_id: string;
   expires_at?: string;
+  points?: number;
   // student-only
   class_id?: string;
   class_name?: string;
@@ -69,6 +70,7 @@ export async function loginWithCode(code: string): Promise<CodeSession> {
     session_token: result.session_token as string,
     device_id,
     expires_at:   result.expires_at as string | undefined,
+    points:       Number(result.points || 0),
     class_id:     result.class_id as string | undefined,
     class_name:   result.class_name as string | undefined,
     school_name:  result.school_name as string | undefined,
@@ -99,6 +101,7 @@ export async function activateWithQrCode(code: string): Promise<CodeSession> {
     session_token: result.session_token as string,
     device_id,
     expires_at: result.expires_at as string | undefined,
+    points: Number(result.points || 0),
     class_id: result.class_id as string | undefined,
     class_name: result.class_name as string | undefined,
     school_name: result.school_name as string | undefined,
@@ -142,6 +145,7 @@ export async function validateSession(): Promise<CodeSession | null> {
     session_token: result.session_token as string,
     device_id,
     expires_at:   result.expires_at as string | undefined,
+    points:       Number(result.points || 0),
     class_id:     result.class_id as string | undefined,
     class_name:   result.class_name as string | undefined,
     school_name:  result.school_name as string | undefined,
@@ -159,6 +163,74 @@ export async function logout(session: CodeSession): Promise<void> {
   });
 
   clearSession();
+}
+
+export interface CodeDailyResult {
+  date: string;
+  jumping_jacks: number | null;
+  push_ups: number | null;
+  squats: number | null;
+  planks: number | null;
+  sit_ups: number | null;
+  steps: number | null;
+  steps_tracking_active?: boolean | null;
+  updated_at?: string | null;
+}
+
+export async function getCodeStudentDashboard(
+  session: Pick<CodeSession, "device_id" | "session_token">,
+  weekStart: string,
+  weekEnd: string
+): Promise<{ points: number; daily_results: CodeDailyResult[] }> {
+  const { data, error } = await (supabase.rpc as any)("get_code_student_dashboard", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+    p_week_start: weekStart,
+    p_week_end: weekEnd,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const result = data as Record<string, unknown>;
+  if (result?.error) throw new Error(result.error as string);
+
+  return {
+    points: Number(result.points || 0),
+    daily_results: (result.daily_results as CodeDailyResult[]) ?? [],
+  };
+}
+
+export async function saveCodeStudentCounterResults(
+  session: Pick<CodeSession, "device_id" | "session_token">,
+  date: string,
+  deltas: {
+    jumping_jacks?: number;
+    push_ups?: number;
+    squats?: number;
+    planks?: number;
+    sit_ups?: number;
+  }
+): Promise<{ points_awarded: number; total_points: number }> {
+  const { data, error } = await (supabase.rpc as any)("save_code_student_counter_results", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+    p_date: date,
+    p_jumping_jacks_delta: deltas.jumping_jacks || 0,
+    p_push_ups_delta: deltas.push_ups || 0,
+    p_squats_delta: deltas.squats || 0,
+    p_planks_delta: deltas.planks || 0,
+    p_sit_ups_delta: deltas.sit_ups || 0,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const result = data as Record<string, unknown>;
+  if (result?.error) throw new Error(result.error as string);
+
+  return {
+    points_awarded: Number(result.points_awarded || 0),
+    total_points: Number(result.total_points || 0),
+  };
 }
 
 // ── Teacher helpers ──────────────────────────────────────────
@@ -183,6 +255,7 @@ export interface ClassStudent {
   student_id: string;
   display_name: string;
   first_name: string;
+  points?: number;
   active?: boolean;
   activated_at?: string | null;
   device_id?: string | null;
@@ -270,7 +343,7 @@ export async function generateActivationCodeAuth(student_id: string): Promise<Ac
   };
 }
 
-export async function resetStudentDeviceAuth(student_id: string): Promise<void> {
+export async function resetStudentDeviceAuth(student_id: string): Promise<{ activation_code?: string }> {
   const { data, error } = await (supabase.rpc as any)("teacher_reset_student_device_auth", {
     p_student_id: student_id,
   });
@@ -279,6 +352,7 @@ export async function resetStudentDeviceAuth(student_id: string): Promise<void> 
 
   const result = data as Record<string, unknown> | null;
   if (result?.error) throw new Error(result.error as string);
+  return { activation_code: result?.activation_code as string | undefined };
 }
 
 export async function deactivateStudentAuth(student_id: string): Promise<void> {

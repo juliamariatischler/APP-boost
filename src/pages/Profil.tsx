@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, MessageSquare, Scale, Send, Settings2, ShieldCheck, Zap } from "lucide-react";
+import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, MessageSquare, Scale, Send, Settings2, ShieldCheck, Star, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import {
   AlertDialog,
@@ -33,6 +33,7 @@ import { endOfWeek, format, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem, WEEKLY_AVATAR_ITEM_THRESHOLD } from "@/lib/avatarItems";
 import { ONBOARDING_OPEN_EVENT } from "@/lib/onboarding";
+import { formatDisplayName } from "@/lib/formatName";
 
 interface ProfileData {
   username: string;
@@ -60,6 +61,7 @@ const Profil = () => {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackRating, setFeedbackRating] = useState(5);
   const [sendingFeedback, setSendingFeedback] = useState(false);
   const settingsSectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -289,16 +291,21 @@ const Profil = () => {
 
     setSendingFeedback(true);
     try {
-      const { error } = await (supabase.from as any)("feedback_submissions").insert({
-        user_id: userId,
-        message,
-        page: "profile",
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      const { data, error } = await (supabase.rpc as any)("submit_feedback", {
+        p_message: message,
+        p_rating: feedbackRating,
+        p_page: "profile",
+        p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        p_device_id: null,
+        p_session_token: null,
       });
-
       if (error) throw error;
 
+      const result = data as Record<string, unknown> | null;
+      if (result?.error) throw new Error(String(result.error));
+
       setFeedbackMessage("");
+      setFeedbackRating(5);
       setFeedbackOpen(false);
       toast.success("Feedback gespeichert. Danke!");
     } catch (error) {
@@ -308,6 +315,12 @@ const Profil = () => {
       setSendingFeedback(false);
     }
   };
+
+  const feedbackRatingLabel = feedbackRating === 1
+    ? "Gefällt wenig"
+    : feedbackRating === 5
+      ? "Mega App"
+      : `${feedbackRating} von 5`;
 
   if (loading || !profile) {
     return (
@@ -341,7 +354,7 @@ const Profil = () => {
             <div className="min-w-0">
               <p className="text-[18px] font-semibold text-muted-foreground">Profil</p>
               <h1 className="mt-1 max-w-full truncate text-[2.1rem] font-black leading-none tracking-tight text-primary">
-                {profile.username}
+                {formatDisplayName(profile.username)}
               </h1>
             </div>
           </div>
@@ -637,6 +650,36 @@ const Profil = () => {
               Schreib kurz, was verbessert werden soll oder wo etwas nicht passt.
             </DialogDescription>
           </DialogHeader>
+          <div className="rounded-2xl bg-muted/50 p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-bold text-foreground">Wie gefällt dir BOOST?</span>
+              <span className="text-xs font-semibold text-muted-foreground">{feedbackRatingLabel}</span>
+            </div>
+            <div className="flex items-center justify-center gap-2" role="radiogroup" aria-label="Feedback Bewertung">
+              {[1, 2, 3, 4, 5].map((rating) => {
+                const isActive = rating <= feedbackRating;
+
+                return (
+                  <button
+                    key={rating}
+                    type="button"
+                    role="radio"
+                    aria-checked={feedbackRating === rating}
+                    aria-label={`${rating} von 5 Sternen`}
+                    onClick={() => setFeedbackRating(rating)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white"
+                    disabled={sendingFeedback}
+                  >
+                    <Star className={`h-7 w-7 ${isActive ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/35"}`} />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex justify-between px-1 text-[11px] font-medium text-muted-foreground">
+              <span>1 gefällt wenig</span>
+              <span>5 Mega App</span>
+            </div>
+          </div>
           <Textarea
             value={feedbackMessage}
             onChange={(event) => setFeedbackMessage(event.target.value)}

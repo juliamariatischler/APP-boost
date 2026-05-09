@@ -690,6 +690,7 @@
     finishBtn.addEventListener('click', async () => {
       finishBtn.disabled = true;
       finishBtn.textContent = 'Speichere...';
+      localStorage.setItem('planks_result', String(time));
       localStorage.setItem('planks_total', String(time));
       const localPoints = Math.max(0, Math.floor(time));
       try{
@@ -702,7 +703,7 @@
         showReward(localPoints, `Lokal gespeichert. Buchen nicht möglich: ${err.message}`);
       }
       setTimeout(() => {
-        window.location.href = 'home.html';
+        window.location.href = '/dashboard';
       }, 1600);
     });
 

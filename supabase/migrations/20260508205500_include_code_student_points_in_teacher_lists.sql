@@ -1,0 +1,107 @@
+-- Include QR/code-login student points in teacher class lists.
+
+CREATE OR REPLACE FUNCTION public.teacher_get_students_auth(p_class_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  IF NOT public.is_current_teacher() THEN
+    RETURN jsonb_build_object('error', 'Unauthorized: teacher role required');
+  END IF;
+
+  IF NOT public.teacher_can_access_class(p_class_id) THEN
+    RETURN jsonb_build_object('error', 'Kein Zugriff auf diese Klasse');
+  END IF;
+
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'student_id', id,
+      'display_name', display_name,
+      'first_name', first_name,
+      'points', COALESCE(points, 0),
+      'active', active,
+      'activated_at', activated_at,
+      'device_id', device_id,
+      'activation_code_created_at', activation_code_created_at,
+      'activation_code_used_at', activation_code_used_at
+    )
+    ORDER BY display_name
+  ) INTO v_result
+  FROM public.students
+  WHERE class_id = p_class_id
+    AND deactivated_at IS NULL;
+
+  RETURN COALESCE(v_result, '[]'::jsonb);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_class_students(
+  p_device_id text,
+  p_session_token text,
+  p_class_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_session public.active_sessions%ROWTYPE;
+  v_access boolean;
+  v_result jsonb;
+BEGIN
+  SELECT * INTO v_session
+  FROM public.active_sessions
+  WHERE device_id = p_device_id
+    AND session_token_hash = encode(extensions.digest(p_session_token, 'sha256'), 'hex')
+    AND active = true
+    AND user_type = 'teacher'
+    AND expires_at > now()
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Keine aktive Lehrer-Session');
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.teacher_class_access
+    WHERE teacher_id = v_session.user_id
+      AND class_id = p_class_id
+  ) INTO v_access;
+
+  IF NOT v_access THEN
+    RETURN jsonb_build_object('error', 'Kein Zugriff auf diese Klasse');
+  END IF;
+
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'student_id', id,
+      'display_name', display_name,
+      'first_name', first_name,
+      'points', COALESCE(points, 0),
+      'active', active,
+      'activated_at', activated_at,
+      'device_id', device_id,
+      'activation_code_created_at', activation_code_created_at,
+      'activation_code_used_at', activation_code_used_at
+    )
+    ORDER BY display_name
+  ) INTO v_result
+  FROM public.students
+  WHERE class_id = p_class_id
+    AND deactivated_at IS NULL;
+
+  RETURN COALESCE(v_result, '[]'::jsonb);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.teacher_get_students_auth(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_class_students(text, text, uuid) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.teacher_get_students_auth(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_class_students(text, text, uuid) TO anon, authenticated;

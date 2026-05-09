@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { LogOut } from "lucide-react";
+import { formatDisplayName } from "@/lib/formatName";
 
 export default function StudentHome() {
   const navigate         = useNavigate();
@@ -25,7 +26,7 @@ export default function StudentHome() {
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
             {session.school_name} · Klasse {session.class_name}
           </p>
-          <h1 className="text-xl font-bold">Hallo, {session.display_name}!</h1>
+          <h1 className="text-xl font-bold">Hallo, {formatDisplayName(session.display_name)}!</h1>
         </div>
         <button
           onClick={handleLogout}

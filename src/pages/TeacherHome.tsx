@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, BarChart2, CheckCircle2, ClipboardList, Flame, Footprints, Loader2, LogOut, Medal, MessageSquare, QrCode, Send, Trophy, Users, XCircle, Zap } from "lucide-react";
+import { ArrowRight, BarChart2, Check, ClipboardList, Flame, Footprints, LogOut, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -14,6 +14,7 @@ import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAppRole } from "@/lib/roles";
 import { DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
+import { formatDisplayName } from "@/lib/formatName";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon } from "@/components/ExerciseIcons";
 import {
   getTeacherClasses,
@@ -27,16 +28,6 @@ import { DEMO_STUDENT_DISPLAY_NAME } from "@/lib/demo";
 
 type AuthMode = "supabase" | "code";
 type ActiveTab = "home" | "uebersicht" | "wertung" | "mitmachen";
-
-type SchoolRegistrationRequest = {
-  id: string;
-  requested_school: string;
-  requester_email: string | null;
-  requester_name: string | null;
-  request_note: string | null;
-  status: string;
-  created_at: string;
-};
 
 type TeacherProgress = {
   push_ups: number;
@@ -132,14 +123,12 @@ export default function TeacherHome() {
   // Mitmachen tab state
   const [teacherId, setTeacherId] = useState<string>("");
   const [teacherProgress, setTeacherProgress] = useState<TeacherProgress>({ ...EMPTY_PROGRESS });
-
-  // School requests state (supabase-auth teachers only)
-  const [schoolRequests, setSchoolRequests] = useState<SchoolRegistrationRequest[]>([]);
-  const [handlingRequestId, setHandlingRequestId] = useState<string | null>(null);
+  const [teacherTodayDbData, setTeacherTodayDbData] = useState({ push_ups: 0, squats: 0, planks: 0, sit_ups: 0, jumping_jacks: 0 });
 
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackRating, setFeedbackRating] = useState(5);
   const [sendingFeedback, setSendingFeedback] = useState(false);
 
   // Overview tab state
@@ -224,7 +213,7 @@ export default function TeacherHome() {
         String(session.user.user_metadata?.username || session.user.email?.split("@")[0] || "Lehrkraft"),
       );
       setTeacherId(session.user.id);
-      await Promise.all([loadClasses("supabase"), loadSchoolRequests()]);
+      await loadClasses("supabase");
     };
 
     void resolveTeacher();
@@ -250,12 +239,26 @@ export default function TeacherHome() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, students]);
 
-  // Load teacher's own daily progress from localStorage
+  // Load teacher's own daily progress
   useEffect(() => {
-    if (activeTab !== "mitmachen" || !teacherId) return;
-    const todayStr = format(new Date(), "yyyy-MM-dd");
-    setTeacherProgress(loadTeacherDailyProgress(teacherId, todayStr));
-  }, [activeTab, teacherId]);
+    if (activeTab !== "mitmachen" || !teacherId || !authMode) return;
+    if (authMode === "supabase") {
+      void loadTeacherTodayDbData();
+    } else {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      setTeacherProgress(loadTeacherDailyProgress(teacherId, todayStr));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, teacherId, authMode]);
+
+  // Reload DB data when teacher returns from camera counter
+  useEffect(() => {
+    if (activeTab !== "mitmachen" || authMode !== "supabase" || !teacherId) return;
+    const handleFocus = () => { void loadTeacherTodayDbData(); };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, authMode, teacherId]);
 
   const loadOverview = async () => {
     setOverviewLoading(true);
@@ -342,6 +345,24 @@ export default function TeacherHome() {
     }
   };
 
+  const loadTeacherTodayDbData = async () => {
+    if (!teacherId) return;
+    const today = format(new Date(), "yyyy-MM-dd");
+    const { data } = await supabase
+      .from("daily_results")
+      .select("push_ups, squats, planks, sit_ups, jumping_jacks")
+      .eq("user_id", teacherId)
+      .eq("date", today)
+      .maybeSingle();
+    setTeacherTodayDbData({
+      push_ups: data?.push_ups || 0,
+      squats: data?.squats || 0,
+      planks: data?.planks || 0,
+      sit_ups: data?.sit_ups || 0,
+      jumping_jacks: data?.jumping_jacks || 0,
+    });
+  };
+
   const loadRanking = async () => {
     setRankingLoading(true);
     try {
@@ -354,7 +375,7 @@ export default function TeacherHome() {
 
       if (error || !data) {
         // Fallback: use student names with 0 points
-        setStudentRanks(students.map((s) => ({ id: s.student_id, name: s.display_name, points: 0 })));
+        setStudentRanks(students.map((s) => ({ id: s.student_id, name: s.display_name, points: Number(s.points || 0) })));
         return;
       }
 
@@ -366,7 +387,7 @@ export default function TeacherHome() {
           return {
             id: s.student_id,
             name: profile?.username || s.display_name,
-            points: Number(profile?.points ?? 0),
+            points: Number(profile?.points ?? s.points ?? 0),
           };
         })
         .sort((a, b) => b.points - a.points);
@@ -396,14 +417,22 @@ export default function TeacherHome() {
     }
     setSendingFeedback(true);
     try {
-      const { error } = await (supabase.from as any)("feedback_submissions").insert({
-        user_id: teacherId || null,
-        message,
-        page: "teacher-home",
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      const isCodeLogin = authMode === "code" && codeSession;
+      const { data, error } = await (supabase.rpc as any)("submit_feedback", {
+        p_message: message,
+        p_rating: feedbackRating,
+        p_page: "teacher-home",
+        p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        p_device_id: isCodeLogin ? codeSession.device_id : null,
+        p_session_token: isCodeLogin ? codeSession.session_token : null,
       });
       if (error) throw error;
+
+      const result = data as Record<string, unknown> | null;
+      if (result?.error) throw new Error(String(result.error));
+
       setFeedbackMessage("");
+      setFeedbackRating(5);
       setFeedbackOpen(false);
       toast.success("Feedback gespeichert. Danke!");
     } catch (error) {
@@ -414,32 +443,11 @@ export default function TeacherHome() {
     }
   };
 
-  const loadSchoolRequests = async () => {
-    const { data, error } = await (supabase as any)
-      .from("school_registration_requests")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true });
-
-    if (!error) {
-      setSchoolRequests((data || []) as SchoolRegistrationRequest[]);
-    }
-  };
-
-  const handleSchoolRequestDecision = async (requestId: string, status: "approved" | "rejected") => {
-    setHandlingRequestId(requestId);
-    const { error } = await (supabase.rpc as any)("review_school_registration_request", {
-      p_request_id: requestId,
-      p_status: status,
-    });
-    setHandlingRequestId(null);
-    if (error) {
-      toast.error("Anfrage konnte nicht aktualisiert werden");
-      return;
-    }
-    toast.success(status === "approved" ? "Schule freigegeben" : "Anfrage abgelehnt");
-    await loadSchoolRequests();
-  };
+  const feedbackRatingLabel = feedbackRating === 1
+    ? "Gefällt wenig"
+    : feedbackRating === 5
+      ? "Mega App"
+      : `${feedbackRating} von 5`;
 
   const handleLogout = async () => {
     if (authMode === "code") {
@@ -453,6 +461,128 @@ export default function TeacherHome() {
 
   const renderMitmachenTab = () => {
     const todayLabel = format(new Date(), "EEEE, d. MMMM", { locale: de });
+
+    // ── Supabase-auth: camera-based challenges (1:1 wie Schüler) ──
+    if (authMode === "supabase") {
+      const completedCount = countCompletedDailyExercises(teacherTodayDbData);
+      const totalExercises = Object.keys(DAILY_EXERCISE_GOALS).length;
+      const progressPct = Math.round((completedCount / totalExercises) * 100);
+
+      const cameraExercises = [
+        {
+          key: "jumping_jacks", title: "Hampelmänner",
+          progress: teacherTodayDbData.jumping_jacks, goal: DAILY_EXERCISE_GOALS.jumping_jacks,
+          unit: "Wdh.", counterPath: "/jumping-jacks-counter.html",
+          icon: <JumpingJacksIcon className="h-5 w-5" />,
+          iconClass: "bg-amber-500/15 text-amber-500",
+          progressClass: "bg-amber-400 shadow-[0_4px_12px_rgba(251,191,36,0.32)]",
+          cardCompleteClass: "bg-amber-50/60",
+        },
+        {
+          key: "push_ups", title: "Push-ups",
+          progress: teacherTodayDbData.push_ups, goal: DAILY_EXERCISE_GOALS.push_ups,
+          unit: "Wdh.", counterPath: "/pushup-counter.html",
+          icon: <PushUpIcon className="h-5 w-5" />,
+          iconClass: "bg-sky-500/15 text-sky-500",
+          progressClass: "bg-sky-400 shadow-[0_4px_12px_rgba(56,189,248,0.32)]",
+          cardCompleteClass: "bg-sky-50/60",
+        },
+        {
+          key: "squats", title: "Kniebeugen",
+          progress: teacherTodayDbData.squats, goal: DAILY_EXERCISE_GOALS.squats,
+          unit: "Wdh.", counterPath: "/squat-counter.html",
+          icon: <SquatIcon className="h-5 w-5" />,
+          iconClass: "bg-orange-500/15 text-orange-500",
+          progressClass: "bg-emerald-400 shadow-[0_4px_12px_rgba(52,211,153,0.35)]",
+          cardCompleteClass: "bg-neutral-100",
+        },
+        {
+          key: "planks", title: "Planks",
+          progress: teacherTodayDbData.planks, goal: DAILY_EXERCISE_GOALS.planks,
+          unit: "Sek.", counterPath: "/plank-timer.html",
+          icon: <PlankIcon className="h-5 w-5" />,
+          iconClass: "bg-cyan-500/15 text-cyan-500",
+          progressClass: "bg-cyan-400 shadow-[0_4px_12px_rgba(34,211,238,0.32)]",
+          cardCompleteClass: "bg-cyan-50/60",
+        },
+        {
+          key: "sit_ups", title: "Sit-ups",
+          progress: teacherTodayDbData.sit_ups, goal: DAILY_EXERCISE_GOALS.sit_ups,
+          unit: "Wdh.", counterPath: "/situp-counter.html",
+          icon: <SitUpIcon className="h-5 w-5" />,
+          iconClass: "bg-fuchsia-500/15 text-fuchsia-500",
+          progressClass: "bg-fuchsia-500 shadow-[0_4px_12px_rgba(217,70,239,0.3)]",
+          cardCompleteClass: "bg-fuchsia-50/60",
+        },
+      ];
+
+      return (
+        <div className="space-y-4">
+          <Card className="overflow-hidden rounded-[28px] border-0 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] p-5 text-white shadow-[0_20px_44px_rgba(34,197,94,0.22)]">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">{todayLabel}</p>
+            <h2 className="mt-1 text-2xl font-black leading-tight">Tägliche Challenge</h2>
+            <div className="mt-4 flex items-end gap-4">
+              <div>
+                <p className="text-5xl font-black leading-none">{progressPct}%</p>
+                <p className="mt-1 text-sm font-semibold text-white/80">{completedCount} von {totalExercises} Übungen erledigt</p>
+              </div>
+              <div className="flex-1">
+                <div className="h-3 w-full overflow-hidden rounded-full bg-white/25">
+                  <div className="h-full rounded-full bg-white transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-2">
+            {cameraExercises.map((task) => {
+              const isComplete = task.progress >= task.goal;
+              const progressPercent = Math.min(100, Math.round((task.progress / task.goal) * 100));
+              return (
+                <Card
+                  key={task.key}
+                  className={`overflow-hidden rounded-[20px] border p-0 shadow-[0_12px_26px_rgba(0,0,0,0.07),inset_0_-2px_0_rgba(0,0,0,0.04)] ${
+                    isComplete ? `border-primary/15 ${task.cardCompleteClass}` : "border-black/5 bg-white"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { window.location.href = task.counterPath; }}
+                    className="flex w-full flex-col items-start gap-2 p-3 text-left"
+                  >
+                    <div className="flex w-full items-start gap-2">
+                      <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[14px] ${task.iconClass}`}>
+                        {task.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="truncate pr-1 text-[13px] font-black leading-tight text-foreground">{task.title}</h3>
+                          <div className={`flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                            isComplete ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                          }`}>
+                            {isComplete ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : `${progressPercent}%`}
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-black text-foreground/80">
+                          {task.progress} / {task.goal} <span className="font-semibold text-foreground/55">{task.unit}</span>
+                        </p>
+                        <div className="mt-1.5 w-full">
+                          <div className="relative h-2.5 overflow-hidden rounded-full bg-white/95 shadow-[inset_0_1px_2px_rgba(15,23,42,0.1)]">
+                            <div className={`h-full rounded-full ${task.progressClass}`} style={{ width: `${progressPercent}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Code-auth: manuelle Eingabe ──
     const exerciseDone = countCompletedDailyExercises({
       push_ups: teacherProgress.push_ups,
       squats: teacherProgress.squats,
@@ -482,7 +612,6 @@ export default function TeacherHome() {
 
     return (
       <div className="space-y-4">
-        {/* Header / progress summary */}
         <Card className="overflow-hidden rounded-[28px] border-0 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] p-5 text-white shadow-[0_20px_44px_rgba(34,197,94,0.22)]">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">{todayLabel}</p>
           <h2 className="mt-1 text-2xl font-black leading-tight">Tägliche Challenge</h2>
@@ -493,16 +622,12 @@ export default function TeacherHome() {
             </div>
             <div className="flex-1">
               <div className="h-3 w-full overflow-hidden rounded-full bg-white/25">
-                <div
-                  className="h-full rounded-full bg-white transition-all duration-500"
-                  style={{ width: `${progressPct}%` }}
-                />
+                <div className="h-full rounded-full bg-white transition-all duration-500" style={{ width: `${progressPct}%` }} />
               </div>
             </div>
           </div>
         </Card>
 
-        {/* Exercise grid */}
         <div className="grid grid-cols-2 gap-3">
           {exercises.map(({ field, label, icon, goal, unit, step }) => {
             const current = teacherProgress[field];
@@ -516,40 +641,22 @@ export default function TeacherHome() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-muted">{icon}</div>
-                  {done && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>
-                  )}
+                  {done && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>}
                 </div>
                 <p className="mt-2 text-sm font-black text-foreground leading-tight">{label}</p>
                 <p className="text-xs font-semibold text-muted-foreground">{current} / {goal} {unit}</p>
                 <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateExercise(field, -step)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95"
-                  >
-                    −
-                  </button>
+                  <button type="button" onClick={() => updateExercise(field, -step)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95">−</button>
                   <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${done ? "bg-primary" : "bg-primary/50"}`}
-                      style={{ width: `${Math.min(100, Math.round((current / goal) * 100))}%` }}
-                    />
+                    <div className={`h-full rounded-full transition-all duration-300 ${done ? "bg-primary" : "bg-primary/50"}`} style={{ width: `${Math.min(100, Math.round((current / goal) * 100))}%` }} />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => updateExercise(field, step)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95"
-                  >
-                    +
-                  </button>
+                  <button type="button" onClick={() => updateExercise(field, step)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95">+</button>
                 </div>
               </Card>
             );
           })}
         </div>
 
-        {/* Steps card */}
         <Card className={`rounded-[20px] border-black/5 p-4 shadow-[0_8px_18px_rgba(0,0,0,0.06)] ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary/8 border-primary/30" : "bg-white"}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -561,31 +668,14 @@ export default function TeacherHome() {
                 <p className="text-xs font-semibold text-muted-foreground">{teacherProgress.steps.toLocaleString("de")} / {DAILY_STEP_GOAL.toLocaleString("de")}</p>
               </div>
             </div>
-            {teacherProgress.steps >= DAILY_STEP_GOAL && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>
-            )}
+            {teacherProgress.steps >= DAILY_STEP_GOAL && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>}
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => updateExercise("steps", -500)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95"
-            >
-              −
-            </button>
+            <button type="button" onClick={() => updateExercise("steps", -500)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95">−</button>
             <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary" : "bg-primary/50"}`}
-                style={{ width: `${Math.min(100, Math.round((teacherProgress.steps / DAILY_STEP_GOAL) * 100))}%` }}
-              />
+              <div className={`h-full rounded-full transition-all duration-300 ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary" : "bg-primary/50"}`} style={{ width: `${Math.min(100, Math.round((teacherProgress.steps / DAILY_STEP_GOAL) * 100))}%` }} />
             </div>
-            <button
-              type="button"
-              onClick={() => updateExercise("steps", 500)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95"
-            >
-              +
-            </button>
+            <button type="button" onClick={() => updateExercise("steps", 500)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95">+</button>
           </div>
           <p className="mt-2 text-center text-[10px] text-muted-foreground">+500 Schritte pro Tipp</p>
         </Card>
@@ -657,57 +747,6 @@ export default function TeacherHome() {
           <p className="text-[11px] font-bold text-muted-foreground">Aktivierung</p>
         </Card>
       </div>
-
-      {schoolRequests.length > 0 && (
-        <section className="mt-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-black text-foreground">Schulanfragen</h2>
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-black text-white">
-              {schoolRequests.length}
-            </span>
-          </div>
-          {schoolRequests.map((req) => {
-            const isBusy = handlingRequestId === req.id;
-            return (
-              <Card key={req.id} className="rounded-[20px] border border-amber-200 bg-amber-50 p-4 shadow-[0_8px_20px_rgba(245,158,11,0.10)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-black text-foreground">{req.requested_school}</p>
-                    {req.requester_name && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {req.requester_name}{req.requester_email ? ` · ${req.requester_email}` : ""}
-                      </p>
-                    )}
-                    {req.request_note && (
-                      <p className="mt-1 text-xs italic text-muted-foreground">"{req.request_note}"</p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => handleSchoolRequestDecision(req.id, "approved")}
-                      className="flex items-center gap-1.5 rounded-[12px] bg-primary px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-50"
-                    >
-                      {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                      Freigeben
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => handleSchoolRequestDecision(req.id, "rejected")}
-                      className="flex items-center gap-1.5 rounded-[12px] border border-black/10 bg-white px-3 py-2 text-xs font-bold text-muted-foreground disabled:opacity-50"
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                      Ablehnen
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </section>
-      )}
 
       <section className="mt-5 space-y-3">
         <div className="flex items-center justify-between">
@@ -869,7 +908,7 @@ export default function TeacherHome() {
             <Card key={s.studentId} className="rounded-[18px] border-black/5 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black text-foreground">{s.name}</p>
+                  <p className="truncate text-sm font-black text-foreground">{formatDisplayName(s.name)}</p>
                   <div className="mt-1.5 flex items-center gap-3">
                     <div className="flex-1">
                       <div className="mb-0.5 flex items-center justify-between">
@@ -947,7 +986,7 @@ export default function TeacherHome() {
                 >
                   <div className="flex items-center gap-2.5">
                     {getRankBadge(rank)}
-                    <span className="text-sm font-bold text-foreground">{student.name}</span>
+                    <span className="text-sm font-bold text-foreground">{formatDisplayName(student.name)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-black">{student.points}</span>
@@ -970,10 +1009,14 @@ export default function TeacherHome() {
                   </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                Mitmachen
-                <Zap className="h-3 w-3" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("mitmachen")}
+                className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary active:scale-95"
+              >
+                Aktiv werden
+                <Zap className="h-3 w-3 fill-current" />
+              </button>
             </div>
           </div>
 
@@ -987,7 +1030,7 @@ export default function TeacherHome() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-4 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-border bg-background px-4 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Lehrer Home</p>
@@ -1007,7 +1050,7 @@ export default function TeacherHome() {
       </main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card/95 shadow-lg backdrop-blur"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card shadow-lg"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-around px-2">
@@ -1071,6 +1114,36 @@ export default function TeacherHome() {
               Schreib kurz, was verbessert werden soll oder wo etwas nicht passt.
             </DialogDescription>
           </DialogHeader>
+          <div className="rounded-2xl bg-muted/50 p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-sm font-bold text-foreground">Wie gefällt dir BOOST?</span>
+              <span className="text-xs font-semibold text-muted-foreground">{feedbackRatingLabel}</span>
+            </div>
+            <div className="flex items-center justify-center gap-2" role="radiogroup" aria-label="Feedback Bewertung">
+              {[1, 2, 3, 4, 5].map((rating) => {
+                const isActive = rating <= feedbackRating;
+
+                return (
+                  <button
+                    key={rating}
+                    type="button"
+                    role="radio"
+                    aria-checked={feedbackRating === rating}
+                    aria-label={`${rating} von 5 Sternen`}
+                    onClick={() => setFeedbackRating(rating)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white"
+                    disabled={sendingFeedback}
+                  >
+                    <Star className={`h-7 w-7 ${isActive ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/35"}`} />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex justify-between px-1 text-[11px] font-medium text-muted-foreground">
+              <span>1 gefällt wenig</span>
+              <span>5 Mega App</span>
+            </div>
+          </div>
           <Textarea
             value={feedbackMessage}
             onChange={(e) => setFeedbackMessage(e.target.value)}

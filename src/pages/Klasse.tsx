@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
+import { de } from "date-fns/locale";
 import { ChevronRight, GraduationCap, Trophy, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
-import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import avatarPlaceholder from "@/assets/avatar-placeholder.png";
 import boostMascotBlue from "@/assets/boost-mascot-blue.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { formatDisplayName } from "@/lib/formatName";
 
 interface StudentRanking {
   id: string;
@@ -19,21 +20,23 @@ interface ClassRanking {
   className: string;
   school: string;
   totalFlashes: number;
+  questBonusPoints: number;
 }
 
 interface PresentationClassRankingRow {
   school: string;
   class: string;
   total_flashes: number | null;
+  student_count?: number | null;
+  quest_bonus_points?: number | null;
 }
 
-const AVATAR_COLORS = [
-  "bg-primary", "bg-blue-500", "bg-orange-500", "bg-purple-500",
-  "bg-pink-500", "bg-yellow-500", "bg-red-500", "bg-teal-500",
-];
+type ClassQuestProgressRow = {
+  class_total: number | null;
+  goal: number | null;
+};
 
-const getInitials = (name: string) =>
-  name.slice(0, 2).toUpperCase();
+const numberFormat = new Intl.NumberFormat("de-AT");
 
 const Klasse = () => {
   const navigate = useNavigate();
@@ -42,6 +45,8 @@ const Klasse = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [studentRankings, setStudentRankings] = useState<StudentRanking[]>([]);
   const [classRankings, setClassRankings] = useState<ClassRanking[]>([]);
+  const [classQuestTotal, setClassQuestTotal] = useState(0);
+  const [classQuestGoal, setClassQuestGoal] = useState(1000);
   const [loading, setLoading] = useState(true);
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
@@ -66,6 +71,7 @@ const Klasse = () => {
           await Promise.all([
             loadStudentRankings(profile.class, profile.school),
             loadClassRankings(),
+            loadClassQuestProgress(),
           ]);
         } else {
           await Promise.all([loadClassRankings()]);
@@ -100,69 +106,99 @@ const Klasse = () => {
       .select("id, username, points")
       .eq("class", cls)
       .eq("school", school)
-      .order("points", { ascending: false })
-      .limit(10);
+      .order("points", { ascending: false });
     if (data) setStudentRankings(data);
   };
 
   const loadClassRankings = async () => {
-    const presentationTable = supabase as typeof supabase & {
-      from: (table: "presentation_class_rankings") => {
-        select: (
-          columns: string,
-        ) => {
-          eq: (column: string, value: boolean) => {
-            order: (
-              column: string,
-              options: { ascending: boolean },
-            ) => {
-              limit: (count: number) => Promise<{
-                data: PresentationClassRankingRow[] | null;
-                error: unknown;
-              }>;
-            };
-          };
-        };
-      };
-    };
-
-    const { data, error } = await presentationTable
-      .from("presentation_class_rankings")
-      .select("school, class, total_flashes")
-      .eq("is_active", true)
-      .order("total_flashes", { ascending: false })
-      .limit(50);
+    const { data, error } = await (supabase.rpc as any)("get_class_rankings_with_quest_bonus", {
+      p_month_start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+    });
 
     if (!error && data && data.length > 0) {
       setClassRankings(
-        data.map((r) => ({
+        (data as PresentationClassRankingRow[]).map((r) => ({
           className: r.class,
           school: r.school,
           totalFlashes: Number(r.total_flashes || 0),
+          questBonusPoints: Number(r.quest_bonus_points || 0),
         }))
       );
     } else {
       setClassRankings([
-        { className: "3b", school: "NMS Klusemann", totalFlashes: 2840 },
-        { className: "4a", school: "NMS Straden", totalFlashes: 2635 },
-        { className: "3e", school: "Ursulinen", totalFlashes: 2410 },
-        { className: "2c", school: "MS Puntigam", totalFlashes: 2210 },
-        { className: "1a", school: "MS Eggenberg", totalFlashes: 1980 },
-        { className: "4c", school: "BRG Petersgasse", totalFlashes: 1760 },
+        { className: "3b", school: "NMS Klusemann", totalFlashes: 2840, questBonusPoints: 0 },
+        { className: "4a", school: "NMS Straden", totalFlashes: 2635, questBonusPoints: 0 },
+        { className: "3e", school: "Ursulinen", totalFlashes: 2410, questBonusPoints: 0 },
+        { className: "2c", school: "MS Puntigam", totalFlashes: 2210, questBonusPoints: 0 },
+        { className: "1a", school: "MS Eggenberg", totalFlashes: 1980, questBonusPoints: 0 },
+        { className: "4c", school: "BRG Petersgasse", totalFlashes: 1760, questBonusPoints: 0 },
       ]);
     }
   };
 
-  const top3 = studentRankings.slice(0, 3);
-  const podiumOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
-  const classQuestGoal = 1000;
-  const classQuestProgress = studentRankings.reduce((sum, student) => sum + student.points, 0);
-  const classQuestPercent = Math.min(100, Math.round((classQuestProgress / classQuestGoal) * 100));
+  const loadClassQuestProgress = async () => {
+    const { data, error } = await (supabase.rpc as any)("get_class_quest_progress", {
+      p_month_start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+    });
+
+    if (!error && data && data.length > 0) {
+      const firstRow = (data as ClassQuestProgressRow[])[0];
+      setClassQuestTotal(Number(firstRow.class_total || 0));
+      setClassQuestGoal(Number(firstRow.goal || 1000));
+    }
+  };
+
+  const classQuestProgress = classQuestTotal;
+  const classQuestPercent = Math.min(100, Math.round((classQuestProgress / Math.max(classQuestGoal, 1)) * 100));
   const visibleClassRankings = classRankings.slice(0, 5);
   const myClassRank = classRankings.findIndex((cls) => cls.className === userClass && cls.school === userSchool) + 1;
-  const currentStudent = studentRankings.find((student) => student.id === userId) ?? studentRankings[0];
+  const studentPointsTotal = studentRankings.reduce((sum, student) => sum + student.points, 0);
+  const myClassRanking = classRankings.find((cls) => cls.className === userClass && cls.school === userSchool);
+  const classQuestBonusPoints = myClassRanking?.questBonusPoints ?? 0;
+  const highlightedClassPoints = studentPointsTotal + classQuestBonusPoints;
+  const classTotalPoints = studentPointsTotal;
+  const currentMonth = startOfMonth(new Date());
+  const questSlots = Array.from({ length: 5 }, (_, index) => {
+    const slotStart = addMonths(currentMonth, index);
+    const isCurrent = index === 0;
+    const progress = isCurrent ? classQuestProgress : 0;
+    const goal = classQuestGoal;
+
+    return {
+      id: `quest-${index}`,
+      label: isCurrent ? "Kniebeugen" : `Slot ${index + 1}`,
+      startLabel: format(slotStart, "dd.MM.", { locale: de }),
+      endLabel: format(endOfMonth(slotStart), "dd.MM.", { locale: de }),
+      progress,
+      goal,
+      complete: progress >= goal,
+    };
+  });
+  const currentStudent = studentRankings.find((student) => student.id === userId);
+  const currentStudentRank = studentRankings.findIndex((student) => student.id === userId) + 1;
   const topStudentPoints = studentRankings[0]?.points ?? 0;
   const pointsToFirstStudent = currentStudent ? Math.max(0, topStudentPoints - currentStudent.points) : 0;
+  const rankingStatusText = pointsToFirstStudent > 0
+    ? `Zum ersten Platz fehlen dir ${pointsToFirstStudent} Punkte.`
+    : "Super, du führst in der Klasse an.";
+
+  const renderStudentAvatar = (student: StudentRanking, className = "h-10 w-10") => {
+    const isCurrentUser = student.id === userId;
+    const equippedItem = isCurrentUser && equippedAvatarItem !== "none" ? AVATAR_ITEMS[equippedAvatarItem] : null;
+
+    return (
+      <div className={`relative shrink-0 overflow-hidden rounded-full border-2 border-white bg-white shadow-[0_8px_16px_rgba(0,0,0,0.1)] ${className}`}>
+        <img src={AVATAR_BASE_ASSET} alt={formatDisplayName(student.username)} className="h-full w-full object-contain" />
+        {equippedItem && (
+          <img
+            src={equippedItem.asset}
+            alt={equippedItem.name}
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
@@ -192,59 +228,113 @@ const Klasse = () => {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-[28px] border border-sky-200/40 bg-[linear-gradient(110deg,#1e3a8a_0%,#0284c7_38%,#38bdf8_68%,#bae6fd_88%,#f0f9ff_100%)] text-foreground shadow-[0_20px_42px_rgba(14,165,233,0.22),0_10px_24px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)]">
-            <div className="pointer-events-none absolute right-[-2rem] top-[-3rem] h-56 w-56 rounded-full bg-sky-400/20 blur-3xl" />
-            <div className="grid grid-cols-[minmax(0,1fr)_140px]">
-              <div className="relative flex min-h-[14.5rem] items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.4)_0_2px,transparent_3px),radial-gradient(circle_at_18%_28%,rgba(255,255,255,0.5)_0_1px,transparent_2px),radial-gradient(circle_at_65%_42%,rgba(255,255,255,0.28)_0_1px,transparent_2px)]" />
-                <div className="absolute bottom-4 left-1/2 h-8 w-40 -translate-x-1/2 rounded-full border-4 border-cyan-200/80 shadow-[0_0_24px_rgba(103,232,249,0.85),inset_0_0_18px_rgba(103,232,249,0.45)]" />
-                <div className="absolute right-7 top-9 text-3xl text-yellow-200 drop-shadow-[0_0_12px_rgba(254,240,138,0.9)]">✦</div>
+          <div className="relative overflow-hidden rounded-[28px] border border-sky-200/50 bg-[linear-gradient(135deg,#0759d6_0%,#0287ef_52%,#06b7f7_100%)] p-3 text-white shadow-[0_22px_46px_rgba(2,132,199,0.28),0_10px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.46)]">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.16)_0_7%,transparent_7%_24%,rgba(255,255,255,0.08)_24%_25%,transparent_25%_100%)]" />
+            <div className="pointer-events-none absolute right-6 top-8 h-28 w-24 bg-[radial-gradient(circle,rgba(255,255,255,0.34)_0_2px,transparent_3px)] [background-size:18px_18px] opacity-70" />
+            <div className="relative grid grid-cols-[minmax(0,1.05fr)_minmax(8.75rem,0.95fr)] items-center gap-2 px-1 pt-1">
+              <div className="relative flex min-h-[13.25rem] items-end justify-center overflow-hidden">
+                <div className="absolute bottom-2 left-1/2 h-8 w-40 -translate-x-1/2 rounded-full border-4 border-cyan-200/80 shadow-[0_0_24px_rgba(103,232,249,0.85),inset_0_0_18px_rgba(103,232,249,0.45)]" />
+                <div className="absolute right-4 top-9 text-2xl text-yellow-200 drop-shadow-[0_0_12px_rgba(254,240,138,0.9)]">✦</div>
+                <div className="absolute left-3 top-[45%] text-2xl text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.9)]">✦</div>
                 <img
                   src={boostMascotBlue}
                   alt=""
                   aria-hidden="true"
-                  className="pointer-events-none relative z-10 h-[13.25rem] w-auto object-contain object-center drop-shadow-[0_18px_28px_rgba(3,30,92,0.35)]"
+                  className="pointer-events-none relative z-10 h-[12.75rem] w-auto object-contain object-center drop-shadow-[0_18px_28px_rgba(3,30,92,0.35)]"
                 />
               </div>
 
-              <div className="relative flex flex-col items-center justify-center px-2 py-4">
+              <div className="relative flex min-w-0 flex-col items-center justify-center py-3">
+                <p className="text-center text-[11px] font-black uppercase leading-tight tracking-[0.12em] text-white/88">
+                  Fortschritt
+                  <br />
+                  Klassenchallenge
+                </p>
                 <div
-                  className="relative flex h-28 w-28 items-center justify-center rounded-full shadow-[0_14px_30px_rgba(14,165,233,0.28),inset_0_2px_0_rgba(255,255,255,0.5)]"
+                  className="relative mt-2 flex h-[7.7rem] w-[7.7rem] items-center justify-center rounded-full shadow-[0_14px_28px_rgba(2,44,120,0.25)]"
                   style={{
-                    background: `conic-gradient(rgb(14 165 233) 0% ${classQuestPercent}%, rgba(148,216,255,0.35) ${classQuestPercent}% 100%)`,
+                    background: `conic-gradient(rgb(31 224 102) 0% ${classQuestPercent}%, rgb(255 255 255) ${classQuestPercent}% 100%)`,
                   }}
                 >
-                  <div className="flex h-[78px] w-[78px] flex-col items-center justify-center rounded-full bg-white text-center shadow-[0_4px_14px_rgba(14,165,233,0.18),inset_0_1px_0_rgba(255,255,255,0.9)]">
-                    <p className="text-[10px] font-bold text-foreground/55">Fortschritt {classQuestPercent}%</p>
-                    <p className="mt-0.5 text-[1.8rem] font-black leading-none text-foreground">
-                      {classQuestProgress}
+                  <div className="flex h-[5.85rem] w-[5.85rem] flex-col items-center justify-center rounded-full bg-[#0b74e8] px-1 text-center text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">
+                    <p className="text-[1.7rem] font-black leading-none tracking-normal">
+                      {numberFormat.format(classQuestProgress)}
                     </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-base font-bold text-foreground/80">
-                      / {classQuestGoal}
-                      <Zap className="h-3.5 w-3.5 fill-warning text-warning" />
+                    <p className="mt-1 text-[1.15rem] font-black leading-none text-white">
+                      / {numberFormat.format(classQuestGoal)}
                     </p>
                   </div>
                 </div>
-                <p className="relative mt-3 text-center text-xs font-bold text-foreground/55">Wochenziel läuft!</p>
+                <div className="relative mt-3 w-full rounded-[18px] border border-white/60 bg-white/12 px-3 py-2 text-center shadow-[0_10px_20px_rgba(3,30,92,0.14),inset_0_1px_0_rgba(255,255,255,0.26)]">
+                  <p className="text-[10px] font-black uppercase leading-none tracking-[0.12em] text-white/82">Klassenpunkte</p>
+                  <p className="mt-1 text-3xl font-black leading-none text-white">
+                    {numberFormat.format(highlightedClassPoints)}
+                  </p>
+                  {classQuestBonusPoints > 0 && (
+                    <p className="mt-1 text-[10px] font-black leading-none text-primary">
+                      inkl. +{numberFormat.format(classQuestBonusPoints)} Questbonus
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="relative flex items-center gap-2 overflow-x-auto bg-white/66 px-5 py-4 backdrop-blur-[2px]">
-              {studentRankings.slice(0, 3).map((student, i) => (
-                <div key={student.id} className="flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-2 py-1 shadow-[0_8px_16px_rgba(0,0,0,0.05),inset_0_1px_0_rgba(255,255,255,0.5)]">
-                  <div className={`relative h-9 w-9 overflow-hidden rounded-full border-2 border-white shadow-[0_8px_14px_rgba(0,0,0,0.1)] ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
-                    <img src={avatarPlaceholder} alt={student.username} className="h-full w-full object-cover" />
+            <div className="relative mt-2">
+              <div
+                className="grid w-full overflow-hidden rounded-[18px] border border-white/65 bg-white shadow-[0_12px_24px_rgba(2,44,120,0.18),inset_0_1px_0_rgba(255,255,255,0.72)]"
+                style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr)) minmax(0, 2.5fr)" }}
+              >
+                {questSlots.map((slot, index) => (
+                  <div
+                    key={slot.id}
+                    className={`min-h-[5.75rem] min-w-0 border-r border-zinc-200/80 px-2 py-2 ${
+                      slot.complete || index === 0
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-white text-foreground"
+                    }`}
+                  >
+                    <div className="flex h-full flex-col justify-between">
+                      <div>
+                        <p className={`text-[9px] font-black uppercase leading-tight ${slot.complete || index === 0 ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
+                          {index === 0 ? "Nächste Quest" : slot.label}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-bold leading-tight ${slot.complete || index === 0 ? "text-primary-foreground" : "text-muted-foreground"}`}>
+                          {slot.startLabel}
+                          <br />
+                          - {slot.endLabel}
+                        </p>
+                        <div className={`mt-1.5 h-1.5 overflow-hidden rounded-full ${slot.complete || index === 0 ? "bg-white/40" : "bg-zinc-200"}`}>
+                          <div
+                            className={`h-full rounded-full ${slot.complete || index === 0 ? "bg-white" : "bg-zinc-300"}`}
+                            style={{ width: `${Math.min(100, Math.round((slot.progress / Math.max(slot.goal, 1)) * 100))}%` }}
+                            aria-hidden="true"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-xs font-black text-foreground">
-                    {getInitials(student.username)}
-                  </span>
+                ))}
+                <div className="min-h-[5.75rem] min-w-0 bg-sky-950 px-3 py-3 text-white">
+                  <div className="flex h-full flex-col justify-between">
+                    <p className="text-[10px] font-black uppercase leading-tight tracking-[0.08em] text-white/82">
+                      Meine
+                      <br />
+                      Klasse
+                    </p>
+                    <div>
+                      <p className="flex items-center gap-1 text-2xl font-black leading-none">
+                        <Zap className="h-5 w-5 shrink-0 fill-primary text-primary" />
+                        {numberFormat.format(classTotalPoints)}
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-black uppercase leading-none text-white/88">
+                        Blitze
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              ))}
-              {studentRankings.length > 3 && (
-                <span className="shrink-0 text-sm font-bold text-foreground/65">
-                  und {studentRankings.length - 3} weitere Personen
-                </span>
-              )}
+              </div>
             </div>
           </div>
 
@@ -256,24 +346,26 @@ const Klasse = () => {
                     <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary shadow-[0_8px_16px_rgba(31,224,102,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]">
                       <Trophy className="h-5 w-5" />
                     </div>
-                    <h2 className="text-[1.55rem] font-black leading-none text-foreground">Meine Klasse</h2>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <h2 className="text-[1.55rem] font-black leading-none text-foreground">Meine Klasse</h2>
+                      {currentStudentRank > 0 && (
+                        <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-black text-primary">
+                          #{currentStudentRank}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-2 text-sm text-foreground/65">
-                      {pointsToFirstStudent > 0
-                        ? `Noch ${pointsToFirstStudent} Pt. für den ersten Rang.`
-                        : "Deine Klasse führt gerade den ersten Rang an."}
+                      {rankingStatusText}
                     </p>
                   </div>
                   <div className="border-l border-black/6 p-4">
                     <div className="space-y-3">
                       {studentRankings.slice(0, 3).map((student, idx) => {
-                        const colorIdx = studentRankings.findIndex((s) => s.id === student.id) % AVATAR_COLORS.length;
                         return (
                           <div key={student.id} className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-full border border-white/40 ${AVATAR_COLORS[colorIdx]} flex items-center justify-center text-white text-xs font-black shadow-[0_8px_16px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.25)]`}>
-                              {getInitials(student.username)}
-                            </div>
+                            {renderStudentAvatar(student)}
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-bold text-foreground/90">{student.username}</p>
+                              <p className="truncate text-sm font-bold text-foreground/90">{formatDisplayName(student.username)}</p>
                               <p className="flex items-center gap-1 text-xs font-medium text-foreground/60">
                                 {student.points}
                                 <Zap className="h-3 w-3 fill-primary text-primary" />
@@ -299,7 +391,7 @@ const Klasse = () => {
                       <br />
                       ranking
                     </h2>
-                    <p className="mt-2 text-sm text-foreground/65">alle Klassen</p>
+                    <p className="mt-2 text-sm text-foreground/65">Steirische Unterstufen</p>
                     <button
                       type="button"
                       onClick={() => setShowAllRankings(true)}
@@ -319,7 +411,7 @@ const Klasse = () => {
                               {cls.className.toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-bold text-foreground/90">{cls.className.toUpperCase()}</p>
+                              <p className="truncate text-sm font-bold text-foreground/90">{cls.school}</p>
                               <p className="flex items-center gap-1 text-xs font-medium text-foreground/60">
                                 {cls.totalFlashes}
                                 <Zap className="h-3 w-3 fill-primary text-primary" />
@@ -344,7 +436,7 @@ const Klasse = () => {
             <DialogHeader className="mb-4 text-left">
               <div className="pr-10">
                 <DialogTitle className="text-xl font-black text-foreground">Klassenranking</DialogTitle>
-                <p className="text-sm text-muted-foreground">Alle aktiven Klassen im Ranking</p>
+                <p className="text-sm text-muted-foreground">Steirische Unterstufen im Ranking</p>
               </div>
             </DialogHeader>
 

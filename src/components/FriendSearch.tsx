@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Search, UserPlus, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatDisplayName } from '@/lib/formatName';
 
 interface Profile {
   id: string;
@@ -69,7 +70,7 @@ export const FriendSearch = ({ currentUserId, onFriendSelect }: FriendSearchProp
               onClick={() => onFriendSelect(user)}
             >
               <div>
-                <p className="font-medium">{user.username}</p>
+                <p className="font-medium">{formatDisplayName(user.username)}</p>
                 <p className="text-sm text-muted-foreground">
                   {user.school} • Klasse {user.class}
                 </p>

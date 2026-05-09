@@ -179,7 +179,18 @@ const Rewards = () => {
     <div className="min-h-screen bg-background pb-nav-safe">
       <TopHeader />
 
-      <div className="max-w-screen-xl mx-auto px-4 -mt-4">
+      <div className="relative max-w-screen-xl mx-auto px-4 -mt-4">
+        <div className="absolute inset-x-4 top-0 bottom-0 z-30 flex items-start justify-center pt-20 rounded-[28px] bg-zinc-950/72 backdrop-grayscale">
+          <div className="rotate-[-7deg] text-center">
+            <p className="text-[3.8rem] font-black leading-none tracking-tight text-white/95 drop-shadow-[0_12px_28px_rgba(0,0,0,0.45)] sm:text-[5.5rem]">
+              Coming
+            </p>
+            <p className="mt-2 text-[3.8rem] font-black leading-none tracking-tight text-white/95 drop-shadow-[0_12px_28px_rgba(0,0,0,0.45)] sm:text-[5.5rem]">
+              soon
+            </p>
+          </div>
+        </div>
+
         {/* Current Status */}
         <Card className="p-4 mb-4 bg-card shadow-lg">
           <div className="flex items-center justify-between">

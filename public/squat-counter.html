@@ -369,10 +369,10 @@
     document.getElementById("finish-button").addEventListener("click", () => {
       if(counter === 0){
         localStorage.setItem("squats_result", 0);
-        window.location.href = "/challenge/daily";
+        window.location.href = "/dashboard";
         return;
       }
-      createCelebration(counter, 'SQUATS!', 'squats_result', '/challenge/daily');
+      createCelebration(counter, 'SQUATS!', 'squats_result', '/dashboard');
     });
 
     async function main(){

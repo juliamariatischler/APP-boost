@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import { Star, Zap } from "lucide-react";
-import { BOOST_POINT_RULES, DAILY_STEP_GOAL, DAILY_EXERCISE_GOALS, WEEKLY_GOAL_DAYS, calculateStreak, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
+import { BOOST_POINT_RULES, WEEKLY_GOAL_DAYS, calculateStreak, countCompletedDailyExercises, isDailyGoalComplete, isStreakEligibleDay } from "@/lib/gamification";
 
 interface DailyResult {
   date: string;
@@ -72,17 +72,6 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
     return blitze;
   };
 
-  const hasAnyActivity = (day: DailyResult) => {
-    return (
-      (day.steps || 0) > 0 ||
-      (day.jumping_jacks || 0) > 0 ||
-      (day.push_ups || 0) > 0 ||
-      (day.squats || 0) > 0 ||
-      (day.planks || 0) > 0 ||
-      (day.sit_ups || 0) > 0
-    );
-  };
-
   const addOneDayToDateString = (dateStr: string) => {
     const [year, month, day] = dateStr.split("-").map(Number);
     const nextDate = new Date(year, month - 1, day);
@@ -105,7 +94,7 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
   const totalWeeklyBlitze = weeklyData.reduce((sum, day) => sum + calculateDailyBlitze(day), 0);
   const daysOfWeek = getDaysOfWeek();
   const activeDates = weeklyData
-    .filter(hasAnyActivity)
+    .filter(isStreakEligibleDay)
     .map((day) => day.date)
     .sort((a, b) => a.localeCompare(b));
   const currentStreak = calculateStreak(activeDates).currentStreak;
@@ -134,10 +123,10 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
         {daysOfWeek.map((day) => {
           const data = getDataForDate(day);
           const blitze = data ? calculateDailyBlitze(data) : 0;
-          const hasActivity = data ? hasAnyActivity(data) : false;
+          const hasStreakProgress = data ? isStreakEligibleDay(data) : false;
           const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
           const isPast = day < new Date() && !isToday;
-          const showStreakStar = format(day, "yyyy-MM-dd") === streakTargetDate && !hasActivity;
+          const showStreakStar = format(day, "yyyy-MM-dd") === streakTargetDate && !hasStreakProgress;
           
           return (
             <div

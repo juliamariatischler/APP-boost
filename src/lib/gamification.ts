@@ -105,10 +105,40 @@ export function getStreakBonusForLength(streak: number): number {
   return 0;
 }
 
-export function calculateStreak(dates: string[]): StreakInfo {
-  if (dates.length === 0) return { currentStreak: 0, longestStreak: 0 };
+type DailyProgressValues = {
+  steps?: number | null;
+  steps_tracking_active?: boolean | null;
+} & Partial<Record<keyof typeof DAILY_EXERCISE_GOALS, number | null>>;
 
-  const sorted = [...dates].sort((a, b) => b.localeCompare(a));
+export const STREAK_DAY_THRESHOLD_PERCENT = 80;
+
+export function getDailyProgressPercent(day?: DailyProgressValues | null): number {
+  if (!day) return 0;
+
+  const steps = day.steps_tracking_active === false ? 0 : Number(day.steps || 0);
+  const completedTaskCount =
+    (steps >= DAILY_STEP_GOAL ? 1 : 0) +
+    countCompletedDailyExercises({
+      jumping_jacks: Number(day.jumping_jacks || 0),
+      push_ups: Number(day.push_ups || 0),
+      squats: Number(day.squats || 0),
+      planks: Number(day.planks || 0),
+      sit_ups: Number(day.sit_ups || 0),
+    });
+  const taskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+
+  return Math.min(100, Math.round((completedTaskCount / taskCount) * 100));
+}
+
+export function isStreakEligibleDay(day?: DailyProgressValues | null): boolean {
+  return getDailyProgressPercent(day) >= STREAK_DAY_THRESHOLD_PERCENT;
+}
+
+export function calculateStreak(dates: string[]): StreakInfo {
+  const uniqueDates = Array.from(new Set(dates.filter(Boolean)));
+  if (uniqueDates.length === 0) return { currentStreak: 0, longestStreak: 0 };
+
+  const sorted = uniqueDates.sort((a, b) => b.localeCompare(a));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -122,9 +152,7 @@ export function calculateStreak(dates: string[]): StreakInfo {
   if (sorted[0] === todayStr || sorted[0] === yesterdayStr) {
     currentStreak = 1;
     for (let i = 1; i < sorted.length; i++) {
-      const prev = new Date(sorted[i - 1]);
-      const curr = new Date(sorted[i]);
-      const diffDays = Math.round((prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = getDateStringDiffDays(sorted[i - 1], sorted[i]);
       if (diffDays === 1) {
         currentStreak++;
       } else {
@@ -137,9 +165,7 @@ export function calculateStreak(dates: string[]): StreakInfo {
   let tempStreak = 1;
   const ascending = [...sorted].reverse();
   for (let i = 1; i < ascending.length; i++) {
-    const prev = new Date(ascending[i - 1]);
-    const curr = new Date(ascending[i]);
-    const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = getDateStringDiffDays(ascending[i], ascending[i - 1]);
     if (diffDays === 1) {
       tempStreak++;
       longestStreak = Math.max(longestStreak, tempStreak);
@@ -153,6 +179,17 @@ export function calculateStreak(dates: string[]): StreakInfo {
 
 function formatDateLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getDateStringDiffDays(laterDateStr: string, earlierDateStr: string): number {
+  const laterDate = parseLocalDate(laterDateStr);
+  const earlierDate = parseLocalDate(earlierDateStr);
+  return Math.round((laterDate.getTime() - earlierDate.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 // === Weekly Goal ===

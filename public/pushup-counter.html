@@ -531,10 +531,10 @@
     finishButton.addEventListener('click', () => {
       if(counter === 0){
         localStorage.setItem("pushups_result", 0);
-        window.location.href = "/challenge/daily";
+        window.location.href = "/dashboard";
         return;
       }
-      createCelebration(counter, 'PUSH-UPS!', 'pushups_result', '/challenge/daily');
+      createCelebration(counter, 'PUSH-UPS!', 'pushups_result', '/dashboard');
     });
 
     // Responsives Canvas (hält 4:3)

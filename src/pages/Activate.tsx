@@ -1,10 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, QrCode, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 
 const normalizeCode = (value: string) => value.replace(/\s+/g, "").toUpperCase();
@@ -13,13 +12,13 @@ export default function Activate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { activate } = useCodeAuth();
-  const [code, setCode] = useState(() => normalizeCode(searchParams.get("code") || ""));
+  const [hasQrCode] = useState(() => Boolean(normalizeCode(searchParams.get("code") || "")));
   const [submitting, setSubmitting] = useState(false);
 
   const submitActivation = async (activationCode: string) => {
     const normalized = normalizeCode(activationCode);
     if (!normalized) {
-      toast.error("Bitte gib den Aktivierungscode ein.");
+      toast.error("Bitte scanne den QR-Code deiner Lehrkraft.");
       return;
     }
 
@@ -41,15 +40,11 @@ export default function Activate() {
   useEffect(() => {
     const initialCode = normalizeCode(searchParams.get("code") || "");
     if (!initialCode) return;
+    window.history.replaceState(null, "", "/activate");
     void submitActivation(initialCode);
     // The initial QR scan should run once for the URL code.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void submitActivation(code);
-  };
 
   return (
     <div className="min-h-screen bg-background px-4 py-8 pt-[calc(env(safe-area-inset-top)+2rem)]">
@@ -65,29 +60,25 @@ export default function Activate() {
         </div>
 
         <Card className="rounded-2xl border-border bg-card p-5 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
               <QrCode className="h-7 w-7" />
             </div>
             <div>
-              <label htmlFor="activation-code" className="text-sm font-semibold text-foreground">
-                Aktivierungscode
-              </label>
-              <Input
-                id="activation-code"
-                value={code}
-                onChange={(event) => setCode(normalizeCode(event.target.value))}
-                placeholder="20-stelliger Code"
-                autoCapitalize="characters"
-                autoComplete="one-time-code"
-                className="mt-2 h-12 text-base font-semibold tracking-[0.12em]"
-              />
+              <p className="text-lg font-black text-foreground">
+                {hasQrCode ? "QR-Code wird geprüft..." : "QR-Code erforderlich"}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {hasQrCode
+                  ? "Der QR-Code wird im Hintergrund gelesen. Du musst nichts eintippen."
+                  : "Bitte öffne diese Seite über den QR-Code deiner Lehrkraft oder scanne den QR-Code direkt in der BOOST App."}
+              </p>
             </div>
-            <Button type="submit" disabled={submitting} className="h-12 w-full">
+            <Button type="button" disabled className="h-12 w-full">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-              Aktivieren
+              {submitting ? "Aktiviere..." : "QR-Code scannen"}
             </Button>
-          </form>
+          </div>
         </Card>
       </div>
     </div>

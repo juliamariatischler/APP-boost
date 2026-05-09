@@ -30,11 +30,11 @@ const STUDENT_SLIDES: Slide[] = [
   },
   {
     title: "Dein Home",
-    text: "Hier siehst du jeden Tag, was du schon geschafft hast.",
+    text: "Ab 80% Tagesfortschritt zählt dein Tag für die Serie. Das sind 5 von 6 Aufgaben.",
     icon: Home,
     accentClass: "bg-emerald-300 text-emerald-950",
     panelClass: "from-[#eefce9] via-[#f7fff5] to-[#dff7f0]",
-    points: ["Balken füllen", "Tagesziele schaffen", "Blitze sammeln"],
+    points: ["80% = Streak-Tag", "5 von 6 Aufgaben reichen", "Blitze weiter sammeln"],
   },
   {
     title: "Quests und Klasse",
@@ -65,11 +65,11 @@ const TEACHER_SLIDES: Slide[] = [
   },
   {
     title: "Home und Aktivität",
-    text: "Auf Home sehen Sie direkt, was heute passiert und wie aktiv die Woche läuft.",
+    text: "Ein Streak-Tag zählt ab 80% Tagesfortschritt, also ab 5 von 6 Aufgaben.",
     icon: Home,
     accentClass: "bg-emerald-300 text-emerald-950",
     panelClass: "from-[#edfce7] via-[#f8fff5] to-[#def6f2]",
-    points: ["Tagesfortschritt", "Wochenblick", "Schneller Einstieg"],
+    points: ["80%-Streak verstehen", "Tagesfortschritt prüfen", "Wochenblick einordnen"],
   },
   {
     title: "Quests und Klasse",

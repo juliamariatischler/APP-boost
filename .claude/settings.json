@@ -15,7 +15,18 @@
       "Bash(sips --help)",
       "Bash(sort -k5 -rh)",
       "Bash(awk '$5 ~ /[0-9]+K/ {size=$5+0; if\\(size > 100\\) print}')",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(find /var/folders /tmp ~/Downloads -name \"*.png\" -newer /Users/juliatischler/Documents/app_boost/src/assets/quest-weekly-hiker-avatar.png 2>/dev/null | head -10)",
+      "Read(//private/var/folders/**)",
+      "Read(//Users/juliatischler/Downloads/**)",
+      "Bash(find ~/Downloads ~/Desktop -name \"*.png\" -newer \"/Users/juliatischler/Downloads/ChatGPT Image 9. Mai 2026, 13_54_26.png\" 2>/dev/null | head -20)",
+      "Read(//Users/juliatischler/Desktop/**)",
+      "Bash(find ~/Downloads ~/Desktop /tmp -name \"*.png\" -newer \"/Users/juliatischler/Downloads/ChatGPT Image 9. Mai 2026, 14_07_53.png\" 2>/dev/null | head -10)",
+      "Read(//private/tmp/**)",
+      "Bash(cp \"/Users/juliatischler/Downloads/ChatGPT_Image_9._Mai_2026__13_54_26-removebg-preview.png\" \"/Users/juliatischler/Documents/app_boost/src/assets/quest-weekly-geo-avatar.png\")"
+    ],
+    "additionalDirectories": [
+      "/Users/juliatischler/Downloads"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import jsQR from "jsqr";
 
 const REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY = "boost:get_registered_schools_unavailable";
 const ACTIVATION_CODE_PATTERN = /^[A-Z0-9]{20}$/;
+const LOGIN_SUCCESS_TOAST_OPTIONS = { duration: 1000 };
 
 // Input validation schemas
 const loginSchema = z.object({
@@ -139,7 +140,7 @@ const Auth = () => {
     if (lower.includes("expired") || lower.includes("abgelaufen")) {
       return "Dieser QR-Code ist abgelaufen. Bitte bitte deine Lehrkraft um einen neuen Code.";
     }
-    if (lower.includes("device") || lower.includes("gerät")) {
+    if (lower.includes("device") || lower.includes("gerät") || lower.includes("geraet")) {
       return "Dieses Profil ist bereits mit einem Gerät verbunden. Bitte wende dich an deine Lehrkraft.";
     }
     if (lower.includes("student") || lower.includes("schüler")) {
@@ -170,6 +171,11 @@ const Auth = () => {
     } finally {
       setQrLoading(false);
     }
+  };
+
+  const handleManualQrSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void activateScannedCode(manualQrCode);
   };
 
   const isMissingInfraError = (error: any) => {
@@ -301,7 +307,7 @@ const Auth = () => {
       setQrScannerError("");
 
       if (!navigator.mediaDevices?.getUserMedia) {
-        setQrScannerError("Diese Kamera-Funktion wird auf diesem Gerät nicht unterstützt. Gib den Code bitte manuell ein.");
+        setQrScannerError("Diese Kamera-Funktion wird auf diesem Gerät nicht unterstützt. Bitte nutze ein Gerät mit Kamera oder gib den Code manuell ein.");
         return;
       }
 
@@ -356,7 +362,7 @@ const Auth = () => {
               return;
             }
           } catch {
-            setQrScannerError("Der QR-Code konnte nicht gelesen werden. Richte die Kamera direkt auf den Code oder gib ihn manuell ein.");
+            setQrScannerError("Der QR-Code konnte nicht gelesen werden. Richte die Kamera direkt auf den Code oder gib den Code manuell ein.");
           }
 
           if (!cancelled) {
@@ -405,7 +411,7 @@ const Auth = () => {
       }
 
       if (data.session) {
-        toast.success("Erfolgreich angemeldet!");
+        toast.success("Erfolgreich angemeldet!", LOGIN_SUCCESS_TOAST_OPTIONS);
         const role = await getCurrentAppRole();
         navigate(routeForRole(role), { replace: true });
       }
@@ -420,11 +426,6 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleManualQrSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void activateScannedCode(manualQrCode);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -467,7 +468,7 @@ const Auth = () => {
       }
 
       if (data.session) {
-        toast.success("Erfolgreich registriert! Du wirst weitergeleitet...");
+        toast.success("Erfolgreich registriert! Du wirst weitergeleitet...", LOGIN_SUCCESS_TOAST_OPTIONS);
         const role = await getCurrentAppRole();
         navigate(routeForRole(role), { replace: true });
       } else if (data.user) {
@@ -622,7 +623,7 @@ const Auth = () => {
         accountType: "student",
       });
 
-      toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!");
+      toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!", LOGIN_SUCCESS_TOAST_OPTIONS);
       navigate("/dashboard");
     } catch (error: any) {
       toast.error("Demo-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
@@ -640,7 +641,7 @@ const Auth = () => {
         accountType: "student",
       });
 
-      toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!");
+      toast.success(result.created ? "Demo-Schülerkonto erstellt!" : "Demo-Login erfolgreich!", LOGIN_SUCCESS_TOAST_OPTIONS);
       navigate("/dashboard");
     } catch (error: any) {
       toast.error("Demo-Login fehlgeschlagen: " + (error?.message ?? "Unbekannter Fehler"));
@@ -725,14 +726,14 @@ const Auth = () => {
       }
 
       if (!assignmentSucceeded) {
-        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung aktuell nicht möglich (DB-Migration fehlt).");
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung aktuell nicht möglich (DB-Migration fehlt).", LOGIN_SUCCESS_TOAST_OPTIONS);
       } else {
-        toast.success("Demo-Lehrkraft-Login erfolgreich! Demoschüler ist der Demo-Lehrkraft zugeordnet.");
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Demoschüler ist der Demo-Lehrkraft zugeordnet.", LOGIN_SUCCESS_TOAST_OPTIONS);
       }
       navigate("/teacher-home", { replace: true });
     } catch (error: any) {
       if (isAssignmentInfraMissing(error)) {
-        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.");
+        toast.success("Demo-Lehrkraft-Login erfolgreich! Zuordnung wird ohne Assignment-Tabelle übersprungen.", LOGIN_SUCCESS_TOAST_OPTIONS);
         navigate("/teacher-home", { replace: true });
         return;
       }
@@ -795,6 +796,7 @@ const Auth = () => {
             type="button"
             className="h-12 w-full text-base font-bold"
             onClick={() => {
+              setQrScannerError("");
               setManualQrCode("");
               setQrScannerOpen(true);
             }}
@@ -1074,23 +1076,26 @@ const Auth = () => {
               <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">{qrScannerError}</p>
             )}
 
-            <form onSubmit={handleManualQrSubmit} className="space-y-3">
-              <div>
+            <p className="text-center text-sm font-medium text-muted-foreground">
+              Halte den QR-Code vollständig in den Rahmen. Die Aktivierung startet automatisch.
+            </p>
+
+            <form className="space-y-3" onSubmit={handleManualQrSubmit}>
+              <div className="space-y-2">
                 <Label htmlFor="manual-qr-code">Code manuell eingeben</Label>
                 <Input
                   id="manual-qr-code"
                   value={manualQrCode}
-                  onChange={(event) => setManualQrCode(normalizeActivationCode(event.target.value))}
+                  onChange={(event) => setManualQrCode(event.target.value)}
                   placeholder="20-stelliger Aktivierungscode"
                   autoCapitalize="characters"
-                  autoComplete="one-time-code"
-                  className="mt-2 font-semibold tracking-[0.12em]"
+                  autoComplete="off"
                   disabled={qrLoading}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={qrLoading || !manualQrCode.trim()}>
                 {qrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                Aktivieren
+                Code aktivieren
               </Button>
             </form>
           </div>

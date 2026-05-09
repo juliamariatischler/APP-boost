@@ -3,6 +3,7 @@ import { Trophy, Zap, ArrowUp, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/formatName";
 
 interface ClassRanking {
   className: string;
@@ -92,12 +93,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
       let presentationError: any = null;
 
       if (sessionStorage.getItem(PRESENTATION_RANKINGS_UNAVAILABLE_KEY) !== "1") {
-        const response = await (supabase as any)
-          .from("presentation_class_rankings")
-          .select("school, class, total_flashes, student_count, sort_order")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true })
-          .order("total_flashes", { ascending: false });
+        const response = await (supabase.rpc as any)("get_class_rankings_with_quest_bonus");
 
         presentationData = response.data;
         presentationError = response.error;
@@ -351,7 +347,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
                     {rank}
                   </div>
                   <span className={`font-bold text-sm ${isMe ? "text-primary" : "text-foreground"}`}>
-                    {student.username}
+                    {formatDisplayName(student.username)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -370,7 +366,7 @@ export const ClassLeaderboard = ({ userClass, userSchool }: Props) => {
                   <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs bg-primary/20 text-primary">
                     {myStudentRank}
                   </div>
-                  <span className="font-bold text-sm text-primary">{myStudent.username}</span>
+                  <span className="font-bold text-sm text-primary">{formatDisplayName(myStudent.username)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="font-bold text-sm">{myStudent.points}</span>

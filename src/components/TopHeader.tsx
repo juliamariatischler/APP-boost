@@ -19,9 +19,10 @@ interface Profile {
 
 interface TopHeaderProps {
   backTo?: string;
+  hideNav?: boolean;
 }
 
-export const TopHeader = ({ backTo = "/dashboard" }: TopHeaderProps) => {
+export const TopHeader = ({ backTo = "/dashboard", hideNav = false }: TopHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -153,7 +154,7 @@ export const TopHeader = ({ backTo = "/dashboard" }: TopHeaderProps) => {
     <div className="border-b border-black/5 bg-white/95 px-4 pb-3 shadow-[0_8px_24px_rgba(0,0,0,0.05)] backdrop-blur mb-5" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
       <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          {!isDashboard && (
+          {!isDashboard && !hideNav && (
             <Button
               variant="outline"
               onClick={() => navigate(backTo)}
@@ -170,18 +171,20 @@ export const TopHeader = ({ backTo = "/dashboard" }: TopHeaderProps) => {
             <span className="hidden text-xs font-bold text-primary/75 sm:inline">gesamt</span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 sm:gap-2">
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
-              <Settings className="h-4 w-4 mr-2" />
-              Admin
+        {!hideNav && (
+          <div className="flex items-center gap-1.5 shrink-0 sm:gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
+                <Settings className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            )}
+            <img src={boostLogo} alt="BOOST Logo" className="h-9 w-auto sm:h-11" />
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 rounded-full sm:h-10 sm:w-10">
+              <LogOut className="h-4 w-4" />
             </Button>
-          )}
-          <img src={boostLogo} alt="BOOST Logo" className="h-9 w-auto sm:h-11" />
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 rounded-full sm:h-10 sm:w-10">
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

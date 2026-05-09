@@ -1,19 +1,19 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/quest-friend-emoji.png";
 import tryitImg from "@/assets/challenge-tryit.jpg";
+import tryitSportsAvatarImg from "@/assets/quest-tryit-sports-avatar.png";
+import weeklyHikerAvatarImg from "@/assets/quest-weekly-hiker-avatar.png";
+import weeklyGeoAvatarImg from "@/assets/quest-weekly-geo-avatar.png";
 import TrialSessionsList from "@/components/TrialSessionsList";
 import { DailyChallengeContent } from "@/components/DailyChallengeContent";
 import { TopHeader } from "@/components/TopHeader";
 import { BottomNav } from "@/components/BottomNav";
-import { CheckCircle2, MapPin, Play, Sparkles, Zap } from "lucide-react";
-import { format, subDays } from "date-fns";
-import { isDemoEmail } from "@/lib/demo";
+import { MapPin, Package, Play, Search, Sparkles, TreePine, Trophy, Zap } from "lucide-react";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET } from "@/lib/avatarItems";
 
@@ -24,9 +24,9 @@ const challengeData: Record<string, { title: string; image: string; description:
     description: "Kurze, kindgerechte Bewegungsimpulse mit reduzierten Wiederholungen und rotierendem Trainingsfokus. Unsere Übungen basieren auf internationalen Trainingsrichtlinien für Kinder und sind speziell auf Sicherheit, Einfachheit und Skalierbarkeit ausgelegt.",
   },
   weekly: {
-    title: "Wochenmission",
+    title: "2-Wochen-Mission",
     image: weeklyImg,
-    description: `Schaffe 5 aktive Tage und hol dir +${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze.`,
+    description: `Schaffe die beschriebene Challenge und erhalte ${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze.`,
   },
   friend: {
     title: "Friendquest Challenge",
@@ -47,9 +47,7 @@ const Blitz3D = ({ className = "" }: { className?: string }) => (
   </span>
 );
 
-const QuestBuddy = ({ type }: { type: string }) => {
-  const isTryIt = type === "tryit";
-
+const QuestBuddy = () => {
   return (
     <div className="relative flex h-32 w-32 items-center justify-center">
       <div className="absolute inset-2 rounded-[36px] bg-[radial-gradient(circle_at_36%_28%,rgba(255,255,255,0.95)_0%,rgba(255,255,255,0.72)_34%,rgba(97,220,112,0.16)_100%)] shadow-[0_18px_34px_rgba(31,224,102,0.20),inset_0_2px_0_rgba(255,255,255,0.85),inset_0_-4px_10px_rgba(0,0,0,0.08)]" />
@@ -57,16 +55,6 @@ const QuestBuddy = ({ type }: { type: string }) => {
         <span className="absolute left-2 top-2 h-2 w-3 rounded-full bg-white/55 blur-[1px]" />
       </div>
       <div className="absolute left-2 top-5 h-5 w-10 -rotate-12 rounded-full border-2 border-white/80 bg-sky-300/80 shadow-[0_8px_14px_rgba(14,165,233,0.18)]" />
-      {isTryIt && (
-        <>
-          <div className="absolute left-1 bottom-9 h-8 w-8 rounded-full bg-[linear-gradient(145deg,#ffffff_0%,#d9f99d_42%,#61dc70_100%)] shadow-[0_8px_16px_rgba(31,224,102,0.2),inset_0_2px_0_rgba(255,255,255,0.85)]">
-            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-primary/45" />
-            <span className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-primary/45" />
-          </div>
-          <div className="absolute right-3 bottom-7 h-2 w-8 rotate-[-24deg] rounded-full bg-primary/35" />
-          <div className="absolute right-7 bottom-4 h-2 w-7 rotate-[-10deg] rounded-full bg-primary/25" />
-        </>
-      )}
       <img
         src={AVATAR_BASE_ASSET}
         alt=""
@@ -84,8 +72,6 @@ const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
-  const [weeklyProgress, setWeeklyProgress] = useState(0);
-  const [weeklyActiveDays, setWeeklyActiveDays] = useState(0);
 
   useEffect(() => {
     checkAuth();
@@ -93,44 +79,13 @@ const ChallengeDetail = () => {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session) {
       navigate("/auth");
       return;
     }
 
     setUserId(session.user.id);
-
-    if (id === "weekly") {
-      const today = new Date().toISOString().split("T")[0];
-      const weekStart = format(subDays(new Date(), 6), "yyyy-MM-dd");
-      const demoUser = isDemoEmail(session.user.email);
-
-      const { data, error } = await supabase
-        .from("daily_results")
-        .select("jumping_jacks, push_ups, squats, planks, sit_ups, steps")
-        .eq("user_id", session.user.id)
-        .gte("date", weekStart)
-        .lte("date", today);
-
-      if (!error && data) {
-        const activeDays = data.filter((day) =>
-          (day.steps || 0) > 0 ||
-          (day.jumping_jacks || 0) > 0 ||
-          (day.push_ups || 0) > 0 ||
-          (day.squats || 0) > 0 ||
-          (day.planks || 0) > 0 ||
-          (day.sit_ups || 0) > 0
-        ).length;
-        const activeGoalDays = Math.min(activeDays, 5);
-        const computedProgress = Math.round((activeGoalDays / 5) * 100);
-        setWeeklyActiveDays(demoUser ? Math.max(2, activeGoalDays) : activeGoalDays);
-        setWeeklyProgress(demoUser ? Math.max(40, computedProgress) : computedProgress);
-      } else {
-        setWeeklyActiveDays(demoUser ? 2 : 0);
-        setWeeklyProgress(demoUser ? 40 : 0);
-      }
-    }
   };
 
   const challenge = id ? challengeData[id] : null;
@@ -149,133 +104,199 @@ const ChallengeDetail = () => {
     );
   }
 
+  const isTryIt = id === "tryit";
+  const isWeekly = id === "weekly";
+
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <TopHeader />
+      <TopHeader hideNav />
 
-      {/* Content */}
       <div className="max-w-screen-xl mx-auto px-4 pb-8">
         {id === "daily" && userId ? (
           <DailyChallengeContent userId={userId} />
-        ) : (
-          <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.72)_0%,transparent_34%),linear-gradient(135deg,#8ee6ff_0%,#7ce582_48%,#fff3a3_100%)]">
-              <div className="grid grid-cols-[minmax(0,1fr)_132px]">
-                <div className="relative min-h-[13.5rem] overflow-hidden">
+        ) : isWeekly ? (
+          <div className="space-y-3">
+            {/* Hero Card */}
+            <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+              <div className="grid min-h-[15rem] grid-cols-[minmax(0,1fr)_42%] overflow-hidden bg-[#f6fbf2]">
+                <div className="flex flex-col justify-center gap-3 px-5 py-6">
+                  <span className="w-fit rounded-full bg-primary/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                    2-Wochenmission
+                  </span>
+                  <h1 className="text-[2rem] font-black leading-[0.92] tracking-tight text-foreground">
+                    2-Wochen-<br />Mission
+                  </h1>
+                  <p className="max-w-[13rem] text-sm leading-snug text-muted-foreground">
+                    Schaffe die beschriebene Challenge und erhalte {BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze.
+                  </p>
+                  <div className="mt-1 flex w-full items-center justify-center gap-2 rounded-[14px] bg-primary px-5 py-3 text-white shadow-[0_12px_28px_rgba(31,224,102,0.35),0_4px_0_rgba(16,110,42,0.28),inset_0_2px_0_rgba(255,255,255,0.22)]">
+                    <Zap className="h-5 w-5 fill-current" />
+                    <div className="flex flex-col leading-none">
+                      <span className="text-2xl font-black">{BOOST_POINT_RULES.weeklyChallengeCompleted}</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.14em]">Blitze</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center justify-end gap-2 py-4 pl-1 pr-3">
                   <img
-                    src={challenge.image}
+                    src={weeklyHikerAvatarImg}
                     alt=""
                     aria-hidden="true"
-                    className="absolute inset-0 h-full w-full object-cover opacity-58 mix-blend-multiply saturate-125"
+                    className="w-full flex-1 object-contain object-bottom drop-shadow-[0_18px_24px_rgba(15,23,42,0.16)]"
                   />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_24%,rgba(255,255,255,0.46)_0%,transparent_32%),linear-gradient(90deg,rgba(15,23,42,0.34)_0%,rgba(15,23,42,0.08)_66%,rgba(255,255,255,0.72)_100%)]" />
-                  <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/45 blur-2xl" />
-                  <div className="absolute bottom-4 right-5 h-9 w-9 rounded-full bg-yellow-300/75 shadow-[0_8px_18px_rgba(250,204,21,0.25)]" />
-                  <div className="absolute left-5 top-5 rounded-full bg-white/22 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
-                    {id === "tryit" ? "Ausprobieren" : "Quest"}
+                  {/* Bonus badge */}
+                  <div className="w-full rounded-[14px] bg-[linear-gradient(145deg,#e8e8e8_0%,#d0d0d0_50%,#b8b8b8_100%)] px-3 py-2 text-center shadow-[0_6px_16px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.12)]">
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/50">Bonus</p>
+                    <p className="text-[13px] font-black text-black/80">+ Avatar-Item</p>
                   </div>
-                  <div className="absolute bottom-5 left-5 right-6">
-                    <h1 className="max-w-[12.5rem] text-[1.72rem] font-black leading-[0.95] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.28)]">
-                      {challenge.title}
-                    </h1>
-                    <p className="mt-2 max-w-[13rem] text-sm font-bold leading-snug text-white/92">
-                      {challenge.description}
+                </div>
+              </div>
+            </Card>
+
+            {/* Mission 1 – Coming Soon */}
+            <Card className="relative overflow-hidden rounded-[24px] border border-black/5 bg-[#f5f5f5] p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-foreground/70">Mission 1</p>
+                    <h3 className="mt-2 text-xl font-black text-foreground">Video-Mission</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Schau ein Sportler-Video und mach mit.</p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-foreground/80">
+                        <Play className="h-4 w-4 text-muted-foreground/60" />
+                        Video schauen
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-foreground/80">
+                        <Trophy className="h-4 w-4 text-muted-foreground/60" />
+                        Challenge nachmachen
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-foreground/80">
+                        <Zap className="h-4 w-4 text-muted-foreground/60" />
+                        Blitze holen
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+                    <Play className="ml-0.5 h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+              {/* COMING SOON ribbon */}
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -right-10 top-10 w-44 rotate-[38deg] bg-[#a0a0a0] py-1.5 text-center text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(0,0,0,0.18)]">
+                  COMING SOON
+                </div>
+              </div>
+            </Card>
+
+            {/* Mission 2 – Active */}
+            <Card className="overflow-hidden rounded-[24px] border-2 border-sky-200 bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
+              <button
+                type="button"
+                onClick={() => navigate("/challenge/weekly/geotracking")}
+                className="flex w-full flex-col text-left"
+              >
+                <div className="relative grid grid-cols-[minmax(0,1fr)_155px]">
+                  <div className="p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 2</p>
+                    <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                        <TreePine className="h-4 w-4 text-sky-500" />
+                        Rausgehen
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                        <Search className="h-4 w-4 text-sky-500" />
+                        Versteck finden
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                        <Package className="h-4 w-4 text-sky-500" />
+                        Fund eintragen
+                      </div>
+                    </div>
+                    <p className="mt-5 text-sm font-black text-primary">Jetzt starten →</p>
+                  </div>
+                  <div className="relative overflow-hidden">
+                    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <img
+                      src={weeklyGeoAvatarImg}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full object-contain object-bottom drop-shadow-[0_12px_18px_rgba(15,23,42,0.14)]"
+                    />
+                  </div>
+                </div>
+              </button>
+            </Card>
+          </div>
+        ) : (
+          <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            {isTryIt ? (
+              <div className="grid min-h-[13.5rem] grid-cols-[minmax(0,1fr)_43%] bg-[#f8fbf5]">
+                <div className="flex min-w-0 flex-col justify-center px-5 py-6">
+                  <div className="mb-3 w-fit rounded-full bg-primary/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-primary">
+                    Ausprobieren
+                  </div>
+                  <h1 className="max-w-[12rem] text-[1.85rem] font-black leading-[0.95] tracking-tight text-foreground">
+                    {challenge.title}
+                  </h1>
+                  <p className="mt-3 max-w-[14.5rem] text-sm font-bold leading-snug text-muted-foreground">
+                    {challenge.description}
+                  </p>
+                </div>
+                <div className="flex min-w-0 items-center justify-center px-1 py-4">
+                  <img
+                    src={tryitSportsAvatarImg}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-[13.25rem] w-[13.25rem] object-contain drop-shadow-[0_18px_24px_rgba(15,23,42,0.16)]"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.72)_0%,transparent_34%),linear-gradient(135deg,#8ee6ff_0%,#7ce582_48%,#fff3a3_100%)]">
+                <div className="grid grid-cols-[minmax(0,1fr)_132px]">
+                  <div className="relative min-h-[13.5rem] overflow-hidden">
+                    <img
+                      src={challenge.image}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full object-cover opacity-58 mix-blend-multiply saturate-125"
+                    />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_24%,rgba(255,255,255,0.46)_0%,transparent_32%),linear-gradient(90deg,rgba(15,23,42,0.34)_0%,rgba(15,23,42,0.08)_66%,rgba(255,255,255,0.72)_100%)]" />
+                    <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/45 blur-2xl" />
+                    <div className="absolute bottom-4 right-5 h-9 w-9 rounded-full bg-yellow-300/75 shadow-[0_8px_18px_rgba(250,204,21,0.25)]" />
+                    <div className="absolute left-5 top-5 rounded-full bg-white/22 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
+                      Quest
+                    </div>
+                    <div className="absolute bottom-5 left-5 right-6">
+                      <h1 className="max-w-[12.5rem] text-[1.72rem] font-black leading-[0.95] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.28)]">
+                        {challenge.title}
+                      </h1>
+                      <p className="mt-2 max-w-[13rem] text-sm font-bold leading-snug text-white/92">
+                        {challenge.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative flex flex-col items-center justify-center px-2 py-4">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.48)_54%,transparent_84%)]" />
+                    <QuestBuddy />
+                    <p className="relative -mt-1 flex items-center gap-1 text-xs font-black text-foreground/70">
+                      +{headerReward}
+                      <Blitz3D className="h-6 w-6" />
                     </p>
                   </div>
                 </div>
-
-                <div className="relative flex flex-col items-center justify-center px-2 py-4">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.48)_54%,transparent_84%)]" />
-                  <QuestBuddy type={id || "weekly"} />
-                  <p className="relative -mt-1 flex items-center gap-1 text-xs font-black text-foreground/70">
-                    +{headerReward}
-                    <Blitz3D className="h-6 w-6" />
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {id === "weekly" && (
-              <div className="p-5">
-                <div className="mx-auto mb-6 max-w-xl rounded-[24px] bg-[#f7f9f3] p-5 text-center">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-3 pr-1.5 text-sm font-black text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
-                    +{BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze
-                    <Blitz3D className="h-7 w-7" />
-                  </div>
-                  <p className="mt-4 text-2xl font-black text-foreground">Schaffe 5 aktive Tage</p>
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">Such dir eine Mission aus und sammle jeden Tag Bewegung.</p>
-                  <div className="mt-4 rounded-[20px] bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                    <div className="mb-2 flex items-center justify-between text-sm font-black text-foreground">
-                      <span>Dein Fortschritt</span>
-                      <span>{weeklyActiveDays}/5 Tage</span>
-                    </div>
-                    <Progress value={weeklyProgress} className="h-3 rounded-full bg-black/8" />
-                    <div className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-foreground/65">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      <span>{weeklyProgress >= 100 ? "Geschafft!" : "Jeder aktive Tag zaehlt"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => navigate("/challenge/weekly/athlete")}
-                  className="rounded-[24px] border border-primary/20 bg-[linear-gradient(180deg,#ffffff_0%,#f6fff7_100%)] p-5 text-left transition hover:border-primary hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Mission 1</p>
-                      <h3 className="mt-2 text-xl font-black text-foreground">Video-Mission</h3>
-                    </div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary">
-                      <Play className="ml-0.5 h-5 w-5 fill-current" />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm font-medium text-muted-foreground">Schau ein Sportler-Video und mach mit.</p>
-                  <div className="mt-4 space-y-2 text-sm font-semibold text-foreground">
-                    <div className="rounded-2xl bg-white px-3 py-2">Video schauen</div>
-                    <div className="rounded-2xl bg-white px-3 py-2">Challenge nachmachen</div>
-                    <div className="rounded-2xl bg-white px-3 py-2">Blitze holen</div>
-                  </div>
-                  <p className="mt-4 text-sm font-black text-primary">Jetzt starten</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => navigate("/challenge/weekly/geotracking")}
-                  className="rounded-[24px] border border-sky-200 bg-[linear-gradient(180deg,#ffffff_0%,#f4fbff_100%)] p-5 text-left transition hover:border-sky-400 hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 2</p>
-                      <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
-                    </div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-                      <MapPin className="h-5 w-5" />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm font-medium text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
-                  <div className="mt-4 space-y-2 text-sm font-semibold text-foreground">
-                    <div className="rounded-2xl bg-white px-3 py-2">Rausgehen</div>
-                    <div className="rounded-2xl bg-white px-3 py-2">Versteck finden</div>
-                    <div className="rounded-2xl bg-white px-3 py-2">Fund eintragen</div>
-                  </div>
-                  <p className="mt-4 text-sm font-black text-sky-600">Jetzt starten</p>
-                </button>
-                </div>
-                <div className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold text-foreground/70">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span>Such dir die Mission aus, die dir am meisten Spass macht.</span>
-                </div>
               </div>
             )}
 
-            {id !== "weekly" && (
-              <div className="bg-white/66 px-5 py-4 backdrop-blur-[2px]" />
-            )}
+            <div className="bg-white/66 px-5 py-4 backdrop-blur-[2px]" />
 
-            {id === "tryit" && (
+            {isTryIt && (
               <div className="px-5 pb-5">
                 <TrialSessionsList />
               </div>

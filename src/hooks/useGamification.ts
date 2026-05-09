@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BOOST_POINT_RULES,
-  DAILY_EXERCISE_GOALS,
-  DAILY_STEP_GOAL,
   getLevelForPoints,
   calculateStreak,
   getEnergyRank,
+  isStreakEligibleDay,
   type LevelInfo,
   type StreakInfo,
   type EnergyRank,
@@ -96,17 +95,6 @@ export function useGamification(userId: string | null, userClass?: string, userS
     };
   }, []);
 
-  const isCompletedDay = (day: any): boolean => {
-    return (
-      (day.steps || 0) >= DAILY_STEP_GOAL &&
-      (day.jumping_jacks || 0) >= DAILY_EXERCISE_GOALS.jumping_jacks &&
-      (day.push_ups || 0) >= DAILY_EXERCISE_GOALS.push_ups &&
-      (day.squats || 0) >= DAILY_EXERCISE_GOALS.squats &&
-      (day.planks || 0) >= DAILY_EXERCISE_GOALS.planks &&
-      (day.sit_ups || 0) >= DAILY_EXERCISE_GOALS.sit_ups
-    );
-  };
-
   const loadGamificationData = async (uid: string) => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -142,7 +130,7 @@ export function useGamification(userId: string | null, userClass?: string, userS
       }
 
       const completedDates = allResults
-        .filter(isCompletedDay)
+        .filter(isStreakEligibleDay)
         .map((r: any) => r.date);
 
       const streak = calculateStreak(completedDates);
@@ -155,7 +143,7 @@ export function useGamification(userId: string | null, userClass?: string, userS
       const weekEndStr = format(weekEnd, "yyyy-MM-dd");
 
       const weeklyCompletedDays = allResults
-        .filter((r: any) => r.date >= weekStartStr && r.date <= weekEndStr && isCompletedDay(r))
+        .filter((r: any) => r.date >= weekStartStr && r.date <= weekEndStr && isStreakEligibleDay(r))
         .length;
 
       const energyRank = getEnergyRank(points, classAverage);

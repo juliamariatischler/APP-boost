@@ -1,5 +1,25 @@
 -- Store in-app feedback submitted from the profile screen.
 
+CREATE OR REPLACE FUNCTION public.is_demo_user(_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM auth.users u
+    WHERE u.id = _user_id
+      AND lower(u.email) IN (
+        'demo@boost-challenge.de',
+        'demo-lehrkraft@boost-challenge.de'
+      )
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_demo_user(uuid) TO authenticated;
+
 CREATE TABLE IF NOT EXISTS public.feedback_submissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
