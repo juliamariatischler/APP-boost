@@ -52,6 +52,14 @@ export const ChallengeSelector = ({ selectedChallenge, onChallengeSelect }: Chal
     );
   }
 
+  if (challenges.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-2">
+        Keine Challenges verfügbar.
+      </p>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3">
       {challenges.map((challenge) => (
@@ -67,10 +75,12 @@ export const ChallengeSelector = ({ selectedChallenge, onChallengeSelect }: Chal
           <div className="text-center space-y-2">
             <span className="text-3xl">{challenge.icon}</span>
             <h3 className="font-semibold text-sm">{challenge.name}</h3>
-            <div className="flex items-center justify-center gap-1">
-              <Zap className="h-3 w-3 text-yellow-500" />
-              <span className="text-xs font-medium">{challenge.winner_points}</span>
-              <span className="text-xs text-muted-foreground">/ {challenge.loser_points}</span>
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1">
+                <Zap className="h-3 w-3 fill-primary text-primary" />
+                <span className="text-xs font-black text-primary">+{challenge.winner_points} pro Person</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">Für beide Teilnehmer:innen</span>
             </div>
           </div>
         </Card>

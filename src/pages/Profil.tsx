@@ -437,9 +437,8 @@ const Profil = () => {
                     type="button"
                     onClick={() => handleEquipAvatarItem(item.id)}
                     disabled={!weeklyItemUnlocked}
-                    className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${
-                      isActive ? "border-primary bg-primary/10" : "border-black/5 bg-white"
-                    } ${weeklyItemUnlocked ? "opacity-100" : "opacity-55"}`}
+                    className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${isActive ? "border-primary bg-primary/10" : "border-black/5 bg-white"
+                      } ${weeklyItemUnlocked ? "opacity-100" : "opacity-55"}`}
                   >
                     <div className="relative mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.08)]">
                       <img src={AVATAR_BASE_ASSET} alt={item.name} className="h-full w-full object-contain" />

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import weeklyAvatarImg from "@/assets/quest-weekly-bike-avatar.png";
 import classAvatarImg from "@/assets/quest-class-avatar.png";
-import friendAvatarImg from "@/assets/quest-friend-highfive.png";
+import friendAvatarImg from "@/assets/friendquest1.svg";
 import tryitAvatarImg from "@/assets/quest-tryit-football-avatar.png";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
@@ -24,6 +24,7 @@ type QuestCard = {
   bgClass?: string;
   imgClass?: string;
   shadowClass?: string;
+  groundClass?: string;
 };
 
 const Blitz3D = () => (
@@ -35,11 +36,11 @@ const Blitz3D = () => (
 
 const RewardDisplay = ({ reward }: { reward: string }) => {
   if (!reward.includes("⚡")) {
-    return <span className="block text-sm font-bold text-foreground">{reward}</span>;
+    return <span className="block text-xs font-bold text-foreground">{reward}</span>;
   }
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-2.5 pr-1.5 text-sm font-black text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 py-1 pl-2 pr-1 text-xs font-black text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
       {reward.replace("⚡", "").trim()}
       <Blitz3D />
     </span>
@@ -48,8 +49,10 @@ const RewardDisplay = ({ reward }: { reward: string }) => {
 
 const QuestAvatar = ({ quest }: { quest: QuestCard }) => (
   <div className={`relative flex h-36 items-center justify-center overflow-hidden px-2 py-2 ${quest.bgClass ?? "bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.58)_34%,transparent_66%),linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
+    <div className="absolute inset-x-0 bottom-0 h-14 bg-[linear-gradient(to_top,rgba(34,197,94,0.42)_0%,rgba(74,222,128,0.18)_55%,transparent_100%)]" />
     <div className="absolute bottom-3 h-7 w-[72%] rounded-full bg-black/18 blur-xl" />
     <div className="absolute bottom-5 h-3 w-[56%] rounded-full bg-black/14 blur-md" />
+    {quest.groundClass && <div className={quest.groundClass} />}
     <img
       src={quest.image}
       alt={quest.title}
@@ -72,7 +75,7 @@ const quests: QuestCard[] = [
     meta: "Endet Sonntag 23:59",
     image: weeklyAvatarImg,
     icon: Sparkles,
-    imgClass: "relative z-10 max-h-[112%] w-auto max-w-[110%] translate-y-0 object-contain object-center drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
+    imgClass: "relative z-10 max-h-[116%] w-auto max-w-[112%] object-contain object-bottom drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
   },
   {
     id: "class",
@@ -94,7 +97,7 @@ const quests: QuestCard[] = [
     meta: "Gemeinsam spielen",
     image: friendAvatarImg,
     icon: Users,
-    imgClass: "relative z-10 max-h-[116%] w-auto max-w-[108%] object-contain object-center drop-shadow-[0_22px_20px_rgba(15,23,42,0.30)] saturate-[1.08] contrast-[1.04]",
+    imgClass: "relative z-10 max-h-[116%] w-auto max-w-[108%] object-contain object-bottom mix-blend-multiply saturate-[1.08] contrast-[1.04]",
   },
   {
     id: "tryit",
@@ -105,7 +108,7 @@ const quests: QuestCard[] = [
     meta: "In deiner Nähe",
     image: tryitAvatarImg,
     icon: MapPin,
-    imgClass: "relative z-10 max-h-[131%] w-auto max-w-[123%] -translate-y-1 object-contain object-center drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
+    imgClass: "relative z-10 max-h-[126%] w-auto max-w-[120%] object-contain object-bottom drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
   },
 ];
 
@@ -184,7 +187,7 @@ const Quests = () => {
                 return (
                   <Card
                     key={quest.id}
-                    className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]"
+                    className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),0_8px_28px_rgba(34,197,94,0.18),inset_0_1px_0_rgba(255,255,255,0.72)]"
                   >
                     <button
                       type="button"
@@ -200,8 +203,8 @@ const Quests = () => {
                             </span>
                             <Icon className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <h3 className="text-lg font-bold leading-tight text-foreground">{quest.title}</h3>
-                          <p className="mt-1 text-sm leading-snug text-muted-foreground">{quest.description}</p>
+                          <h3 className="text-base font-black leading-tight text-foreground">{quest.title}</h3>
+                          <p className="mt-1 text-xs leading-snug text-muted-foreground">{quest.description}</p>
                         </div>
                         <div className="mt-4 space-y-1">
                           <RewardDisplay reward={quest.reward} />

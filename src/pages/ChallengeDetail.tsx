@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
-import friendImg from "@/assets/quest-friend-emoji.png";
+import friendImg from "@/assets/friendquest1.svg";
 import tryitImg from "@/assets/challenge-tryit.jpg";
 import tryitSportsAvatarImg from "@/assets/quest-tryit-sports-avatar.png";
 import weeklyHikerAvatarImg from "@/assets/quest-weekly-hiker-avatar.png";
@@ -72,6 +72,8 @@ const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [showScanForm, setShowScanForm] = useState(false);
+  const [scanValues, setScanValues] = useState(["", "", ""]);
 
   useEffect(() => {
     checkAuth();
@@ -93,8 +95,8 @@ const ChallengeDetail = () => {
     id === "tryit"
       ? BOOST_POINT_RULES.tryItCompleted
       : id === "friend"
-      ? BOOST_POINT_RULES.friendQuestCompleted
-      : BOOST_POINT_RULES.weeklyChallengeCompleted;
+        ? BOOST_POINT_RULES.friendQuestCompleted
+        : BOOST_POINT_RULES.weeklyChallengeCompleted;
 
   if (!challenge) {
     return (
@@ -108,8 +110,8 @@ const ChallengeDetail = () => {
   const isWeekly = id === "weekly";
 
   return (
-    <div className="min-h-screen bg-background pb-nav-safe">
-      <TopHeader hideNav />
+    <div className={`min-h-screen pb-nav-safe ${isTryIt ? "bg-[#FFFDF4]" : "bg-background"}`}>
+      {!isTryIt && <TopHeader hideNav />}
 
       <div className="max-w-screen-xl mx-auto px-4 pb-8">
         {id === "daily" && userId ? (
@@ -121,7 +123,7 @@ const ChallengeDetail = () => {
               <div className="grid min-h-[15rem] grid-cols-[minmax(0,1fr)_42%] overflow-hidden bg-[#f6fbf2]">
                 <div className="flex flex-col justify-center gap-3 px-5 py-6">
                   <span className="w-fit rounded-full bg-primary/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-                    2-Wochenmission
+                    Fordere dich selbst heraus
                   </span>
                   <h1 className="text-[2rem] font-black leading-[0.92] tracking-tight text-foreground">
                     2-Wochen-<br />Mission
@@ -142,7 +144,7 @@ const ChallengeDetail = () => {
                     src={weeklyHikerAvatarImg}
                     alt=""
                     aria-hidden="true"
-                    className="w-full flex-1 object-contain object-bottom drop-shadow-[0_18px_24px_rgba(15,23,42,0.16)]"
+                    className="w-full flex-1 scale-[1.25] origin-bottom object-contain object-bottom drop-shadow-[0_18px_24px_rgba(15,23,42,0.16)]"
                   />
                   {/* Bonus badge */}
                   <div className="w-full rounded-[14px] bg-[linear-gradient(145deg,#e8e8e8_0%,#d0d0d0_50%,#b8b8b8_100%)] px-3 py-2 text-center shadow-[0_6px_16px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.12)]">
@@ -153,12 +155,86 @@ const ChallengeDetail = () => {
               </div>
             </Card>
 
-            {/* Mission 1 – Coming Soon */}
+            {/* Mission 1 – Active (Schatzsuche) */}
+            <Card className="overflow-hidden rounded-[24px] border-2 border-sky-200 bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
+              <div className="flex w-full flex-col text-left">
+                <div className="relative grid grid-cols-[minmax(0,1fr)_155px]">
+                  <div className="p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 1</p>
+                    <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                        <TreePine className="h-4 w-4 text-sky-500" />
+                        Rausgehen
+                      </div>
+                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                        <Search className="h-4 w-4 text-sky-500" />
+                        Versteck finden
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowScanForm(true)}
+                        className="flex w-full items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground text-left"
+                      >
+                        <Package className="h-4 w-4 text-sky-500" />
+                        Fund eintragen
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/challenge/weekly/geotracking")}
+                      className="mt-5 text-sm font-black text-primary"
+                    >
+                      Jetzt starten →
+                    </button>
+                  </div>
+                  <div className="relative overflow-hidden">
+                    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <img
+                      src={weeklyGeoAvatarImg}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full scale-[1.25] origin-bottom object-contain object-bottom drop-shadow-[0_12px_18px_rgba(15,23,42,0.14)]"
+                    />
+                  </div>
+                </div>
+
+                {/* Scan Station Formular */}
+                {showScanForm && (
+                  <div className="border-t border-sky-100 px-5 pb-5 pt-4">
+                    <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-sky-600">Scan Station</p>
+                    <div className="space-y-2">
+                      {scanValues.map((val, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-2xl border border-sky-200 bg-[#f3f8ff] px-3 py-2">
+                          <Package className="h-4 w-4 shrink-0 text-sky-500" />
+                          <input
+                            type="text"
+                            placeholder={`Station ${i + 1}`}
+                            value={val}
+                            onChange={(e) => {
+                              const next = [...scanValues];
+                              next[i] = e.target.value;
+                              setScanValues(next);
+                            }}
+                            className="w-full bg-transparent text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 outline-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Mission 2 – Coming Soon */}
             <Card className="relative overflow-hidden rounded-[24px] border border-black/5 bg-[#f5f5f5] p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
               <div className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-foreground/70">Mission 1</p>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-foreground/70">Mission 2</p>
                     <h3 className="mt-2 text-xl font-black text-foreground">Video-Mission</h3>
                     <p className="mt-1 text-sm text-muted-foreground">Schau ein Sportler-Video und mach mit.</p>
                     <div className="mt-4 space-y-2">
@@ -188,119 +264,85 @@ const ChallengeDetail = () => {
                 </div>
               </div>
             </Card>
-
-            {/* Mission 2 – Active */}
-            <Card className="overflow-hidden rounded-[24px] border-2 border-sky-200 bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
-              <button
-                type="button"
-                onClick={() => navigate("/challenge/weekly/geotracking")}
-                className="flex w-full flex-col text-left"
-              >
-                <div className="relative grid grid-cols-[minmax(0,1fr)_155px]">
-                  <div className="p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 2</p>
-                    <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
-                        <TreePine className="h-4 w-4 text-sky-500" />
-                        Rausgehen
-                      </div>
-                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
-                        <Search className="h-4 w-4 text-sky-500" />
-                        Versteck finden
-                      </div>
-                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
-                        <Package className="h-4 w-4 text-sky-500" />
-                        Fund eintragen
-                      </div>
-                    </div>
-                    <p className="mt-5 text-sm font-black text-primary">Jetzt starten →</p>
-                  </div>
-                  <div className="relative overflow-hidden">
-                    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-                      <MapPin className="h-5 w-5" />
-                    </div>
-                    <img
-                      src={weeklyGeoAvatarImg}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full object-contain object-bottom drop-shadow-[0_12px_18px_rgba(15,23,42,0.14)]"
-                    />
-                  </div>
-                </div>
-              </button>
-            </Card>
           </div>
-        ) : (
-          <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-            {isTryIt ? (
-              <div className="grid min-h-[13.5rem] grid-cols-[minmax(0,1fr)_43%] bg-[#f8fbf5]">
-                <div className="flex min-w-0 flex-col justify-center px-5 py-6">
-                  <div className="mb-3 w-fit rounded-full bg-primary/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-primary">
-                    Ausprobieren
-                  </div>
-                  <h1 className="max-w-[12rem] text-[1.85rem] font-black leading-[0.95] tracking-tight text-foreground">
-                    {challenge.title}
+        ) : isTryIt ? (
+          <>
+            {/* Hero card */}
+            <div className="relative overflow-hidden rounded-[32px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.09),inset_0_1px_0_rgba(255,255,255,0.9)]">
+              {/* Sparkles around avatar */}
+              <div className="pointer-events-none absolute right-[22%] top-7 text-xl text-yellow-400 drop-shadow-[0_0_6px_rgba(253,224,71,0.5)]">✦</div>
+              <div className="pointer-events-none absolute right-[10%] top-4 text-sm text-yellow-300">✦</div>
+              <div className="pointer-events-none absolute right-[16%] bottom-14 text-xs text-yellow-400/70">✦</div>
+
+              {/* Avatar – absolute right */}
+              <img
+                src={tryitSportsAvatarImg}
+                alt=""
+                aria-hidden="true"
+                className="absolute right-0 top-[0.5rem] z-0 h-[13rem] w-[13rem] object-contain object-top drop-shadow-[0_18px_24px_rgba(15,23,42,0.12)]"
+              />
+
+              {/* Text content */}
+              <div className="relative z-10 px-7 pt-7">
+                <div className="max-w-[58%]">
+                  <h1 className="text-[2rem] font-black leading-[0.92] tracking-tight text-foreground">
+                    Try It<br />Challenge
+
                   </h1>
-                  <p className="mt-3 max-w-[14.5rem] text-sm font-bold leading-snug text-muted-foreground">
+                  <p className="mt-3 text-sm leading-snug text-muted-foreground">
                     {challenge.description}
                   </p>
                 </div>
-                <div className="flex min-w-0 items-center justify-center px-1 py-4">
-                  <img
-                    src={tryitSportsAvatarImg}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-[13.25rem] w-[13.25rem] object-contain drop-shadow-[0_18px_24px_rgba(15,23,42,0.16)]"
-                  />
+              </div>
+              {/* Reward pill – full width so text stays on one line */}
+              <div className="relative z-10 px-7 pb-7 pt-3">
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-black/8 bg-white px-4 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
+                  <Zap className="h-4 w-4 fill-primary text-primary" />
+                  <span className="whitespace-nowrap text-sm font-black text-foreground">
+                    <span className="text-primary">+{BOOST_POINT_RULES.tryItCompleted}</span> Blitze pro neuem Erlebnis
+                  </span>
                 </div>
               </div>
-            ) : (
-              <div className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.72)_0%,transparent_34%),linear-gradient(135deg,#8ee6ff_0%,#7ce582_48%,#fff3a3_100%)]">
-                <div className="grid grid-cols-[minmax(0,1fr)_132px]">
-                  <div className="relative min-h-[13.5rem] overflow-hidden">
-                    <img
-                      src={challenge.image}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full object-cover opacity-58 mix-blend-multiply saturate-125"
-                    />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_24%,rgba(255,255,255,0.46)_0%,transparent_32%),linear-gradient(90deg,rgba(15,23,42,0.34)_0%,rgba(15,23,42,0.08)_66%,rgba(255,255,255,0.72)_100%)]" />
-                    <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/45 blur-2xl" />
-                    <div className="absolute bottom-4 right-5 h-9 w-9 rounded-full bg-yellow-300/75 shadow-[0_8px_18px_rgba(250,204,21,0.25)]" />
-                    <div className="absolute left-5 top-5 rounded-full bg-white/22 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
-                      Quest
-                    </div>
-                    <div className="absolute bottom-5 left-5 right-6">
-                      <h1 className="max-w-[12.5rem] text-[1.72rem] font-black leading-[0.95] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.28)]">
-                        {challenge.title}
-                      </h1>
-                      <p className="mt-2 max-w-[13rem] text-sm font-bold leading-snug text-white/92">
-                        {challenge.description}
-                      </p>
-                    </div>
+            </div>
+            <TrialSessionsList />
+          </>
+        ) : (
+          <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.72)_0%,transparent_34%),linear-gradient(135deg,#8ee6ff_0%,#7ce582_48%,#fff3a3_100%)]">
+              <div className="grid grid-cols-[minmax(0,1fr)_132px]">
+                <div className="relative min-h-[13.5rem] overflow-hidden">
+                  <img
+                    src={challenge.image}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover opacity-58 mix-blend-multiply saturate-125"
+                  />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_24%,rgba(255,255,255,0.46)_0%,transparent_32%),linear-gradient(90deg,rgba(15,23,42,0.34)_0%,rgba(15,23,42,0.08)_66%,rgba(255,255,255,0.72)_100%)]" />
+                  <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/45 blur-2xl" />
+                  <div className="absolute bottom-4 right-5 h-9 w-9 rounded-full bg-yellow-300/75 shadow-[0_8px_18px_rgba(250,204,21,0.25)]" />
+                  <div className="absolute left-5 top-5 rounded-full bg-white/22 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur">
+                    Quest
                   </div>
-
-                  <div className="relative flex flex-col items-center justify-center px-2 py-4">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.48)_54%,transparent_84%)]" />
-                    <QuestBuddy />
-                    <p className="relative -mt-1 flex items-center gap-1 text-xs font-black text-foreground/70">
-                      +{headerReward}
-                      <Blitz3D className="h-6 w-6" />
+                  <div className="absolute bottom-5 left-5 right-6">
+                    <h1 className="max-w-[12.5rem] text-[1.72rem] font-black leading-[0.95] tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.28)]">
+                      {challenge.title}
+                    </h1>
+                    <p className="mt-2 max-w-[13rem] text-sm font-bold leading-snug text-white/92">
+                      {challenge.description}
                     </p>
                   </div>
                 </div>
-              </div>
-            )}
 
-            <div className="bg-white/66 px-5 py-4 backdrop-blur-[2px]" />
-
-            {isTryIt && (
-              <div className="px-5 pb-5">
-                <TrialSessionsList />
+                <div className="relative flex flex-col items-center justify-center px-2 py-4">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.48)_54%,transparent_84%)]" />
+                  <QuestBuddy />
+                  <p className="relative -mt-1 flex items-center gap-1 text-xs font-black text-foreground/70">
+                    +{headerReward}
+                    <Blitz3D className="h-6 w-6" />
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
           </Card>
         )}
       </div>

@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Zap, LogOut, Settings, ArrowLeft } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import boostLogo from "@/assets/boost-logo.png";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { getDemoAwarePoints, isDemoEmail } from "@/lib/demo";
 
 const POINTS_DECAY_UNAVAILABLE_KEY = "boost:apply_daily_points_decay_unavailable";
@@ -129,19 +128,12 @@ export const TopHeader = ({ backTo = "/dashboard", hideNav = false }: TopHeaderP
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Abgemeldet");
-    navigate("/");
-  };
-
   if (!profile) {
     return (
       <div className="border-b border-black/5 bg-white/95 px-4 pb-3 shadow-[0_8px_24px_rgba(0,0,0,0.05)] backdrop-blur mb-5" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
         <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3">
           <Skeleton className="h-10 w-28 rounded-full" />
           <div className="flex items-center gap-2">
-            <Skeleton className="h-11 w-24 rounded-full" />
             <Skeleton className="h-11 w-20 rounded-full" />
             <Skeleton className="h-10 w-10 rounded-full" />
           </div>
@@ -153,24 +145,7 @@ export const TopHeader = ({ backTo = "/dashboard", hideNav = false }: TopHeaderP
   return (
     <div className="border-b border-black/5 bg-white/95 px-4 pb-3 shadow-[0_8px_24px_rgba(0,0,0,0.05)] backdrop-blur mb-5" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
       <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          {!isDashboard && !hideNav && (
-            <Button
-              variant="outline"
-              onClick={() => navigate(backTo)}
-              className="h-10 shrink-0 rounded-full border-black/10 bg-white px-3 text-sm font-bold shadow-[0_8px_20px_rgba(0,0,0,0.04)] sm:h-11 sm:px-4 sm:text-base"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Zurück</span>
-            </Button>
-          )}
-
-          <div className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-primary/10 px-3 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:h-11 sm:gap-2 sm:px-4">
-            <Zap className="h-[18px] w-[18px] text-primary fill-primary sm:h-5 sm:w-5" />
-            <span className="text-base font-black text-primary sm:text-lg">{profile.points}</span>
-            <span className="hidden text-xs font-bold text-primary/75 sm:inline">gesamt</span>
-          </div>
-        </div>
+        <div className="flex items-center gap-3 min-w-0" />
         {!hideNav && (
           <div className="flex items-center gap-1.5 shrink-0 sm:gap-2">
             {isAdmin && (
@@ -179,10 +154,6 @@ export const TopHeader = ({ backTo = "/dashboard", hideNav = false }: TopHeaderP
                 Admin
               </Button>
             )}
-            <img src={boostLogo} alt="BOOST Logo" className="h-9 w-auto sm:h-11" />
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 rounded-full sm:h-10 sm:w-10">
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         )}
       </div>

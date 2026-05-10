@@ -71,7 +71,7 @@ const Dashboard = () => {
     const checkAuthAndLoadProfile = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (!session) {
           if (codeAuthLoading) return;
 
@@ -380,17 +380,14 @@ const Dashboard = () => {
   const todayKey = format(today, "yyyy-MM-dd");
   const todayResult = weeklyData.find((day) => day.date === todayKey);
   const todaySteps = todayResult?.steps_tracking_active ? Number(todayResult.steps || 0) : 0;
-  const todayStepsSyncedAt = todayResult?.steps_tracking_active && todayResult.updated_at
-    ? format(new Date(todayResult.updated_at), "HH:mm")
-    : null;
   const completedExerciseCount = todayResult
     ? countCompletedDailyExercises({
-        jumping_jacks: todayResult.jumping_jacks || 0,
-        push_ups: todayResult.push_ups || 0,
-        squats: todayResult.squats || 0,
-        planks: todayResult.planks || 0,
-        sit_ups: todayResult.sit_ups || 0,
-      })
+      jumping_jacks: todayResult.jumping_jacks || 0,
+      push_ups: todayResult.push_ups || 0,
+      squats: todayResult.squats || 0,
+      planks: todayResult.planks || 0,
+      sit_ups: todayResult.sit_ups || 0,
+    })
     : 0;
   const dailyTaskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
   const completedDailyTaskCount = (todaySteps >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
@@ -400,7 +397,7 @@ const Dashboard = () => {
       key: "inaktiv",
       min: 0,
       title: "Flash ist inaktiv.",
-      copy: "Erledige eine Aufgabe, damit dein Buddy wieder Energie bekommt.",
+      copy: "Erledige eine Aufgabe, damit dein\nBuddy wieder Energie bekommt.",
       label: "Inaktiv",
       image: voltUnder39Img,
     },
@@ -424,7 +421,7 @@ const Dashboard = () => {
       key: "aufgeladen",
       min: 80,
       title: "Flash ist aufgeladen!",
-      copy: "Starker Fortschritt. Dein Tagesziel ist fast geschafft.",
+      copy: "Starker Fortschritt. Dein\nTagesziel ist fast geschafft.",
       label: "Aufgeladen",
       image: volt80To89Img,
     },
@@ -432,7 +429,7 @@ const Dashboard = () => {
       key: "mega-boost",
       min: 90,
       title: "Flash im Mega Boost!",
-      copy: "Mega Tag. Flash ist voll da und wächst mit dir.",
+      copy: "Mega Tag. Flash ist voll da\nund wächst mit dir.",
       label: "Mega Boost",
       image: volt90PlusImg,
     },
@@ -444,7 +441,7 @@ const Dashboard = () => {
       title: "Schritte",
       progress: todaySteps,
       goal: DAILY_STEP_GOAL,
-      unit: "Schritte",
+      unit: "S.",
       reward: STEP_TASK_REWARD,
       icon: <WalkingIcon className="h-5 w-5" />,
       iconClass: "bg-emerald-500/15 text-emerald-500",
@@ -571,16 +568,10 @@ const Dashboard = () => {
         </div>
 
         <div className="mb-4 overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_28%_78%,rgba(50,255,236,0.45)_0%,transparent_32%),linear-gradient(135deg,#075cff_0%,#078cff_48%,#16c7e9_100%)] text-white shadow-[0_18px_34px_rgba(0,83,255,0.22),0_10px_22px_rgba(0,0,0,0.08)]">
-          <div className="relative grid h-[36vh] min-h-[14.5rem] max-h-[18rem] grid-cols-[minmax(0,1fr)_45%] overflow-hidden">
+          <div className="relative grid h-[25vh] min-h-[10rem] max-h-[14.5rem] grid-cols-[minmax(0,1fr)_45%] overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_22%,rgba(255,255,255,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_52%_20%,rgba(255,255,255,0.5)_0_2px,transparent_3px),radial-gradient(circle_at_33%_38%,rgba(255,255,255,0.24)_0_1px,transparent_2px)]" />
-            <div className="relative flex items-center justify-center overflow-hidden px-1 py-4">
-              <div className="absolute bottom-[3.625rem] h-3 w-36 overflow-hidden rounded-full bg-white/20">
-                <div
-                  className="h-full rounded-full bg-cyan-300/90 shadow-[0_0_12px_rgba(103,232,249,0.9)] transition-all duration-700"
-                  style={{ width: `${dailyProgressPercent}%` }}
-                />
-              </div>
-              <div className="absolute left-3 top-9 hidden h-28 w-6 rounded-full border border-cyan-200/50 bg-cyan-200/10 shadow-[0_0_18px_rgba(103,232,249,0.5)] sm:block">
+            <div className="relative flex flex-col items-center justify-center overflow-hidden px-1 py-4">
+              <div className="absolute left-3 top-9 hidden h-22 w-6 rounded-full border border-cyan-200/50 bg-cyan-200/10 shadow-[0_0_18px_rgba(103,232,249,0.5)] sm:block">
                 <div className="absolute bottom-2 left-1/2 h-16 w-2.5 -translate-x-1/2 rounded-full bg-cyan-200/85 shadow-[0_0_16px_rgba(103,232,249,0.95)]" />
                 <span className="absolute -right-9 bottom-1 text-[9px] font-black text-white/85">Lv.1</span>
                 <span className="absolute -right-9 bottom-[3.4rem] text-[9px] font-black text-white/85">Lv.2</span>
@@ -589,23 +580,20 @@ const Dashboard = () => {
               <img
                 src={activeVoltMood.image}
                 alt={`Flash Status: ${activeVoltMood.label}`}
-                className="relative z-10 h-[12.75rem] w-[12.75rem] -translate-y-[1.625rem] object-contain drop-shadow-[0_18px_24px_rgba(0,30,120,0.24)] transition-all duration-700"
+                className="relative z-10 h-[12.75rem] w-[12.75rem] -translate-y-[1.2rem] object-contain drop-shadow-[0_18px_24px_rgba(0,30,120,0.24)] transition-all duration-700"
               />
             </div>
 
-            <div className="relative z-10 flex flex-col justify-between px-4 py-4">
+            <div className="relative z-10 flex flex-col justify-between px-4 pt-3 pb-4">
               <div>
-                <p className="mb-2 inline-flex rounded-full bg-white/16 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/90 backdrop-blur">
+                <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/90 backdrop-blur">
                   {activeVoltMood.label}
                 </p>
                 <h2 className="text-[1.45rem] font-black leading-tight tracking-tight">
                   {activeVoltMood.title}
                 </h2>
-                <p className="mt-2 line-clamp-3 text-[0.9rem] font-medium leading-snug text-white/92">
-                  {activeVoltMood.copy}
-                </p>
               </div>
-              <div className="flex -translate-y-2 justify-center pt-1">
+              <div className="flex justify-center">
                 <div className="relative flex h-[6rem] w-[6rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_9px_rgba(255,255,255,0.12),0_0_28px_rgba(34,211,238,0.34)]">
                   <div
                     className="absolute inset-0 rounded-full"
@@ -620,43 +608,41 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+            <p className="absolute bottom-[0.75rem] left-0 z-20 w-full whitespace-pre-line px-4 text-left text-[0.8rem] font-bold leading-snug text-white/90">
+              {activeVoltMood.copy}
+            </p>
           </div>
         </div>
 
         <div className="mb-5 grid grid-cols-3 overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_16px_34px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-          <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-4 text-center">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
-              <Footprints className="h-5 w-5" />
+          <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+              <Footprints className="h-4 w-4" />
             </div>
             <div className="min-w-0 max-w-full">
               <p className="text-[1.05rem] font-black leading-none text-foreground">{todaySteps.toLocaleString("de-DE")}</p>
               <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Schritte</p>
             </div>
           </div>
-          <div className="flex min-w-0 flex-col items-center justify-center gap-2 border-x border-black/6 px-2 py-4 text-center">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-              <Check className="h-5 w-5 stroke-[3]" />
+          <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 border-x border-black/6 px-2 py-2 text-center">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+              <Check className="h-4 w-4 stroke-[3]" />
             </div>
             <div className="min-w-0 max-w-full">
               <p className="text-[1.05rem] font-black leading-none text-foreground">{completedDailyTaskCount}/{dailyTaskCount}</p>
               <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Aufgaben erledigt</p>
             </div>
           </div>
-          <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-4 text-center">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
-              <Flame className="h-5 w-5 fill-orange-500" />
+          <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+              <Flame className="h-4 w-4 fill-orange-500" />
             </div>
             <div className="min-w-0 max-w-full">
-              <p className="text-[1.05rem] font-black leading-none text-foreground">{weeklyCompleted} <span className="text-[0.75rem]">Tage</span></p>
+              <p className="text-[1.05rem] font-black leading-none text-foreground">{weeklyCompleted} <span className="text-[0.8rem]">Tage</span></p>
               <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Streaks</p>
             </div>
           </div>
         </div>
-        <p className="mb-5 text-center text-[11px] font-semibold text-muted-foreground">
-          {todayStepsSyncedAt
-            ? `Apple Health zuletzt synchronisiert: ${todaySteps.toLocaleString("de-DE")} Schritte um ${todayStepsSyncedAt}`
-            : "Apple Health noch nicht synchronisiert"}
-        </p>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-black leading-none text-foreground">Heutige Aufgaben</h2>
           <button
@@ -677,11 +663,10 @@ const Dashboard = () => {
               return (
                 <Card
                   key={task.key}
-                  className={`overflow-hidden rounded-[20px] border p-0 shadow-[0_12px_26px_rgba(0,0,0,0.07),inset_0_-2px_0_rgba(0,0,0,0.04)] ${
-                    isComplete
+                  className={`overflow-hidden rounded-[20px] border p-0 shadow-[0_12px_26px_rgba(0,0,0,0.07),inset_0_-2px_0_rgba(0,0,0,0.04)] ${isComplete
                       ? `border-primary/15 ${task.cardCompleteClass}`
                       : "border-black/5 bg-white"
-                  }`}
+                    }`}
                 >
                   <button
                     type="button"
@@ -699,9 +684,8 @@ const Dashboard = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="truncate pr-1 text-[13px] font-black leading-tight text-foreground">{task.title}</h3>
-                          <div className={`flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
-                            isComplete ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                          }`}>
+                          <div className={`flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${isComplete ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                            }`}>
                             {isComplete ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : `${progressPercent}%`}
                           </div>
                         </div>
@@ -720,9 +704,8 @@ const Dashboard = () => {
                               style={{ width: `${progressPercent}%` }}
                             />
                           </div>
-                          <div className="mt-1 flex items-center justify-between text-[9px] font-semibold text-foreground/55">
-                            <span>{progressPercent}% erreicht</span>
-                            <span>{task.goal} {task.unit}</span>
+                          <div className="flex items-center gap-2 text-[9px] font-semibold text-foreground/55">
+                            <span className="whitespace-nowrap">{progressPercent}% erreicht</span>
                           </div>
                         </div>
                       </div>

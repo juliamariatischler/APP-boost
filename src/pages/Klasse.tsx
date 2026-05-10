@@ -248,7 +248,7 @@ const Klasse = () => {
                 <p className="text-center text-[11px] font-black uppercase leading-tight tracking-[0.12em] text-white/88">
                   Fortschritt
                   <br />
-                  Klassenchallenge
+                  Klassen-Quest
                 </p>
                 <div
                   className="relative mt-2 flex h-[7.7rem] w-[7.7rem] items-center justify-center rounded-full shadow-[0_14px_28px_rgba(2,44,120,0.25)]"
@@ -349,9 +349,15 @@ const Klasse = () => {
                     <div className="flex flex-wrap items-end gap-2">
                       <h2 className="text-[1.55rem] font-black leading-none text-foreground">Meine Klasse</h2>
                       {currentStudentRank > 0 && (
-                        <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-black text-primary">
-                          #{currentStudentRank}
-                        </span>
+                        currentStudentRank === 1 ? (
+                          <span className="rounded-full bg-[linear-gradient(145deg,#ffe566_0%,#f59e0b_100%)] px-3 py-1 text-sm font-black text-white shadow-[0_4px_12px_rgba(245,158,11,0.45),inset_0_1px_0_rgba(255,255,255,0.4)]">
+                            #1
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-black text-amber-500 shadow-[0_2px_8px_rgba(245,158,11,0.18)]">
+                            #{currentStudentRank}
+                          </span>
+                        )
                       )}
                     </div>
                     <p className="mt-2 text-sm text-foreground/65">
@@ -461,7 +467,7 @@ const Klasse = () => {
                       <p className="truncate text-xs text-muted-foreground">{cls.school}</p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-sm font-black text-foreground">#{i + 1}</p>
+                      <p className={`text-sm font-black ${i === 0 ? "text-amber-500" : i === 1 ? "text-zinc-400" : i === 2 ? "text-amber-700/70" : "text-foreground"}`}>#{i + 1}</p>
                       <p className="flex items-center justify-end gap-1 text-xs font-bold text-primary">
                         {cls.totalFlashes.toLocaleString("de")}
                         <Zap className="h-3 w-3 fill-current" />

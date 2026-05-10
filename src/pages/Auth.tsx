@@ -821,7 +821,7 @@ const Auth = () => {
               disabled={demoStudentLoading || demoTeacherLoading}
             >
               {demoStudentLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              Demo Schüler
+              Demo Schüler:in
             </Button>
             <Button
               type="button"
@@ -831,7 +831,7 @@ const Auth = () => {
               disabled={demoStudentLoading || demoTeacherLoading}
             >
               {demoTeacherLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              Demo Lehrer
+              Demo Lehrer:in
             </Button>
           </div>
 

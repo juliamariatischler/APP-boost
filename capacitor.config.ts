@@ -15,10 +15,9 @@ const config: CapacitorConfig = {
       }
     },
     SplashScreen: {
-      // Hold native splash while JS bundle loads, then auto-hide
-      launchShowDuration: 2000,
+      launchShowDuration: 1500,
       launchAutoHide: true,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#f8f5f1',
       showSpinner: false,
     },
   },

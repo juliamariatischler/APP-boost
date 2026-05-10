@@ -38,7 +38,7 @@ const avatarItemDefinitions = [
 export type AvatarItemKey = (typeof avatarItemDefinitions)[number]["id"];
 export type AvatarItemId = "none" | AvatarItemKey;
 
-export const WEEKLY_AVATAR_ITEM_THRESHOLD = 100;
+export const WEEKLY_AVATAR_ITEM_THRESHOLD = 40;
 export const AVATAR_BASE_ASSET = getAsset("Blitz BASIS.png");
 
 export const AVATAR_ITEMS = Object.fromEntries(

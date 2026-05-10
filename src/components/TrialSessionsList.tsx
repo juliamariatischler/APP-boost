@@ -1,26 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import GrazSportsGallery from "@/components/GrazSportsGallery";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  Phone, 
-  Mail, 
-  Globe,
-  CheckCircle,
-  Loader2,
-  Zap
-} from "lucide-react";
-import { format } from "date-fns";
-import { isValid, parseISO } from "date-fns";
-import { de } from "date-fns/locale";
+import { CheckCircle2, ChevronRight, Loader2, MapPin, X } from "lucide-react";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
+import { AVATAR_BASE_ASSET } from "@/lib/avatarItems";
+import tryitFootballNetImg from "@/assets/quest-tryit-football-net.png";
 
 const POINTS_PROBETRAINING = BOOST_POINT_RULES.tryItProbetraining;
 const POINTS_KURS = BOOST_POINT_RULES.tryItCompleted;
@@ -60,24 +44,6 @@ type Registration = {
 
 type TryItFilter = "all" | "probetraining" | "highlight";
 
-const getAssociationInfo = (clubName: string) => {
-  const normalized = clubName.toLowerCase();
-
-  if (normalized.includes("asvö") || normalized.includes("asvoe")) {
-    return { label: "ASVÖ", className: "bg-red-600 text-white" };
-  }
-
-  if (normalized.includes("askö") || normalized.includes("askoe")) {
-    return { label: "ASKÖ", className: "bg-rose-700 text-white" };
-  }
-
-  if (normalized.includes("sportunion")) {
-    return { label: "Sportunion", className: "bg-blue-700 text-white" };
-  }
-
-  return { label: "Partnerverein", className: "bg-slate-800 text-white" };
-};
-
 const getSessionPoints = (session: TrialSession) => {
   const label = getExperienceLabel(session);
   return label === "Highlight-Erlebnis" ? POINTS_KURS : POINTS_PROBETRAINING;
@@ -87,14 +53,34 @@ const getExperienceLabel = (session: TrialSession) => {
   return session.end_time && session.end_time > "17:30:00" ? "Highlight-Erlebnis" : "Probetraining";
 };
 
+const getSportEmoji = (sportType: string): string => {
+  const t = (sportType || '').toLowerCase();
+  if (t.includes('fußball') || t.includes('football') || t.includes('soccer')) return '⚽';
+  if (t.includes('badminton')) return '🏸';
+  if (t.includes('tanz') || t.includes('dance')) return '🎵';
+  if (t.includes('tennis')) return '🎾';
+  if (t.includes('basketball')) return '🏀';
+  if (t.includes('schwimm')) return '🏊';
+  if (t.includes('turnen') || t.includes('gymnas')) return '🤸';
+  if (t.includes('laufen') || t.includes('leichtathletik')) return '🏃';
+  if (t.includes('volleyball')) return '🏐';
+  if (t.includes('handball')) return '🤾';
+  return '⚡';
+};
+
+const isFootballSport = (sportType: string) => {
+  const t = (sportType || '').toLowerCase();
+  return t.includes('fußball') || t.includes('football') || t.includes('soccer');
+};
+
 const TrialSessionsList = () => {
   const [sessions, setSessions] = useState<TrialSession[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({});
+  const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [isAttending, setIsAttending] = useState(false);
   const [activeFilter, setActiveFilter] = useState<TryItFilter>("all");
+  const [selectedSession, setSelectedSession] = useState<TrialSession | null>(null);
 
   useEffect(() => {
     loadData();
@@ -103,7 +89,6 @@ const TrialSessionsList = () => {
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      setUserId(session.user.id);
       await loadUserRegistrations(session.user.id);
     }
     await loadSessions();
@@ -112,13 +97,9 @@ const TrialSessionsList = () => {
 
   const loadSessions = async () => {
     const today = new Date().toISOString().split('T')[0];
-    
     const { data, error } = await supabase
       .from("trial_sessions")
-      .select(`
-        *,
-        clubs (*)
-      `)
+      .select(`*, clubs (*)`)
       .gte("date", today)
       .order("date", { ascending: true });
 
@@ -129,21 +110,7 @@ const TrialSessionsList = () => {
     }
 
     setSessions(data as TrialSession[] || []);
-    
-    // Load registration counts for each session
-    if (data && data.length > 0) {
-      const counts: Record<string, number> = {};
-      for (const session of data) {
-        const { count } = await supabase
-          .from("trial_registrations")
-          .select("*", { count: "exact", head: true })
-          .eq("session_id", session.id)
-          .eq("status", "registered");
-        
-        counts[session.id] = count || 0;
-      }
-      setRegistrationCounts(counts);
-    }
+
   };
 
   const loadUserRegistrations = async (uid: string) => {
@@ -151,110 +118,35 @@ const TrialSessionsList = () => {
       .from("trial_registrations")
       .select("session_id, status")
       .eq("user_id", uid)
-      .eq("status", "registered");
-
-    if (error) {
-      console.error("Error loading registrations:", error);
-      return;
-    }
-
-    setRegistrations(data || []);
+      .in("status", ["registered", "attended"]);
+    if (error) { console.error("Error loading registrations:", error); return; }
+    setRegistrations((data || []).filter(r => r.status === "registered"));
+    setAttendedIds(new Set((data || []).filter(r => r.status === "attended").map(r => r.session_id)));
   };
 
-  const handleRegister = async (sessionId: string) => {
-    if (!userId) {
-      toast.error("Bitte melde dich zuerst an");
-      return;
-    }
-
-    const session = sessions.find((entry) => entry.id === sessionId);
-    const pointsReward = session ? getSessionPoints(session) : POINTS_PROBETRAINING;
-
-    setRegistering(sessionId);
-
-    const { error } = await supabase
-      .from("trial_registrations")
-      .insert({
-        session_id: sessionId,
-        user_id: userId,
-        status: "registered"
-      });
-
-    if (error) {
-      if (error.code === "23505") {
-        toast.error("Du bist bereits für diesen Termin angemeldet");
+  const handleAttendance = async (sessionId: string, points: number) => {
+    setIsAttending(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("record_trial_attendance", { p_session_id: sessionId });
+      if (error) throw error;
+      const result = data as { status: string; points_awarded: number };
+      if (result.status === "already_attended") {
+        toast.info("Du hast bereits teilgenommen.");
       } else {
-        console.error("Error registering:", error);
-        toast.error("Fehler bei der Anmeldung");
+        setAttendedIds(prev => new Set([...prev, sessionId]));
+        toast.success(`Super! +${result.points_awarded} Blitze erhalten! ⚡`);
       }
-    } else {
-      // Award points for registration
-      try {
-        await (supabase.rpc as any)('increment_points', { 
-          points_to_add: pointsReward
-        });
-        window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: pointsReward } }));
-        toast.success(`Erfolgreich angemeldet! +${pointsReward} ⚡ Blitze`);
-      } catch (e) {
-        toast.success("Erfolgreich angemeldet!");
-      }
-      setRegistrations(prev => [...prev, { session_id: sessionId, status: "registered" }]);
-      setRegistrationCounts(prev => ({
-        ...prev,
-        [sessionId]: (prev[sessionId] || 0) + 1
-      }));
+    } catch (e) {
+      console.error("Attendance error:", e);
+      toast.error("Fehler beim Speichern der Teilnahme.");
+    } finally {
+      setIsAttending(false);
     }
-
-    setRegistering(null);
   };
 
-  const handleCancelRegistration = async (sessionId: string) => {
-    if (!userId) return;
 
-    setRegistering(sessionId);
 
-    const { error } = await supabase
-      .from("trial_registrations")
-      .update({ status: "cancelled" })
-      .eq("session_id", sessionId)
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error cancelling:", error);
-      toast.error("Fehler beim Stornieren");
-    } else {
-      toast.success("Anmeldung storniert");
-      setRegistrations(prev => prev.filter(r => r.session_id !== sessionId));
-      setRegistrationCounts(prev => ({
-        ...prev,
-        [sessionId]: Math.max((prev[sessionId] || 1) - 1, 0)
-      }));
-    }
-
-    setRegistering(null);
-  };
-
-  const isRegistered = (sessionId: string) => {
-    return registrations.some(r => r.session_id === sessionId);
-  };
-
-  const getAvailableSpots = (session: TrialSession) => {
-    const count = registrationCounts[session.id] || 0;
-    return session.max_participants - count;
-  };
-
-  const formatTime = (time: string) => {
-    return time.substring(0, 5);
-  };
-
-  const formatSessionDate = (date: string) => {
-    const parsedDate = parseISO(date);
-    if (!isValid(parsedDate)) {
-      return date;
-    }
-
-    return format(parsedDate, "EEEE, d. MMMM yyyy", { locale: de });
-  };
+  const isRegistered = (sessionId: string) => registrations.some(r => r.session_id === sessionId);
 
   const filteredSessions = sessions.filter((session) => {
     if (activeFilter === "all") return true;
@@ -263,291 +155,380 @@ const TrialSessionsList = () => {
     return !isHighlight;
   });
 
+  const probetrainingCount = sessions.filter(s => getExperienceLabel(s) !== "Highlight-Erlebnis").length;
+  const kursCount = sessions.filter(s => getExperienceLabel(s) === "Highlight-Erlebnis").length;
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (sessions.length === 0) {
-    return (
-      <div className="space-y-6">
-        <GrazSportsGallery />
-      </div>
-    );
-  }
+  const featuredSession = filteredSessions[0] ?? null;
+  const remainingSessions = filteredSessions.slice(1);
+
+  const filters: { key: TryItFilter; label: string; count: number }[] = [
+    { key: "all", label: "Alle Angebote", count: sessions.length },
+    { key: "probetraining", label: "Probetraining", count: probetrainingCount },
+    { key: "highlight", label: "Kurse", count: kursCount },
+  ];
 
   return (
-    <div className="space-y-6">
-      <GrazSportsGallery />
+    <div className="space-y-5 pt-4">
 
-      <Card className="overflow-hidden rounded-[24px] border border-primary/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(240,253,244,0.9)_54%,rgba(255,247,237,0.82)_100%)] text-foreground shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Try It</p>
-              <h2 className="mt-2 text-2xl font-black leading-none">Sportarten testen</h2>
-              <p className="mt-3 max-w-3xl text-sm font-medium leading-snug text-foreground/65">
-                Probetrainings, Highlights und Vereine in deiner Nähe. Jede Anmeldung bringt Blitze.
-              </p>
-            </div>
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_24px_rgba(31,224,102,0.18)]">
-              <MapPin className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge className="rounded-full bg-white/78 text-foreground hover:bg-white/78">Probetraining: {POINTS_PROBETRAINING}⚡</Badge>
-            <Badge className="rounded-full bg-white/78 text-foreground hover:bg-white/78">Kurs: {POINTS_KURS}⚡</Badge>
-            <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">In deiner Nähe</Badge>
-          </div>
+      {/* Section header */}
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[1.55rem] font-black leading-tight text-foreground">Sportangebote in Graz</h2>
+          <button
+            type="button"
+            className="rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-bold text-primary shadow-sm"
+          >
+            Try It
+          </button>
         </div>
-      </Card>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant={activeFilter === "all" ? "default" : "outline"}
-          onClick={() => setActiveFilter("all")}
-          className="rounded-full"
-        >
-          Alle
-        </Button>
-        <Button
-          variant={activeFilter === "probetraining" ? "default" : "outline"}
-          onClick={() => setActiveFilter("probetraining")}
-          className="rounded-full"
-        >
-          Probetraining
-        </Button>
-        <Button
-          variant={activeFilter === "highlight" ? "default" : "outline"}
-          onClick={() => setActiveFilter("highlight")}
-          className="rounded-full"
-        >
-          Highlight-Erlebnis
-        </Button>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+          Wähle eine Sportart und tippe auf die Karte, um genaue Termine mit Datum, Uhrzeit, Treffpunkt und Ort zu sehen.
+        </p>
       </div>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-black leading-tight text-foreground">Schnuppertermine</h2>
-        <Badge variant="secondary" className="flex items-center gap-1 rounded-full">
-          <Zap className="h-3 w-3 text-yellow-500" />
-          {POINTS_PROBETRAINING}–{POINTS_KURS} ⚡
-        </Badge>
+      {/* Filter pills */}
+      <div className="grid grid-cols-[5fr_5fr_3fr] gap-2">
+        {filters.map(({ key, label, count }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveFilter(key)}
+            className={`flex w-full items-center justify-center gap-1.5 rounded-full px-2 py-2.5 text-[13px] font-bold transition-all ${
+              activeFilter === key
+                ? "bg-[linear-gradient(135deg,#16C653_0%,#0D7F38_100%)] text-white shadow-[0_4px_16px_rgba(22,198,83,0.35)]"
+                : "border border-black/8 bg-white text-foreground shadow-sm"
+            }`}
+          >
+            <span className="whitespace-nowrap">{label}</span>
+            <span className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-xs font-black ${
+              activeFilter === key ? "bg-white/25 text-white" : "bg-primary/10 text-primary"
+            }`}>
+              {count}
+            </span>
+          </button>
+        ))}
       </div>
-      
-      {filteredSessions.map((session) => {
-        const availableSpots = getAvailableSpots(session);
-        const isFull = availableSpots <= 0;
-        const registered = isRegistered(session.id);
-        const club = session.clubs;
+
+      {/* Featured card */}
+      {featuredSession && (() => {
+        const club = featuredSession.clubs;
         const clubName = club?.name || "Verein";
-        const clubSportType = club?.sport_type || "Sport";
-        const clubInitial = clubName.charAt(0).toUpperCase();
-        const association = getAssociationInfo(clubName);
-        const pointsReward = getSessionPoints(session);
-        const experienceLabel = getExperienceLabel(session);
+        const sportType = club?.sport_type || featuredSession.title;
+        const sportEmoji = getSportEmoji(sportType);
+        const pointsReward = getSessionPoints(featuredSession);
+        const isFootball = isFootballSport(sportType);
 
         return (
-          <Card key={session.id} className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-            <div className="relative bg-[linear-gradient(135deg,#0f172a_0%,#164e63_52%,#f0fdf4_100%)] px-5 py-5 text-white">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(255,255,255,0.22)_0%,transparent_32%)]" />
-              <div className="absolute bottom-4 right-4">
-                <Badge className={`${association.className} rounded-full shadow-sm`}>
-                  {association.label}
-                </Badge>
-              </div>
-              <div className="relative pr-28">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">{experienceLabel}</p>
-                <h3 className="mt-1 text-2xl font-black leading-tight">{session.title}</h3>
-                <p className="mt-1 text-sm text-white/80">{clubName}</p>
-              </div>
+          <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#18C957_0%,#10A048_55%,#0D7F38_100%)] shadow-[0_16px_40px_rgba(14,126,62,0.35)]">
+            {/* Sparkles */}
+            <div className="pointer-events-none absolute right-[46%] top-4 text-2xl text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">✦</div>
+            <div className="pointer-events-none absolute right-[38%] top-16 text-sm text-white/60">✦</div>
+
+            {/* Sport image – right side */}
+            <div className="absolute right-0 top-0 h-full w-[52%]">
+              {isFootball ? (
+                <img
+                  src={tryitFootballNetImg}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                />
+              ) : (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[7rem] leading-none opacity-70">
+                  {sportEmoji}
+                </span>
+              )}
             </div>
 
-            <div className="p-5">
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Club Info */}
-              <div className="flex-shrink-0">
+            {/* Content left */}
+            <div className="relative z-10 max-w-[52%] p-4 pb-3">
+              <div className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-white/90">
+                ⭐ Empfohlen
+              </div>
+              <h3 className="text-[1.7rem] font-black leading-none text-white">{sportType}</h3>
+              {featuredSession.description && (
+                <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-white/80">{featuredSession.description}</p>
+              )}
+              {/* Club row */}
+              <div className="mt-2 flex items-center gap-2">
                 {club?.logo_url ? (
-                  <img 
-                    src={club.logo_url} 
-                    alt={clubName}
-                    className="h-20 w-20 rounded-[20px] object-cover shadow-[0_12px_24px_rgba(0,0,0,0.08)]"
-                  />
+                  <img src={club.logo_url} alt={clubName} className="h-8 w-8 rounded-full border-2 border-white/30 object-cover" />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-[20px] bg-primary/10 shadow-[0_12px_24px_rgba(0,0,0,0.08)]">
-                    <span className="text-2xl font-bold text-primary">
-                      {clubInitial}
-                    </span>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white/25 bg-white/20 text-xs font-bold text-white">
+                    {clubName.charAt(0)}
                   </div>
                 )}
-              </div>
-
-              {/* Session Details */}
-              <div className="flex-grow space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-primary font-medium">{clubName}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="rounded-full text-sm">
-                      {clubSportType}
-                    </Badge>
-                    <Badge variant="outline" className="rounded-full text-sm">
-                      {experienceLabel}
-                    </Badge>
-                    <Badge className="rounded-full bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-                      +{pointsReward} Blitze
-                    </Badge>
-                  </div>
-                </div>
-
-                {session.description && (
-                  <p className="text-muted-foreground">{session.description}</p>
-                )}
-
-                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                  <div className="flex items-center gap-2 text-foreground">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <span>{formatSessionDate(session.date)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-foreground">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span>
-                      {formatTime(session.start_time)}
-                      {session.end_time && ` - ${formatTime(session.end_time)}`} Uhr
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-foreground">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span>{session.location}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
-                    <span className={isFull ? "text-destructive font-medium" : "text-foreground"}>
-                      {isFull ? "Ausgebucht" : `${availableSpots} Plätze frei`}
-                    </span>
-                  </div>
-                </div>
-
-                {session.address && (
-                  <p className="text-sm text-muted-foreground">
-                    📍 {session.address}
-                  </p>
-                )}
-
-                {(session.min_age || session.max_age) && (
-                  <p className="text-sm text-muted-foreground">
-                    Alter: {session.min_age || "0"} - {session.max_age || "∞"} Jahre
-                  </p>
-                )}
-
-                {session.requirements && (
-                  <p className="text-sm text-muted-foreground">
-                    ℹ️ {session.requirements}
-                  </p>
-                )}
-
-                {/* Club Contact - Only show contact buttons, not raw data */}
-                <div className="flex flex-wrap gap-4 border-t pt-2 text-sm text-muted-foreground">
-                  {club?.contact_email && (
-                    <a 
-                      href={`mailto:${club.contact_email}`}
-                      className="flex items-center gap-1 hover:text-primary transition-colors"
-                    >
-                      <Mail className="h-3 w-3" />
-                      E-Mail senden
-                    </a>
-                  )}
-                  {club?.contact_phone && (
-                    <a 
-                      href={`tel:${club.contact_phone}`}
-                      className="flex items-center gap-1 hover:text-primary transition-colors"
-                    >
-                      <Phone className="h-3 w-3" />
-                      Anrufen
-                    </a>
-                  )}
-                  {club?.website && (
-                    <a 
-                      href={club.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 hover:text-primary transition-colors"
-                    >
-                      <Globe className="h-3 w-3" />
-                      Website
-                    </a>
-                  )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-white">{clubName}</p>
+                  {featuredSession.location && <p className="truncate text-xs text-white/70">{featuredSession.location}</p>}
                 </div>
               </div>
-
-              {/* Action Button */}
-              <div className="flex-shrink-0 flex items-start">
-                {registered ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex items-center gap-2 text-primary">
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="font-medium">Angemeldet</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-yellow-600">
-                      <Zap className="h-4 w-4" />
-                      <span className="text-sm font-medium">+{pointsReward} Blitze</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCancelRegistration(session.id)}
-                      disabled={registering === session.id}
-                    >
-                      {registering === session.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Stornieren"
-                      )}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Button
-                      onClick={() => handleRegister(session.id)}
-                      disabled={isFull || registering === session.id}
-                      className="min-w-[120px] rounded-full"
-                    >
-                      {registering === session.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : isFull ? (
-                        "Ausgebucht"
-                      ) : (
-                        "Anmelden"
-                      )}
-                    </Button>
-                    {!isFull && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Zap className="h-3 w-3 text-yellow-500" />
-                        <span className="text-xs">+{pointsReward} Blitze</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              {/* Blitze pill */}
+              <div className="mt-3">
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-black/30 px-3.5 py-2 text-sm font-bold text-white">
+                  ⚡ +{pointsReward} Blitze
+                </span>
               </div>
             </div>
-            </div>
-          </Card>
+
+            {/* "Zum Angebot" – absolute bottom right */}
+            <button
+              type="button"
+              onClick={() => setSelectedSession(featuredSession)}
+              className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-green-700 shadow-sm"
+            >
+              Zum Angebot <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         );
-      })}
+      })()}
 
+      {/* Empty state */}
       {filteredSessions.length === 0 && (
-        <Card className="p-8 text-center">
-          <p className="text-lg text-muted-foreground">
-            Für diesen Filter sind aktuell keine Termine verfügbar.
-          </p>
-        </Card>
+        <div className="rounded-[24px] bg-white p-8 text-center shadow-sm">
+          <p className="text-muted-foreground">Für diesen Filter sind aktuell keine Angebote verfügbar.</p>
+        </div>
       )}
+
+      {/* Small cards grid */}
+      {remainingSessions.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {remainingSessions.map((session) => {
+            const club = session.clubs;
+            const clubName = club?.name || "Verein";
+            const sportType = club?.sport_type || session.title;
+            const sportEmoji = getSportEmoji(sportType);
+            const pointsReward = getSessionPoints(session);
+            const isHighlight = getExperienceLabel(session) === "Highlight-Erlebnis";
+            const isRegisteredSession = isRegistered(session.id);
+
+            return (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => setSelectedSession(session)}
+                className="overflow-hidden rounded-[22px] border border-black/5 bg-white text-left shadow-[0_8px_22px_rgba(0,0,0,0.07)]"
+              >
+                <div className="grid min-h-[130px] grid-cols-[62px_1fr]">
+                  {/* Emoji image – left column */}
+                  <div className={`flex items-center justify-center text-[2.6rem] leading-none ${
+                    isHighlight ? "bg-purple-50" : "bg-primary/8"
+                  }`}>
+                    {sportEmoji}
+                  </div>
+                  {/* Content – right column */}
+                  <div className="flex flex-col justify-between p-2">
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-[13px] font-black leading-tight text-foreground">{sportType}</p>
+                      <span className={`w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        isHighlight
+                          ? "border border-purple-200 bg-purple-50 text-purple-600"
+                          : "border border-primary/25 bg-primary/8 text-primary"
+                      }`}>
+                        {isHighlight ? "Kurs" : "Probetraining"}
+                      </span>
+                      <p className="text-[11px] font-semibold leading-snug text-foreground/80">{clubName}</p>
+                      {session.location && <p className="text-[10px] leading-snug text-muted-foreground">{session.location}</p>}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-primary">⚡ +{pointsReward} Blitze</p>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        {isRegisteredSession
+                          ? <span className="text-[8px] font-black">✓</span>
+                          : <ChevronRight className="h-3 w-3" />}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bottom promo cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Weitere Angebote */}
+        <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.05]"
+            style={{
+              backgroundImage: "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
+              backgroundSize: "18px 18px",
+            }}
+          />
+          <div className="relative flex flex-1 flex-col gap-1.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <MapPin className="h-4 w-4" />
+            </div>
+            <p className="mt-0.5 text-sm font-black text-foreground">Weitere Angebote</p>
+            <p className="text-xs leading-snug text-muted-foreground">
+              Entdecke noch mehr Sportmöglichkeiten in deiner Nähe.
+            </p>
+          </div>
+          <div className="mt-2 flex justify-end">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </span>
+          </div>
+        </div>
+
+        {/* Dein Fortschritt */}
+        <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">
+          <img
+            src={AVATAR_BASE_ASSET}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-1 -right-1 h-[5rem] w-[5rem] select-none object-contain opacity-40"
+          />
+          <div className="relative space-y-1.5">
+            <p className="text-sm font-black text-foreground">⚡ Dein Fortschritt</p>
+            <p className="text-xs text-muted-foreground">{registrations.length} Sportarten ausprobiert</p>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary/10">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${Math.min((registrations.length / 10) * 100, 100)}%` }}
+              />
+            </div>
+            <p className="text-xs font-bold text-primary">{registrations.length} / 10</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-2" />
+
+      {/* Session detail bottom sheet */}
+      {selectedSession && (() => {
+        const s = selectedSession;
+        const club = s.clubs;
+        const sportType = club?.sport_type || s.title;
+        const sportEmoji = getSportEmoji(sportType);
+        const isHighlight = getExperienceLabel(s) === "Highlight-Erlebnis";
+        const pointsReward = getSessionPoints(s);
+        const dateFormatted = new Date(s.date).toLocaleDateString("de-AT", { weekday: "long", day: "numeric", month: "long" });
+        const timeFormatted = `${s.start_time.slice(0, 5)}${s.end_time ? ` – ${s.end_time.slice(0, 5)}` : ""} Uhr`;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSelectedSession(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative w-full overflow-hidden rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-black/10" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-start justify-between px-5 pb-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-[2.4rem] leading-none">{sportEmoji}</span>
+                  <div>
+                    <p className="text-[1.3rem] font-black leading-tight text-foreground">{sportType}</p>
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      isHighlight ? "bg-purple-50 text-purple-600" : "bg-primary/10 text-primary"
+                    }`}>
+                      {isHighlight ? "Kurs" : "Probetraining"}
+                    </span>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setSelectedSession(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/6 text-foreground/60">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Details */}
+              <div className="space-y-3 px-5 pb-2">
+                <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <span className="text-base">📅</span>
+                    <span className="font-semibold">{dateFormatted}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <span className="text-base">🕐</span>
+                    <span className="font-semibold">{timeFormatted}</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm text-foreground">
+                    <span className="text-base">📍</span>
+                    <div>
+                      <p className="font-semibold">{s.location}</p>
+                      {s.address && <p className="text-xs text-muted-foreground">{s.address}</p>}
+                    </div>
+                  </div>
+                  {club && (
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <span className="text-base">🏛</span>
+                      <span className="font-semibold">{club.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                {s.description && (
+                  <p className="text-sm leading-relaxed text-muted-foreground">{s.description}</p>
+                )}
+                {s.requirements && (
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    <span className="font-bold text-foreground/70">Voraussetzungen: </span>{s.requirements}
+                  </p>
+                )}
+              </div>
+
+              {/* Contact details */}
+              {club && (club.contact_email || club.contact_phone || club.website) && (
+                <div className="mx-5 mb-3 rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Kontakt</p>
+                  {club.contact_email && (
+                    <a href={`mailto:${club.contact_email}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      <span className="text-base">✉️</span>{club.contact_email}
+                    </a>
+                  )}
+                  {club.contact_phone && (
+                    <a href={`tel:${club.contact_phone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <span className="text-base">📞</span>{club.contact_phone}
+                    </a>
+                  )}
+                  {club.website && (
+                    <a href={club.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      <span className="text-base">🌐</span>{club.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Blitze reward + Teilnahme Button */}
+              <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-1 space-y-3">
+                <div className="flex items-center justify-center gap-2 rounded-[16px] bg-primary/8 py-3 text-sm font-bold text-primary">
+                  ⚡ +{pointsReward} Blitze nach der Teilnahme
+                </div>
+                {attendedIds.has(s.id) ? (
+                  <div className="flex items-center justify-center gap-2 rounded-[16px] bg-primary/10 py-4 text-sm font-bold text-primary">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Teilnahme bestätigt
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isAttending}
+                    onClick={() => void handleAttendance(s.id, pointsReward)}
+                    className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)] disabled:opacity-60"
+                  >
+                    {isAttending ? "Wird gespeichert…" : "✓ Erfolgreich teilgenommen"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

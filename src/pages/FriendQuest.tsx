@@ -24,9 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ChallengeSelector } from '@/components/ChallengeSelector';
 import { LiveBattle } from '@/components/LiveBattle';
-import { TopHeader } from '@/components/TopHeader';
 import { BottomNav } from '@/components/BottomNav';
-import friendHighfiveImg from '@/assets/quest-friend-highfive.png';
+import friendQuestImg from '@/assets/friendquest1.svg';
 
 interface Challenge {
   id: string;
@@ -177,7 +176,7 @@ const FriendQuest = () => {
 
     try {
       await navigator.clipboard.writeText(createdInvite.invite_code);
-      toast.success('Code kopiert!');
+      toast.success('Code kopiert!', { duration: 3000 });
     } catch {
       toast.error('Code konnte nicht kopiert werden.');
     }
@@ -219,7 +218,11 @@ const FriendQuest = () => {
 
       const result = Array.isArray(data) ? data[0] : data;
       if (!result || result.status !== 'awaiting_creator_confirmation') {
-        toast.error(GENERIC_CODE_ERROR);
+        if (result?.status === 'already_connected') {
+          toast.error('Ihr seid bereits miteinander verbunden.');
+        } else {
+          toast.error(GENERIC_CODE_ERROR);
+        }
         return;
       }
 
@@ -280,8 +283,8 @@ const FriendQuest = () => {
         challengeData: {
           name: friendquest.challenge_name,
           icon: friendquest.challenge_icon,
-          winner_points: friendquest.winner_points || 50,
-          loser_points: friendquest.loser_points || 20,
+          winner_points: friendquest.winner_points || 25,
+          loser_points: friendquest.loser_points || 25,
         },
         isChallenger: true,
         challengerName: 'Du',
@@ -362,9 +365,7 @@ const FriendQuest = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <TopHeader />
-
-      <div className="mx-auto max-w-screen-xl px-4 pb-8">
+      <div className="mx-auto max-w-screen-xl px-4 pb-8 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <div className="space-y-5">
           <div className="overflow-hidden rounded-[28px] border border-black/5 bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
             <div className="grid min-h-[13.5rem] grid-cols-[minmax(0,1fr)_46%] overflow-hidden bg-[#f6fbf2]">
@@ -381,10 +382,10 @@ const FriendQuest = () => {
               </div>
               <div className="flex items-end justify-center overflow-hidden">
                 <img
-                  src={friendHighfiveImg}
+                  src={friendQuestImg}
                   alt=""
                   aria-hidden="true"
-                  className="w-full object-contain object-bottom drop-shadow-[0_18px_24px_rgba(15,23,42,0.14)]"
+                  className="w-full object-contain object-bottom mix-blend-multiply"
                 />
               </div>
             </div>

@@ -165,8 +165,6 @@ export const ChallengeInvitationsList = ({ userId, onStartChallenge }: Challenge
         const opponentName = isChallenger 
           ? invitation.opponent_profile?.username || 'Unbekannt'
           : invitation.challenger_profile?.username || 'Unbekannt';
-        const isWinner = invitation.winner_id === userId;
-
         return (
           <Card key={invitation.id} className="p-4">
             <div className="flex items-center justify-between">
@@ -190,7 +188,7 @@ export const ChallengeInvitationsList = ({ userId, onStartChallenge }: Challenge
                   <div className="flex items-center gap-1">
                     <Zap className="h-4 w-4 text-yellow-500" />
                     <span className="font-bold text-sm">
-                      +{isWinner ? invitation.challenge.winner_points : invitation.challenge.loser_points}
+                      +{invitation.challenge.winner_points}
                     </span>
                   </div>
                 )}

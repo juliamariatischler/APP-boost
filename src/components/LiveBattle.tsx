@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Zap, Trophy, Clock, User } from 'lucide-react';
+import { ArrowLeft, Zap, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import boostLogo from '@/assets/boost-logo.png';
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from '@/lib/avatarItems';
 
 interface Challenge {
   name: string;
@@ -47,6 +48,11 @@ export const LiveBattle = ({
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [challengerId, setChallengerId] = useState<string>('');
   const [opponentId, setOpponentId] = useState<string>('');
+  const [equippedItem, setEquippedItem] = useState<AvatarItemId>('none');
+
+  useEffect(() => {
+    setEquippedItem(loadEquippedAvatarItem(userId));
+  }, [userId]);
 
   // Load initial data
   useEffect(() => {
@@ -260,9 +266,7 @@ export const LiveBattle = ({
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
+          <div className="w-10" />
           <img src={boostLogo} alt="BOOST" className="h-8" />
           <div className="w-10" />
         </div>
@@ -270,10 +274,32 @@ export const LiveBattle = ({
 
       {/* Battle Arena */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 space-y-6">
-        {/* Challenge Info */}
-        <div className="text-center">
-          <span className="text-5xl">{challengeData.icon}</span>
-          <h2 className="text-2xl font-bold mt-2">{challengeData.name}</h2>
+        {/* VS Player Banner */}
+        <div className="flex w-full items-center justify-center gap-4">
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-primary/30 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
+              <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
+              {equippedItem !== 'none' && AVATAR_ITEMS[equippedItem] && (
+                <img src={AVATAR_ITEMS[equippedItem].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+              )}
+            </div>
+            <span className="text-sm font-black text-foreground">Du</span>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-3xl font-black text-primary">VS</span>
+            <div className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1">
+              <span className="text-base">{challengeData.icon}</span>
+              <span className="text-xs font-bold text-primary">{challengeData.name}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-muted bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
+              <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
+            </div>
+            <span className="text-sm font-black text-foreground">{isChallenger ? opponentName : challengerName}</span>
+          </div>
         </div>
 
         {/* Waiting Phase */}
@@ -283,18 +309,31 @@ export const LiveBattle = ({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${myReady ? 'bg-primary' : 'bg-muted'}`}>
-                  <User className="h-8 w-8 text-white" />
+                <div className={`relative w-16 h-16 mx-auto rounded-full overflow-hidden border-2 transition-colors ${myReady ? 'border-primary' : 'border-muted'}`}>
+                  <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
+                  {equippedItem !== 'none' && AVATAR_ITEMS[equippedItem] && (
+                    <img src={AVATAR_ITEMS[equippedItem].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                  )}
+                  {myReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
+                      <span className="text-xl">✓</span>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-2 font-medium">Du</p>
                 <Badge variant={myReady ? 'default' : 'secondary'}>
                   {myReady ? '✓ Bereit' : 'Warten...'}
                 </Badge>
               </div>
-              
+
               <div className="text-center">
-                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${opponentReady ? 'bg-primary' : 'bg-muted'}`}>
-                  <User className="h-8 w-8 text-white" />
+                <div className={`relative w-16 h-16 mx-auto rounded-full overflow-hidden border-2 transition-colors ${opponentReady ? 'border-primary' : 'border-muted'}`}>
+                  <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
+                  {opponentReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
+                      <span className="text-xl">✓</span>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-2 font-medium">{isChallenger ? opponentName : challengerName}</p>
                 <Badge variant={opponentReady ? 'default' : 'secondary'}>
@@ -414,7 +453,7 @@ export const LiveBattle = ({
             </motion.div>
 
             <h3 className="text-2xl font-bold">
-              {isTie ? 'Unentschieden!' : isWinner ? 'Du hast gewonnen!' : 'Knapp verloren!'}
+              {isTie ? 'Unentschieden!' : isWinner ? 'Du hast gewonnen!' : 'Stark mitgemacht!'}
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
@@ -431,7 +470,7 @@ export const LiveBattle = ({
             <div className="flex items-center justify-center gap-2 text-lg">
               <Zap className="h-6 w-6 text-yellow-500" />
               <span className="font-bold">
-                +{isTie ? challengeData.loser_points : isWinner ? challengeData.winner_points : challengeData.loser_points} Blitze
+                +{challengeData.winner_points} Blitze
               </span>
             </div>
 
