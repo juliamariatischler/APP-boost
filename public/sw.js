@@ -1,4 +1,4 @@
-const CACHE_NAME = 'boost-v1';
+const CACHE_NAME = 'boost-v2';
 const STATIC_ASSETS = [
   '/',
   '/boost-logo.png',
@@ -29,6 +29,21 @@ self.addEventListener('fetch', (event) => {
 
   // Let Supabase API calls go through the network always
   if (url.hostname.includes('supabase')) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok && url.origin === self.location.origin) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

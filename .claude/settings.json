@@ -23,7 +23,10 @@
       "Read(//Users/juliatischler/Desktop/**)",
       "Bash(find ~/Downloads ~/Desktop /tmp -name \"*.png\" -newer \"/Users/juliatischler/Downloads/ChatGPT Image 9. Mai 2026, 14_07_53.png\" 2>/dev/null | head -10)",
       "Read(//private/tmp/**)",
-      "Bash(cp \"/Users/juliatischler/Downloads/ChatGPT_Image_9._Mai_2026__13_54_26-removebg-preview.png\" \"/Users/juliatischler/Documents/app_boost/src/assets/quest-weekly-geo-avatar.png\")"
+      "Bash(cp \"/Users/juliatischler/Downloads/ChatGPT_Image_9._Mai_2026__13_54_26-removebg-preview.png\" \"/Users/juliatischler/Documents/app_boost/src/assets/quest-weekly-geo-avatar.png\")",
+      "Bash(xargs cat -n)",
+      "Bash(python3 -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(python3)"
     ],
     "additionalDirectories": [
       "/Users/juliatischler/Downloads"
