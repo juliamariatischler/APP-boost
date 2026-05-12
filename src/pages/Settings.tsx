@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
 import { CheckCircle2, HeartPulse } from "lucide-react";
+import { logoutEverywhereOnDevice } from "@/lib/logout";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -40,9 +41,9 @@ const Settings = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logoutEverywhereOnDevice();
       toast.success("Erfolgreich abgemeldet");
-      navigate("/auth");
+      navigate("/auth", { replace: true });
     } catch (error: any) {
       toast.error("Fehler beim Abmelden: " + error.message);
     }
@@ -92,7 +93,7 @@ const Settings = () => {
         window.localStorage.removeItem(`weekly_video_rewards_${userId}`);
       }
 
-      await supabase.auth.signOut();
+      await logoutEverywhereOnDevice();
       toast.success("Dein Konto wurde gelöscht.");
       navigate("/auth", { replace: true });
     } catch (error: any) {

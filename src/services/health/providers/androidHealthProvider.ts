@@ -3,10 +3,10 @@ import { getHealthPlatformContext } from '../platform';
 import type { HealthProvider } from '../types';
 
 const normalizeSteps = (result: unknown): number => {
-  if (!Array.isArray(result)) return 0;
+  const items = Array.isArray(result) ? result : [result];
 
   return Math.floor(
-    result.reduce((sum: number, item: any) => {
+    items.reduce((sum: number, item: any) => {
       return sum + (Number(item?.value) || 0);
     }, 0)
   );
@@ -52,6 +52,15 @@ export class AndroidHealthProvider implements HealthProvider {
     const now = new Date();
 
     try {
+      const aggregated = await callCordovaHealth('queryAggregated', {
+        startDate: today,
+        endDate: now,
+        dataType: 'steps',
+      });
+      console.log('Android Health Connect aggregated steps result:', aggregated);
+      const aggregatedSteps = normalizeSteps(aggregated);
+      if (aggregatedSteps > 0) return aggregatedSteps;
+
       const result = await callCordovaHealth('query', {
         startDate: today,
         endDate: now,
@@ -59,6 +68,7 @@ export class AndroidHealthProvider implements HealthProvider {
         limit: 1000
       });
 
+      console.log('Android Health Connect raw steps result:', result);
       return normalizeSteps(result);
     } catch (error) {
       console.error('Android step query failed:', error);

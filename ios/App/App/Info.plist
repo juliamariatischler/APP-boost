@@ -30,6 +30,8 @@
 	<string>public.app-category.education</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NFCReaderUsageDescription</key>
+	<string>BOOST verwendet NFC, um Stationsstempel zu erfassen und deinen Fortschritt zu speichern.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>BOOST benötigt die Kamera zum Scannen von QR-Codes und zur Bewegungserkennung bei Übungen.</string>
 	<key>NSHealthShareUsageDescription</key>

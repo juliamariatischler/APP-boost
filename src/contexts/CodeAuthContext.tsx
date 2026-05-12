@@ -10,9 +10,11 @@ import {
   type CodeSession,
   activateWithQrCode,
   loginWithCode,
+  loadSession,
   validateSession,
   logout,
 } from "@/services/codeAuthService";
+import { CODE_SESSION_CLEARED_EVENT } from "@/lib/logout";
 
 interface CodeAuthContextValue {
   session: CodeSession | null;
@@ -30,9 +32,29 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
 
   // Restore session on mount
   useEffect(() => {
+    let cancelled = false;
+
     validateSession()
-      .then(setSession)
-      .finally(() => setLoading(false));
+      .then((validatedSession) => {
+        if (cancelled) return;
+        const cachedSession = loadSession();
+        setSession(
+          cachedSession?.session_token === validatedSession?.session_token
+            ? validatedSession
+            : null,
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    const handleSessionCleared = () => setSession(null);
+    window.addEventListener(CODE_SESSION_CLEARED_EVENT, handleSessionCleared);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(CODE_SESSION_CLEARED_EVENT, handleSessionCleared);
+    };
   }, []);
 
   const login = useCallback(async (code: string): Promise<CodeSession> => {
@@ -48,8 +70,11 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (session) await logout(session);
-    setSession(null);
+    try {
+      if (session) await logout(session);
+    } finally {
+      setSession(null);
+    }
   }, [session]);
 
   return (

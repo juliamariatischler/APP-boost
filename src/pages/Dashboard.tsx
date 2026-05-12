@@ -405,7 +405,7 @@ const Dashboard = () => {
       key: "bereit",
       min: 39,
       title: "Flash ist bereit!",
-      copy: "Du bist gut gestartet. Jetzt fehlt nicht mehr viel.",
+      copy: "Du bist gut gestartet. Jetzt fehlt\nnicht mehr viel.",
       label: "Bereit",
       image: volt39To59Img,
     },
@@ -413,7 +413,7 @@ const Dashboard = () => {
       key: "aktiv",
       min: 60,
       title: "Flash ist aktiv!",
-      copy: "Dein Buddy sammelt Energie und bleibt mit dir dran.",
+      copy: "Dein Buddy sammelt Energie\nund bleibt mit dir dran.",
       label: "Aktiv",
       image: volt60To79Img,
     },
@@ -518,7 +518,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background pb-nav-safe">
-        <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+1rem)] space-y-4">
+        <div className="mx-auto max-w-screen-xl px-4 pt-4 space-y-4">
           <div className="space-y-2">
             <Skeleton className="h-10 w-32 rounded-xl" />
             <Skeleton className="h-6 w-52 rounded-xl" />
@@ -541,7 +541,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="relative mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.25rem)]">
+      <div className="relative mx-auto max-w-screen-xl px-4 pt-[calc(0.25rem+0.4cm)]">
         <div className="mb-5 flex items-start gap-3">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
             <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
@@ -608,7 +608,7 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            <p className="absolute bottom-[0.75rem] left-0 z-20 w-full whitespace-pre-line px-4 text-left text-[0.8rem] font-bold leading-snug text-white/90">
+            <p className="absolute bottom-[0.75rem] left-0 z-20 w-full whitespace-pre-line px-4 text-left text-[0.75rem] font-bold leading-snug text-white/90">
               {activeVoltMood.copy}
             </p>
           </div>
@@ -716,11 +716,7 @@ const Dashboard = () => {
             })}
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => navigate("/challenge/weekly/athlete")}
-          className="mb-4 block w-full text-left"
-        >
+        <div className="mb-4 block w-full cursor-default select-none grayscale opacity-75">
           <Card className="overflow-hidden rounded-[24px] border-0 bg-transparent p-0 shadow-none">
             <div className="mb-3 flex items-center justify-between px-1">
               <h2 className="text-base font-black leading-none text-foreground">Motivation der Woche</h2>
@@ -730,7 +726,7 @@ const Dashboard = () => {
               </span>
             </div>
 
-            <div className="overflow-hidden rounded-[24px] border border-white/45 bg-[linear-gradient(135deg,hsl(var(--primary)/0.24)_0%,hsl(var(--primary)/0.5)_100%)] shadow-[0_22px_44px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-3px_0_rgba(0,0,0,0.08)]">
+            <div className="relative overflow-hidden rounded-[24px] border border-white/45 bg-[linear-gradient(135deg,hsl(var(--primary)/0.24)_0%,hsl(var(--primary)/0.5)_100%)] shadow-[0_22px_44px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-3px_0_rgba(0,0,0,0.08)]">
               <div className="relative">
                 <div className="relative aspect-[16/8.5]">
                   <video
@@ -769,9 +765,14 @@ const Dashboard = () => {
                   <p className="text-xs text-zinc-900/70">{currentWeeklyVideo.speakerLabel}</p>
                 </div>
               </div>
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -right-10 top-10 w-44 rotate-[38deg] bg-[#a0a0a0] py-1.5 text-center text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(0,0,0,0.18)]">
+                  COMING SOON
+                </div>
+              </div>
             </div>
           </Card>
-        </button>
+        </div>
 
         {isTeacher && userSchool && userClass && (
           <div className="mb-6">

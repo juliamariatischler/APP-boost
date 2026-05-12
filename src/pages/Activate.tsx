@@ -47,7 +47,7 @@ export default function Activate() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8 pt-[calc(env(safe-area-inset-top)+2rem)]">
+    <div className="min-h-screen bg-background px-4 py-8">
       <div className="mx-auto flex max-w-md flex-col gap-6">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">

@@ -1,7 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from "@capacitor/core";
+import { toast } from "sonner";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/friendquest1.svg";
@@ -13,9 +16,23 @@ import TrialSessionsList from "@/components/TrialSessionsList";
 import { DailyChallengeContent } from "@/components/DailyChallengeContent";
 import { TopHeader } from "@/components/TopHeader";
 import { BottomNav } from "@/components/BottomNav";
-import { MapPin, Package, Play, Search, Sparkles, TreePine, Trophy, Zap } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  MapPin,
+  Nfc,
+  Package,
+  Play,
+  Search,
+  Sparkles,
+  TreePine,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET } from "@/lib/avatarItems";
+import { scanForStation } from "@/lib/nfc";
 
 const challengeData: Record<string, { title: string; image: string; description: string }> = {
   daily: {
@@ -39,6 +56,13 @@ const challengeData: Record<string, { title: string; image: string; description:
     description: `Ein gemeinsames Try-It-System mit echten Sportarten, Vereinsnähe und +${BOOST_POINT_RULES.tryItCompleted} Blitzen pro neuem Erlebnis.`,
   },
 };
+
+// Placeholder station data – update lat/lng with real coordinates before deploying
+const SCHATZSUCHE_STATIONS = [
+  { id: "station_1", label: "Station 1", lat: 46.8523, lng: 15.8726 },
+  { id: "station_2", label: "Station 2", lat: 46.8531, lng: 15.8740 },
+  { id: "station_3", label: "Station 3", lat: 46.8518, lng: 15.8752 },
+] as const;
 
 const Blitz3D = ({ className = "" }: { className?: string }) => (
   <span className={`relative inline-flex shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(145deg,#baff76_0%,#61dc70_46%,#22a64a_100%)] text-white shadow-[0_9px_14px_rgba(31,224,102,0.34),0_3px_0_rgba(20,120,52,0.28),inset_0_2px_2px_rgba(255,255,255,0.68),inset_0_-3px_5px_rgba(0,0,0,0.18)] ${className}`}>
@@ -68,26 +92,96 @@ const QuestBuddy = () => {
   );
 };
 
+const TrackPlaceholder = () => (
+  <div className="mx-5 mb-5 mt-3 overflow-hidden rounded-[16px] border border-sky-100/80 bg-[linear-gradient(135deg,#e0f2fe_0%,#eff6ff_100%)]">
+    <div className="relative flex h-28 items-center justify-center">
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 300 112" preserveAspectRatio="none">
+        <path
+          d="M 20 95 C 60 88, 72 28, 122 48 S 198 78, 242 38 S 276 14, 286 17"
+          stroke="#bae6fd"
+          strokeWidth="3"
+          fill="none"
+          strokeDasharray="8 5"
+        />
+        <circle cx="20" cy="95" r="5" fill="#0ea5e9" fillOpacity="0.55" />
+        <circle cx="122" cy="48" r="5" fill="#0ea5e9" fillOpacity="0.55" />
+        <circle cx="286" cy="17" r="5" fill="#0ea5e9" fillOpacity="0.55" />
+      </svg>
+      <div className="relative z-10 flex flex-col items-center gap-1 text-center">
+        <MapPin className="h-5 w-5 text-sky-400" />
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-500">Track</p>
+        <p className="text-[9px] text-sky-400/80">Routenbild hier einfügen</p>
+      </div>
+    </div>
+  </div>
+);
+
 const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
-  const [showScanForm, setShowScanForm] = useState(false);
-  const [scanValues, setScanValues] = useState(["", "", ""]);
+  const [completedStations, setCompletedStations] = useState<Set<string>>(new Set());
+  const [scanningStation, setScanningStation] = useState<string | null>(null);
+  const [showScanSection, setShowScanSection] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!userId || id !== "weekly") return;
+    const load = async () => {
+      const { data } = await (supabase.from("station_scans") as any)
+        .select("station_id")
+        .eq("user_id", userId)
+        .eq("challenge_id", "schatzsuche");
+      if (data) setCompletedStations(new Set(data.map((d: any) => d.station_id as string)));
+    };
+    void load();
+  }, [userId, id]);
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-
+    if (!session) { navigate("/auth"); return; }
     setUserId(session.user.id);
+  };
+
+  const openInMaps = (lat: number, lng: number, label: string) => {
+    const url =
+      Capacitor.getPlatform() === "ios"
+        ? `maps://?q=${encodeURIComponent(label)}&ll=${lat},${lng}`
+        : `https://www.google.com/maps?q=${lat},${lng}`;
+    window.open(url, "_blank");
+  };
+
+  const handleScanStation = async (stationId: string, label: string) => {
+    if (scanningStation || completedStations.has(stationId)) return;
+    setScanningStation(stationId);
+    try {
+      const result = await scanForStation({
+        expectedStationId: stationId,
+        alertMessage: `Halte dein iPhone an ${label}`,
+      });
+      if (result === "success") {
+        if (userId) {
+          await (supabase.from("station_scans") as any).upsert({
+            user_id: userId,
+            challenge_id: "schatzsuche",
+            station_id: stationId,
+          });
+        }
+        setCompletedStations((prev) => new Set([...prev, stationId]));
+        toast.success(`${label} erfolgreich gescannt! ✓`);
+      } else if (result === "wrong_tag") {
+        toast.error("Falsche Station – bitte scanne die richtige Station.");
+      } else if (result === "unavailable") {
+        toast.error("NFC nicht verfügbar auf diesem Gerät.");
+      }
+    } catch {
+      toast.error("Scan fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setScanningStation(null);
+    }
   };
 
   const challenge = id ? challengeData[id] : null;
@@ -113,7 +207,7 @@ const ChallengeDetail = () => {
     <div className={`min-h-screen pb-nav-safe ${isTryIt ? "bg-[#FFFDF4]" : "bg-background"}`}>
       {!isTryIt && <TopHeader hideNav />}
 
-      <div className="max-w-screen-xl mx-auto px-4 pb-8">
+      <div className={`max-w-screen-xl mx-auto px-4 pb-8 ${isTryIt ? "pt-[0.4cm]" : ""}`}>
         {id === "daily" && userId ? (
           <DailyChallengeContent userId={userId} />
         ) : isWeekly ? (
@@ -146,7 +240,6 @@ const ChallengeDetail = () => {
                     aria-hidden="true"
                     className="w-full flex-1 scale-[1.25] origin-bottom object-contain object-bottom drop-shadow-[0_18px_24px_rgba(15,23,42,0.16)]"
                   />
-                  {/* Bonus badge */}
                   <div className="w-full rounded-[14px] bg-[linear-gradient(145deg,#e8e8e8_0%,#d0d0d0_50%,#b8b8b8_100%)] px-3 py-2 text-center shadow-[0_6px_16px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.12)]">
                     <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/50">Bonus</p>
                     <p className="text-[13px] font-black text-black/80">+ Avatar-Item</p>
@@ -155,78 +248,147 @@ const ChallengeDetail = () => {
               </div>
             </Card>
 
-            {/* Mission 1 – Active (Schatzsuche) */}
+            {/* Mission 1 – Schatzsuche */}
             <Card className="overflow-hidden rounded-[24px] border-2 border-sky-200 bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
-              <div className="flex w-full flex-col text-left">
-                <div className="relative grid grid-cols-[minmax(0,1fr)_155px]">
-                  <div className="p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 1</p>
-                    <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
-                        <TreePine className="h-4 w-4 text-sky-500" />
-                        Rausgehen
-                      </div>
-                      <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
-                        <Search className="h-4 w-4 text-sky-500" />
-                        Versteck finden
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowScanForm(true)}
-                        className="flex w-full items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground text-left"
-                      >
-                        <Package className="h-4 w-4 text-sky-500" />
-                        Fund eintragen
-                      </button>
+              {/* Header grid */}
+              <div className="relative grid grid-cols-[minmax(0,1fr)_155px]">
+                <div className="p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 1</p>
+                  <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                      <TreePine className="h-4 w-4 text-sky-500" />
+                      Rausgehen
+                    </div>
+                    <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
+                      <Search className="h-4 w-4 text-sky-500" />
+                      Versteck finden
                     </div>
                     <button
                       type="button"
-                      onClick={() => navigate("/challenge/weekly/geotracking")}
-                      className="mt-5 text-sm font-black text-primary"
+                      onClick={() => setShowScanSection((v) => !v)}
+                      className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                        showScanSection
+                          ? "bg-sky-500 text-white shadow-[0_4px_12px_rgba(14,165,233,0.28)]"
+                          : "bg-[#f3f8ff] text-foreground"
+                      }`}
                     >
-                      Jetzt starten →
+                      <Nfc className={`h-4 w-4 shrink-0 ${showScanSection ? "text-white" : "text-sky-500"}`} />
+                      <span className="flex-1">Station scannen</span>
+                      <ChevronDown
+                        className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                          showScanSection ? "rotate-180 text-white" : "text-sky-400"
+                        }`}
+                      />
                     </button>
                   </div>
-                  <div className="relative overflow-hidden">
-                    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
-                      <MapPin className="h-5 w-5" />
-                    </div>
-                    <img
-                      src={weeklyGeoAvatarImg}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 h-full w-full scale-[1.25] origin-bottom object-contain object-bottom drop-shadow-[0_12px_18px_rgba(15,23,42,0.14)]"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/challenge/weekly/geotracking")}
+                    className="mt-5 text-sm font-black text-primary"
+                  >
+                    Jetzt starten →
+                  </button>
                 </div>
-
-                {/* Scan Station Formular */}
-                {showScanForm && (
-                  <div className="border-t border-sky-100 px-5 pb-5 pt-4">
-                    <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-sky-600">Scan Station</p>
-                    <div className="space-y-2">
-                      {scanValues.map((val, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-2xl border border-sky-200 bg-[#f3f8ff] px-3 py-2">
-                          <Package className="h-4 w-4 shrink-0 text-sky-500" />
-                          <input
-                            type="text"
-                            placeholder={`Station ${i + 1}`}
-                            value={val}
-                            onChange={(e) => {
-                              const next = [...scanValues];
-                              next[i] = e.target.value;
-                              setScanValues(next);
-                            }}
-                            className="w-full bg-transparent text-sm font-semibold text-foreground placeholder:text-muted-foreground/60 outline-none"
-                          />
-                        </div>
-                      ))}
-                    </div>
+                <div className="relative overflow-hidden">
+                  <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+                    <MapPin className="h-5 w-5" />
                   </div>
-                )}
+                  <img
+                    src={weeklyGeoAvatarImg}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full scale-[1.25] origin-bottom object-contain object-bottom drop-shadow-[0_12px_18px_rgba(15,23,42,0.14)]"
+                  />
+                </div>
               </div>
+
+              {/* NFC Scan Stations – animated reveal */}
+              <AnimatePresence initial={false}>
+                {showScanSection && (
+              <motion.div
+                key="scan-section"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+              <div className="border-t border-sky-100 px-5 pb-2 pt-4">
+                <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-sky-600">Scan Station</p>
+                <div className="space-y-2">
+                  {SCHATZSUCHE_STATIONS.map((station) => {
+                    const isDone = completedStations.has(station.id);
+                    const isScanning = scanningStation === station.id;
+                    return (
+                      <div
+                        key={station.id}
+                        className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition-colors ${
+                          isDone ? "border-green-200 bg-green-50" : "border-sky-200 bg-[#f3f8ff]"
+                        }`}
+                      >
+                        <div
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                            isDone ? "bg-green-100" : "bg-sky-100"
+                          }`}
+                        >
+                          {isDone ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Package className="h-4 w-4 text-sky-500" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground">{station.label}</p>
+                          <button
+                            type="button"
+                            onClick={() => openInMaps(station.lat, station.lng, station.label)}
+                            className="mt-0.5 flex items-center gap-1 text-[10px] text-sky-500 active:text-sky-700"
+                          >
+                            <MapPin className="h-2.5 w-2.5" />
+                            {station.lat.toFixed(4)}° N, {station.lng.toFixed(4)}° E
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleScanStation(station.id, station.label)}
+                          disabled={isDone || isScanning}
+                          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition-all active:scale-95 ${
+                            isDone
+                              ? "cursor-default bg-green-100 text-green-600"
+                              : isScanning
+                                ? "bg-sky-100 text-sky-500"
+                                : "bg-sky-500 text-white shadow-[0_4px_12px_rgba(14,165,233,0.3)]"
+                          }`}
+                        >
+                          {isScanning ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Scanne…
+                            </>
+                          ) : isDone ? (
+                            "Gescannt ✓"
+                          ) : (
+                            <>
+                              <Nfc className="h-3.5 w-3.5" />
+                              Scan NFC
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Track image placeholder */}
+              <TrackPlaceholder />
+              </motion.div>
+              )}
+              </AnimatePresence>
             </Card>
 
             {/* Mission 2 – Coming Soon */}
@@ -257,7 +419,6 @@ const ChallengeDetail = () => {
                   </div>
                 </div>
               </div>
-              {/* COMING SOON ribbon */}
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div className="absolute -right-10 top-10 w-44 rotate-[38deg] bg-[#a0a0a0] py-1.5 text-center text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(0,0,0,0.18)]">
                   COMING SOON
@@ -267,34 +428,26 @@ const ChallengeDetail = () => {
           </div>
         ) : isTryIt ? (
           <>
-            {/* Hero card */}
             <div className="relative overflow-hidden rounded-[32px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.09),inset_0_1px_0_rgba(255,255,255,0.9)]">
-              {/* Sparkles around avatar */}
               <div className="pointer-events-none absolute right-[22%] top-7 text-xl text-yellow-400 drop-shadow-[0_0_6px_rgba(253,224,71,0.5)]">✦</div>
               <div className="pointer-events-none absolute right-[10%] top-4 text-sm text-yellow-300">✦</div>
               <div className="pointer-events-none absolute right-[16%] bottom-14 text-xs text-yellow-400/70">✦</div>
-
-              {/* Avatar – absolute right */}
               <img
                 src={tryitSportsAvatarImg}
                 alt=""
                 aria-hidden="true"
                 className="absolute right-0 top-[0.5rem] z-0 h-[13rem] w-[13rem] object-contain object-top drop-shadow-[0_18px_24px_rgba(15,23,42,0.12)]"
               />
-
-              {/* Text content */}
               <div className="relative z-10 px-7 pt-7">
                 <div className="max-w-[58%]">
                   <h1 className="text-[2rem] font-black leading-[0.92] tracking-tight text-foreground">
                     Try It<br />Challenge
-
                   </h1>
                   <p className="mt-3 text-sm leading-snug text-muted-foreground">
                     {challenge.description}
                   </p>
                 </div>
               </div>
-              {/* Reward pill – full width so text stays on one line */}
               <div className="relative z-10 px-7 pb-7 pt-3">
                 <div className="inline-flex w-fit items-center gap-2 rounded-full border border-black/8 bg-white px-4 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
                   <Zap className="h-4 w-4 fill-primary text-primary" />
@@ -332,7 +485,6 @@ const ChallengeDetail = () => {
                     </p>
                   </div>
                 </div>
-
                 <div className="relative flex flex-col items-center justify-center px-2 py-4">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_42%,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.48)_54%,transparent_84%)]" />
                   <QuestBuddy />

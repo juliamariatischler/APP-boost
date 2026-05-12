@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart2, ClipboardList, Flame, LogOut, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Trophy, Users, Zap } from "lucide-react";
+import { LogOut, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Users } from "lucide-react";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TeacherBottomNav } from "@/components/TeacherBottomNav";
 import {
   Dialog,
   DialogContent,
@@ -23,14 +24,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { env } from "@/lib/env";
 import { formatDisplayName } from "@/lib/formatName";
 import { getCurrentAppRole } from "@/lib/roles";
+import { logoutEverywhereOnDevice } from "@/lib/logout";
 import {
+  addStudent,
   addStudentAuth,
+  deactivateStudent,
   deactivateStudentAuth,
+  generateActivationCode,
   generateActivationCodeAuth,
   getClassStudents,
   getClassStudentsAuth,
   getTeacherClasses,
   getTeacherClassesAuth,
+  resetStudentDevice,
   resetStudentDeviceAuth,
   type ClassStudent,
   type TeacherClass,
@@ -237,7 +243,7 @@ export default function TeacherManagement() {
       return;
     }
 
-    await supabase.auth.signOut();
+    await logoutEverywhereOnDevice();
     navigate("/auth", { replace: true });
   };
 
@@ -254,14 +260,12 @@ export default function TeacherManagement() {
 
   const handleAddStudent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (authMode !== "supabase") {
-      toast.error("Schülerverwaltung ist für diesen Testzugang nur mit Lehrer-Account verfügbar.");
-      return;
-    }
-    if (!selectedClassId || !newStudentName.trim()) return;
+    if (!authMode || !selectedClassId || !newStudentName.trim()) return;
 
     try {
-      const result = await addStudentAuth(selectedClassId, newStudentName);
+      const result = authMode === "code" && codeSession
+        ? await addStudent(codeSession, selectedClassId, newStudentName)
+        : await addStudentAuth(selectedClassId, newStudentName);
       await showActivationQr(result.activation_code, formatDisplayName(newStudentName));
       setNewStudentName("");
       toast.success("Schüler:in angelegt und QR-Code erstellt.");
@@ -273,14 +277,13 @@ export default function TeacherManagement() {
   };
 
   const handleGenerate = async (student: ClassStudent) => {
-    if (authMode !== "supabase") {
-      toast.error("QR-Codes können nur mit einem Lehrer-Account erzeugt werden.");
-      return;
-    }
+    if (!authMode) return;
 
     setBusyStudentId(student.student_id);
     try {
-      const result = await generateActivationCodeAuth(student.student_id);
+      const result = authMode === "code" && codeSession
+        ? await generateActivationCode(codeSession, student.student_id)
+        : await generateActivationCodeAuth(student.student_id);
       await showActivationQr(result.activation_code, formatDisplayName(student.display_name));
       toast.success("Neuer QR-Code erstellt.");
       await loadStudents(authMode, selectedClassId);
@@ -292,11 +295,13 @@ export default function TeacherManagement() {
   };
 
   const handleResetDevice = async (student: ClassStudent) => {
-    if (authMode !== "supabase") return;
+    if (!authMode) return;
 
     setBusyStudentId(student.student_id);
     try {
-      const result = await resetStudentDeviceAuth(student.student_id);
+      const result = authMode === "code" && codeSession
+        ? await resetStudentDevice(codeSession, student.student_id)
+        : await resetStudentDeviceAuth(student.student_id);
       if (result.activation_code) {
         await showActivationQr(result.activation_code, formatDisplayName(student.display_name));
         toast.success("Gerät zurückgesetzt und neuer QR-Code erstellt.");
@@ -312,11 +317,15 @@ export default function TeacherManagement() {
   };
 
   const handleDeactivate = async (student: ClassStudent) => {
-    if (authMode !== "supabase") return;
+    if (!authMode) return;
 
     setBusyStudentId(student.student_id);
     try {
-      await deactivateStudentAuth(student.student_id);
+      if (authMode === "code" && codeSession) {
+        await deactivateStudent(codeSession, student.student_id);
+      } else {
+        await deactivateStudentAuth(student.student_id);
+      }
       toast.success("Schüler:in deaktiviert.");
       await loadClasses(authMode);
       await loadStudents(authMode, selectedClassId);
@@ -328,10 +337,6 @@ export default function TeacherManagement() {
   };
 
   const openExportDialog = () => {
-    if (authMode !== "supabase") {
-      toast.error("Die Exportansicht ist nur mit einem Lehrer-Account verfügbar.");
-      return;
-    }
     if (!selectedClass || !selectedClassId) {
       toast.error("Bitte wähle zuerst eine Klasse aus.");
       return;
@@ -357,10 +362,6 @@ export default function TeacherManagement() {
   };
 
   const handleExportClass = async () => {
-    if (authMode !== "supabase") {
-      toast.error("Die Exportansicht ist nur mit einem Lehrer-Account verfügbar.");
-      return;
-    }
     if (!selectedClass || !selectedClassId) {
       toast.error("Bitte wähle zuerst eine Klasse aus.");
       return;
@@ -379,7 +380,9 @@ export default function TeacherManagement() {
     try {
       const results = await Promise.all(
         selectedStudents.map(async (student) => {
-          const result = await generateActivationCodeAuth(student.student_id);
+          const result = authMode === "code" && codeSession
+            ? await generateActivationCode(codeSession, student.student_id)
+            : await generateActivationCodeAuth(student.student_id);
           return {
             studentId: student.student_id,
             studentName: formatDisplayName(student.display_name),
@@ -555,7 +558,7 @@ export default function TeacherManagement() {
                 {selectedClass ? `Klasse ${selectedClass.class_name} verwalten` : "Klasse auswählen"}
               </h2>
             </div>
-            <Button type="button" variant="outline" onClick={openExportDialog} disabled={exporting || !selectedClassId || authMode !== "supabase"}>
+            <Button type="button" variant="outline" onClick={openExportDialog} disabled={exporting || !selectedClassId}>
               <Printer className="h-4 w-4" />
               Exportansicht
             </Button>
@@ -567,19 +570,14 @@ export default function TeacherManagement() {
                 value={newStudentName}
                 onChange={(event) => setNewStudentName(event.target.value)}
                 placeholder="Vorname Schüler:in"
-                disabled={!selectedClassId || authMode !== "supabase"}
+                disabled={!selectedClassId}
                 className="h-11"
               />
-              <Button type="submit" disabled={!selectedClassId || authMode !== "supabase" || !newStudentName.trim()} className="h-11">
+              <Button type="submit" disabled={!selectedClassId || !newStudentName.trim()} className="h-11">
                 <Plus className="h-4 w-4" />
                 Hinzufügen
               </Button>
             </form>
-            {authMode === "code" && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                Dieser Lehrer-Code zeigt die Klasse an. Änderungen sind im registrierten Lehrer-Account verfügbar.
-              </p>
-            )}
           </Card>
 
           {activationCode && activationQrDataUrl && (
@@ -642,15 +640,15 @@ export default function TeacherManagement() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleGenerate(student)} disabled={isBusy || authMode !== "supabase"}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleGenerate(student)} disabled={isBusy}>
                         {codeAvailable ? <RefreshCcw className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
                         {codeAvailable ? "Neu generieren" : "QR generieren"}
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleResetDevice(student)} disabled={isBusy || authMode !== "supabase"}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleResetDevice(student)} disabled={isBusy}>
                         <RotateCcw className="h-4 w-4" />
                         Gerät resetten
                       </Button>
-                      <Button type="button" variant="destructive" size="sm" onClick={() => handleDeactivate(student)} disabled={isBusy || authMode !== "supabase"}>
+                      <Button type="button" variant="destructive" size="sm" onClick={() => handleDeactivate(student)} disabled={isBusy}>
                         <ShieldOff className="h-4 w-4" />
                         Deaktivieren
                       </Button>
@@ -663,55 +661,7 @@ export default function TeacherManagement() {
         </section>
       </main>
 
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card/95 shadow-lg backdrop-blur"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-around px-2">
-          <button
-            onClick={() => navigate("/teacher-home")}
-            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full">
-              <Zap className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Home</span>
-          </button>
-          <button
-            onClick={() => navigate("/teacher-home", { state: { tab: "uebersicht" } })}
-            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full">
-              <BarChart2 className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Übersicht</span>
-          </button>
-          <button
-            onClick={() => navigate("/teacher-home", { state: { tab: "wertung" } })}
-            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full">
-              <Trophy className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Wertung</span>
-          </button>
-          <button
-            onClick={() => navigate("/teacher-home", { state: { tab: "mitmachen" } })}
-            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full">
-              <Flame className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Aktiv</span>
-          </button>
-          <button className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-foreground">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]">
-              <ClipboardList className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Verwaltung</span>
-          </button>
-        </div>
-      </nav>
+      <TeacherBottomNav active="verwaltung" />
       </div>
 
       <Dialog open={exportDialogOpen} onOpenChange={(open) => !exporting && setExportDialogOpen(open)}>

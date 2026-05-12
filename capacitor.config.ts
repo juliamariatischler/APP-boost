@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'BoostSchule',
   webDir: 'dist',
   ios: {
-    // Use automatic safe-area inset handling
-    contentInset: 'automatic',
+    contentInset: 'never',
   },
   plugins: {
     HealthKit: {

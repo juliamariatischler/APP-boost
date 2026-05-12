@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, BarChart2, Check, ClipboardList, Flame, Footprints, LogOut, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, LogOut, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -10,9 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { TeacherBottomNav } from "@/components/TeacherBottomNav";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAppRole } from "@/lib/roles";
+import { logoutEverywhereOnDevice } from "@/lib/logout";
 import { DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
 import { formatDisplayName } from "@/lib/formatName";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon } from "@/components/ExerciseIcons";
@@ -455,7 +457,7 @@ export default function TeacherHome() {
       navigate("/login", { replace: true });
       return;
     }
-    await supabase.auth.signOut();
+    await logoutEverywhereOnDevice();
     navigate("/auth", { replace: true });
   };
 
@@ -1049,62 +1051,7 @@ export default function TeacherHome() {
         {activeTab === "mitmachen" && renderMitmachenTab()}
       </main>
 
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card shadow-lg"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-around px-2">
-          <button
-            onClick={() => setActiveTab("home")}
-            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "home" ? "text-foreground" : "text-muted-foreground"}`}
-          >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "home" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
-              <Zap className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Home</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("uebersicht")}
-            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "uebersicht" ? "text-foreground" : "text-muted-foreground"}`}
-          >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "uebersicht" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
-              <BarChart2 className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Übersicht</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("wertung")}
-            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "wertung" ? "text-foreground" : "text-muted-foreground"}`}
-          >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "wertung" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
-              <Trophy className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Wertung</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("mitmachen")}
-            className={`flex h-full flex-1 flex-col items-center justify-center gap-1 ${activeTab === "mitmachen" ? "text-foreground" : "text-muted-foreground"}`}
-          >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeTab === "mitmachen" ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
-              <Flame className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Aktiv</span>
-          </button>
-
-          <button
-            onClick={() => navigate("/teacher-management")}
-            className="flex h-full flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full">
-              <ClipboardList className="h-[18px] w-[18px]" />
-            </div>
-            <span className="text-[10px]">Verw.</span>
-          </button>
-        </div>
-      </nav>
+      <TeacherBottomNav active={activeTab} onTabChange={setActiveTab} />
 
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">

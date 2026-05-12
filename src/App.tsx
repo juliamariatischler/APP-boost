@@ -17,6 +17,7 @@ const Activate = lazy(() => import("./pages/Activate"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
 const TeacherHome = lazy(() => import("./pages/TeacherHome"));
 const TeacherManagement = lazy(() => import("./pages/TeacherManagement"));
+const TeacherProfile = lazy(() => import("./pages/TeacherProfile"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Quests = lazy(() => import("./pages/Quests"));
 const ClassQuest = lazy(() => import("./pages/ClassQuest"));
@@ -49,7 +50,7 @@ const NativeChrome = () => {
 
     const configureStatusBar = async () => {
       try {
-        await StatusBar.setOverlaysWebView({ overlay: true });
+        await StatusBar.setOverlaysWebView({ overlay: false });
         await StatusBar.setStyle({ style: Style.Dark });
       } catch (error) {
         console.warn("StatusBar configuration skipped:", error);
@@ -105,6 +106,7 @@ const App = () => (
                 <Route path="/student-home" element={<StudentHome />} />
                 <Route path="/teacher-home" element={<TeacherHome />} />
                 <Route path="/teacher-management" element={<TeacherManagement />} />
+                <Route path="/teacher-profile" element={<TeacherProfile />} />
                 {/* Legacy email/password routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />

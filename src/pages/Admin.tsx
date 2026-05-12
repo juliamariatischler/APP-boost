@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { logoutEverywhereOnDevice } from "@/lib/logout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -556,8 +557,8 @@ const Admin = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+    await logoutEverywhereOnDevice();
+    navigate("/auth", { replace: true });
   };
 
   const availableSchools = [...new Set(allStudents.map((student) => student.school))].sort((a, b) =>

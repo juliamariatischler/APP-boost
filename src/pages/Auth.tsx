@@ -75,6 +75,7 @@ const Auth = () => {
   const { activate } = useCodeAuth();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const activatingRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
@@ -150,13 +151,14 @@ const Auth = () => {
     return "Dieser QR-Code ist nicht gültig.";
   };
 
-  const activateScannedCode = async (rawValue: string) => {
+  const activateScannedCode = async (rawValue: string): Promise<boolean> => {
     const code = extractActivationCode(rawValue);
     if (!code) {
       toast.error("Dieser QR-Code ist nicht gültig.");
-      return;
+      return false;
     }
 
+    activatingRef.current = true;
     setQrLoading(true);
     try {
       const session = await activate(code);
@@ -166,9 +168,12 @@ const Auth = () => {
       toast.success("Profil erfolgreich aktiviert.");
       setQrScannerOpen(false);
       navigate("/dashboard", { replace: true });
+      return true;
     } catch (error) {
       toast.error(getActivationErrorMessage(error));
+      return false;
     } finally {
+      activatingRef.current = false;
       setQrLoading(false);
     }
   };
@@ -331,7 +336,7 @@ const Auth = () => {
         const detector = BarcodeDetectorCtor ? new BarcodeDetectorCtor({ formats: ["qr_code"] }) : null;
 
         const scan = async () => {
-          if (cancelled || qrLoading) return;
+          if (cancelled || activatingRef.current) return;
 
           try {
             let rawValue = "";
@@ -356,10 +361,13 @@ const Auth = () => {
             }
 
             if (rawValue) {
-              cancelled = true;
-              stopStream();
-              await activateScannedCode(rawValue);
-              return;
+              const success = await activateScannedCode(rawValue);
+              if (success) {
+                cancelled = true;
+                stopStream();
+                return;
+              }
+              // Activation failed — continue scanning so user can retry
             }
           } catch {
             setQrScannerError("Der QR-Code konnte nicht gelesen werden. Richte die Kamera direkt auf den Code oder gib den Code manuell ein.");

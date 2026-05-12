@@ -157,12 +157,14 @@ export async function validateSession(): Promise<CodeSession | null> {
 
 // ── Logout ───────────────────────────────────────────────────
 export async function logout(session: CodeSession): Promise<void> {
-  await (supabase.rpc as any)("logout_code_session", {
-    p_device_id: session.device_id,
-    p_session_token: session.session_token,
-  });
-
-  clearSession();
+  try {
+    await (supabase.rpc as any)("logout_code_session", {
+      p_device_id: session.device_id,
+      p_session_token: session.session_token,
+    });
+  } finally {
+    clearSession();
+  }
 }
 
 export interface CodeDailyResult {
@@ -357,6 +359,88 @@ export async function resetStudentDeviceAuth(student_id: string): Promise<{ acti
 
 export async function deactivateStudentAuth(student_id: string): Promise<void> {
   const { data, error } = await (supabase.rpc as any)("teacher_deactivate_student_auth", {
+    p_student_id: student_id,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const result = data as Record<string, unknown> | null;
+  if (result?.error) throw new Error(result.error as string);
+}
+
+// ── Code-auth write operations ────────────────────────────────────────────────
+
+type SessionParams = Pick<CodeSession, "device_id" | "session_token">;
+
+export async function addStudent(
+  session: SessionParams,
+  class_id: string,
+  first_name: string,
+): Promise<ActivationResult> {
+  const { data, error } = await (supabase.rpc as any)("teacher_add_student", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+    p_class_id: class_id,
+    p_first_name: first_name.trim(),
+  });
+
+  if (error) throw new Error(error.message);
+
+  const result = data as Record<string, unknown>;
+  if (result.error) throw new Error(result.error as string);
+
+  return {
+    student_id: result.student_id as string,
+    activation_code: result.activation_code as string,
+  };
+}
+
+export async function generateActivationCode(
+  session: SessionParams,
+  student_id: string,
+): Promise<ActivationResult> {
+  const { data, error } = await (supabase.rpc as any)("teacher_generate_student_activation", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+    p_student_id: student_id,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const result = data as Record<string, unknown>;
+  if (result.error) throw new Error(result.error as string);
+
+  return {
+    student_id: result.student_id as string,
+    activation_code: result.activation_code as string,
+  };
+}
+
+export async function resetStudentDevice(
+  session: SessionParams,
+  student_id: string,
+): Promise<{ activation_code?: string }> {
+  const { data, error } = await (supabase.rpc as any)("teacher_reset_student_device", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+    p_student_id: student_id,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const result = data as Record<string, unknown> | null;
+  if (result?.error) throw new Error(result.error as string);
+
+  return { activation_code: result?.activation_code as string | undefined };
+}
+
+export async function deactivateStudent(
+  session: SessionParams,
+  student_id: string,
+): Promise<void> {
+  const { data, error } = await (supabase.rpc as any)("teacher_deactivate_student", {
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
     p_student_id: student_id,
   });
 

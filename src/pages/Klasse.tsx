@@ -155,7 +155,8 @@ const Klasse = () => {
   const studentPointsTotal = studentRankings.reduce((sum, student) => sum + student.points, 0);
   const myClassRanking = classRankings.find((cls) => cls.className === userClass && cls.school === userSchool);
   const classQuestBonusPoints = myClassRanking?.questBonusPoints ?? 0;
-  const highlightedClassPoints = studentPointsTotal + classQuestBonusPoints;
+  const questComplete = classQuestProgress >= classQuestGoal && classQuestGoal > 0;
+  const highlightedClassPoints = studentPointsTotal + (questComplete ? classQuestBonusPoints : 0);
   const classTotalPoints = studentPointsTotal;
   const currentMonth = startOfMonth(new Date());
   const questSlots = Array.from({ length: 5 }, (_, index) => {
@@ -202,7 +203,7 @@ const Klasse = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="mx-auto max-w-screen-xl px-4 pt-3">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
@@ -270,7 +271,7 @@ const Klasse = () => {
                   <p className="mt-1 text-3xl font-black leading-none text-white">
                     {numberFormat.format(highlightedClassPoints)}
                   </p>
-                  {classQuestBonusPoints > 0 && (
+                  {questComplete && classQuestBonusPoints > 0 && (
                     <p className="mt-1 text-[10px] font-black leading-none text-primary">
                       inkl. +{numberFormat.format(classQuestBonusPoints)} Questbonus
                     </p>
@@ -288,26 +289,26 @@ const Klasse = () => {
                   <div
                     key={slot.id}
                     className={`min-h-[5.75rem] min-w-0 border-r border-zinc-200/80 px-2 py-2 ${
-                      slot.complete || index === 0
+                      slot.complete
                         ? "bg-primary text-primary-foreground"
                         : "bg-white text-foreground"
                     }`}
                   >
                     <div className="flex h-full flex-col justify-between">
                       <div>
-                        <p className={`text-[9px] font-black uppercase leading-tight ${slot.complete || index === 0 ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
+                        <p className={`text-[9px] font-black uppercase leading-tight ${slot.complete ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
                           {index === 0 ? "Nächste Quest" : slot.label}
                         </p>
                       </div>
                       <div>
-                        <p className={`text-[10px] font-bold leading-tight ${slot.complete || index === 0 ? "text-primary-foreground" : "text-muted-foreground"}`}>
+                        <p className={`text-[10px] font-bold leading-tight ${slot.complete ? "text-primary-foreground" : "text-muted-foreground"}`}>
                           {slot.startLabel}
                           <br />
                           - {slot.endLabel}
                         </p>
-                        <div className={`mt-1.5 h-1.5 overflow-hidden rounded-full ${slot.complete || index === 0 ? "bg-white/40" : "bg-zinc-200"}`}>
+                        <div className={`mt-1.5 h-1.5 overflow-hidden rounded-full ${slot.complete ? "bg-white/40" : "bg-zinc-200"}`}>
                           <div
-                            className={`h-full rounded-full ${slot.complete || index === 0 ? "bg-white" : "bg-zinc-300"}`}
+                            className={`h-full rounded-full ${slot.complete ? "bg-white" : "bg-primary/60"}`}
                             style={{ width: `${Math.min(100, Math.round((slot.progress / Math.max(slot.goal, 1)) * 100))}%` }}
                             aria-hidden="true"
                           />

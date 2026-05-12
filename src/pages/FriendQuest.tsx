@@ -365,7 +365,7 @@ const FriendQuest = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pb-8 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="mx-auto max-w-screen-xl px-4 pb-8 pt-3">
         <div className="space-y-5">
           <div className="overflow-hidden rounded-[28px] border border-black/5 bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
             <div className="grid min-h-[13.5rem] grid-cols-[minmax(0,1fr)_46%] overflow-hidden bg-[#f6fbf2]">
@@ -393,16 +393,25 @@ const FriendQuest = () => {
 
           <Card className="overflow-hidden rounded-[24px] border border-black/5 bg-white p-4 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
             <Tabs defaultValue="create" className="w-full">
-              <TabsList className="grid h-auto w-full grid-cols-3 rounded-[18px] bg-muted/60 p-1">
-                <TabsTrigger value="create">
+              <TabsList className="grid h-auto w-full grid-cols-3 rounded-[18px] border border-primary/25 bg-primary/8 p-1">
+                <TabsTrigger
+                  value="create"
+                  className="rounded-[14px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_4px_12px_rgba(34,197,94,0.30)]"
+                >
                   <Link className="h-4 w-4 mr-1" />
                   Erstellen
                 </TabsTrigger>
-                <TabsTrigger value="join">
+                <TabsTrigger
+                  value="join"
+                  className="rounded-[14px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_4px_12px_rgba(34,197,94,0.30)]"
+                >
                   <Ticket className="h-4 w-4 mr-1" />
                   Beitreten
                 </TabsTrigger>
-                <TabsTrigger value="mine">
+                <TabsTrigger
+                  value="mine"
+                  className="rounded-[14px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_4px_12px_rgba(34,197,94,0.30)]"
+                >
                   <Users className="h-4 w-4 mr-1" />
                   Meine
                 </TabsTrigger>

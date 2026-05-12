@@ -34,6 +34,7 @@ import { de } from "date-fns/locale";
 import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem, WEEKLY_AVATAR_ITEM_THRESHOLD } from "@/lib/avatarItems";
 import { ONBOARDING_OPEN_EVENT } from "@/lib/onboarding";
 import { formatDisplayName } from "@/lib/formatName";
+import { logoutEverywhereOnDevice } from "@/lib/logout";
 
 interface ProfileData {
   username: string;
@@ -239,8 +240,8 @@ const Profil = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
+    await logoutEverywhereOnDevice();
+    navigate("/auth", { replace: true });
   };
 
   const handleDeleteAccount = async () => {
@@ -263,7 +264,7 @@ const Profil = () => {
         window.localStorage.removeItem(`weekly_video_rewards_${currentUserId}`);
       }
 
-      await supabase.auth.signOut();
+      await logoutEverywhereOnDevice();
       toast.success("Dein Konto wurde gelöscht.");
       navigate("/auth", { replace: true });
     } catch (error: any) {
@@ -326,7 +327,7 @@ const Profil = () => {
     return (
       <div className="min-h-screen bg-background pb-nav-safe">
         <div className="mx-auto max-w-screen-xl space-y-4 px-4">
-          <div className="pt-[calc(env(safe-area-inset-top)+1rem)]" />
+          <div className="pt-4" />
           <Skeleton className="h-32 w-full rounded-[28px]" />
           <Skeleton className="h-32 w-full rounded-[28px]" />
           <Skeleton className="h-40 w-full rounded-[28px]" />
@@ -338,7 +339,7 @@ const Profil = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="mx-auto max-w-screen-xl px-4 pt-3">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white text-zinc-950 shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDisplayName } from "@/lib/formatName";
 import { toast } from "sonner";
-import flashAvatarImg from "@/assets/volt-90-plus.png";
+import flashAvatarImg from "@/assets/quest-class-avatar.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
 
 type ClassQuestProgressRow = {
@@ -102,7 +102,7 @@ const ClassQuest = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-[640px] px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="mx-auto max-w-[640px] px-4 pt-3">
         {loading ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -164,6 +164,20 @@ const ClassQuest = () => {
                   Gemeinsam als Klasse sammeln.{" "}
                   Jede eingetragene Kniebeuge zählt automatisch dazu.
                 </p>
+              </div>
+
+              <div className="relative z-10 mx-4 mt-4 flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-yellow-200/80 bg-white/92 px-4 py-2.5 text-left shadow-[0_12px_26px_rgba(22,198,83,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-300 text-yellow-950 shadow-[0_5px_12px_rgba(250,204,21,0.35)]">
+                  <Zap className="h-5 w-5 fill-current" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                    Bei Zielerreichung
+                  </span>
+                  <span className="block text-sm font-black leading-tight text-foreground">
+                    +{numberFormat.format(CLASS_QUEST_REWARD_POINTS)} Blitze fürs Klassenranking
+                  </span>
+                </span>
               </div>
 
               {/* Progress card inside hero */}

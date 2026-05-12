@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import weeklyAvatarImg from "@/assets/quest-weekly-bike-avatar.png";
 import classAvatarImg from "@/assets/quest-class-avatar.png";
-import friendAvatarImg from "@/assets/friendquest1.svg";
+import friendAvatarImg from "@/assets/quest-friend-emoji.svg";
 import tryitAvatarImg from "@/assets/quest-tryit-football-avatar.png";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
@@ -25,6 +25,7 @@ type QuestCard = {
   imgClass?: string;
   shadowClass?: string;
   groundClass?: string;
+  containerClass?: string;
 };
 
 const Blitz3D = () => (
@@ -48,7 +49,7 @@ const RewardDisplay = ({ reward }: { reward: string }) => {
 };
 
 const QuestAvatar = ({ quest }: { quest: QuestCard }) => (
-  <div className={`relative flex h-36 items-center justify-center overflow-hidden px-2 py-2 ${quest.bgClass ?? "bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.58)_34%,transparent_66%),linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
+  <div className={`relative flex items-center justify-center overflow-hidden px-2 py-2 ${quest.containerClass ?? "h-36"} ${quest.bgClass ?? "bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.58)_34%,transparent_66%),linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
     <div className="absolute inset-x-0 bottom-0 h-14 bg-[linear-gradient(to_top,rgba(34,197,94,0.42)_0%,rgba(74,222,128,0.18)_55%,transparent_100%)]" />
     <div className="absolute bottom-3 h-7 w-[72%] rounded-full bg-black/18 blur-xl" />
     <div className="absolute bottom-5 h-3 w-[56%] rounded-full bg-black/14 blur-md" />
@@ -97,7 +98,7 @@ const quests: QuestCard[] = [
     meta: "Gemeinsam spielen",
     image: friendAvatarImg,
     icon: Users,
-    imgClass: "relative z-10 max-h-[116%] w-auto max-w-[108%] object-contain object-bottom mix-blend-multiply saturate-[1.08] contrast-[1.04]",
+    imgClass: "relative z-10 h-full w-auto mx-auto saturate-[1.1] contrast-[1.05]",
   },
   {
     id: "tryit",
@@ -153,7 +154,7 @@ const Quests = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pb-8 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      <div className="mx-auto max-w-screen-xl px-4 pb-8 pt-3">
         {loading ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-52 rounded-xl" />
