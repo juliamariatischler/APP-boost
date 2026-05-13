@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,12 +58,7 @@ const challengeData: Record<string, { title: string; image: string; description:
   },
 };
 
-// Placeholder station data – update lat/lng with real coordinates before deploying
-const SCHATZSUCHE_STATIONS = [
-  { id: "station_1", label: "Station 1", lat: 46.8523, lng: 15.8726 },
-  { id: "station_2", label: "Station 2", lat: 46.8531, lng: 15.8740 },
-  { id: "station_3", label: "Station 3", lat: 46.8518, lng: 15.8752 },
-] as const;
+const SCHATZSUCHE_STATIONS: ReadonlyArray<{ id: string; label: string; lat: number; lng: number }> = [];
 
 const Blitz3D = ({ className = "" }: { className?: string }) => (
   <span className={`relative inline-flex shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(145deg,#baff76_0%,#61dc70_46%,#22a64a_100%)] text-white shadow-[0_9px_14px_rgba(31,224,102,0.34),0_3px_0_rgba(20,120,52,0.28),inset_0_2px_2px_rgba(255,255,255,0.68),inset_0_-3px_5px_rgba(0,0,0,0.18)] ${className}`}>
@@ -119,14 +115,27 @@ const TrackPlaceholder = () => (
 const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [userId, setUserId] = useState<string | null>(null);
   const [completedStations, setCompletedStations] = useState<Set<string>>(new Set());
   const [scanningStation, setScanningStation] = useState<string | null>(null);
   const [showScanSection, setShowScanSection] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (codeAuthLoading) return;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (codeSession?.user_type === "student") {
+          setUserId(codeSession.user_id);
+          return;
+        }
+        navigate("/auth");
+        return;
+      }
+      setUserId(session.user.id);
+    })();
+  }, [navigate, codeSession, codeAuthLoading]);
 
   useEffect(() => {
     if (!userId || id !== "weekly") return;
@@ -139,12 +148,6 @@ const ChallengeDetail = () => {
     };
     void load();
   }, [userId, id]);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { navigate("/auth"); return; }
-    setUserId(session.user.id);
-  };
 
   const openInMaps = (lat: number, lng: number, label: string) => {
     const url =
@@ -265,31 +268,26 @@ const ChallengeDetail = () => {
                       <Search className="h-4 w-4 text-sky-500" />
                       Versteck finden
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowScanSection((v) => !v)}
-                      className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                        showScanSection
-                          ? "bg-sky-500 text-white shadow-[0_4px_12px_rgba(14,165,233,0.28)]"
-                          : "bg-[#f3f8ff] text-foreground"
-                      }`}
-                    >
-                      <Nfc className={`h-4 w-4 shrink-0 ${showScanSection ? "text-white" : "text-sky-500"}`} />
-                      <span className="flex-1">Station scannen</span>
-                      <ChevronDown
-                        className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                          showScanSection ? "rotate-180 text-white" : "text-sky-400"
+                    {SCHATZSUCHE_STATIONS.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowScanSection((v) => !v)}
+                        className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                          showScanSection
+                            ? "bg-sky-500 text-white shadow-[0_4px_12px_rgba(14,165,233,0.28)]"
+                            : "bg-[#f3f8ff] text-foreground"
                         }`}
-                      />
-                    </button>
+                      >
+                        <Nfc className={`h-4 w-4 shrink-0 ${showScanSection ? "text-white" : "text-sky-500"}`} />
+                        <span className="flex-1">Station scannen</span>
+                        <ChevronDown
+                          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                            showScanSection ? "rotate-180 text-white" : "text-sky-400"
+                          }`}
+                        />
+                      </button>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/challenge/weekly/geotracking")}
-                    className="mt-5 text-sm font-black text-primary"
-                  >
-                    Jetzt starten →
-                  </button>
                 </div>
                 <div className="relative overflow-hidden">
                   <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-600">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Sparkles, Users, Zap } from "lucide-react";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -115,17 +116,23 @@ const quests: QuestCard[] = [
 
 const Quests = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
 
   useEffect(() => {
     const loadProfile = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
+        if (codeAuthLoading) return;
+        if (codeSession?.user_type === "student") {
+          setUserId(codeSession.user_id);
+          setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+          setLoading(false);
+          return;
+        }
         navigate("/");
         return;
       }
@@ -135,7 +142,7 @@ const Quests = () => {
     };
 
     void loadProfile();
-  }, [navigate]);
+  }, [navigate, codeSession, codeAuthLoading]);
 
   useEffect(() => {
     if (!userId) return;

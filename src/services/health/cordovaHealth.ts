@@ -17,6 +17,15 @@ export const callCordovaHealth = <T = unknown>(method: CordovaHealthMethod, ...a
       return;
     }
 
-    fn.apply(plugin, [...args, resolve, reject]);
+    const timeout = window.setTimeout(() => {
+      reject("plugin_timeout");
+    }, 20000);
+
+    const finish = (callback: (value?: unknown) => void) => (value?: unknown) => {
+      window.clearTimeout(timeout);
+      callback(value);
+    };
+
+    fn.apply(plugin, [...args, finish(resolve as (value?: unknown) => void), finish(reject)]);
   });
 };

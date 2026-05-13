@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { BottomNav } from "@/components/BottomNav";
 import { TopHeader } from "@/components/TopHeader";
 import { StreakCard } from "@/components/boost/StreakCard";
@@ -16,6 +17,7 @@ import { Zap, Trophy, School } from "lucide-react";
 
 const Boost = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [userId, setUserId] = useState<string | null>(null);
   const [userClass, setUserClass] = useState("");
   const [userSchool, setUserSchool] = useState("");
@@ -25,8 +27,19 @@ const Boost = () => {
 
   useEffect(() => {
     const init = async () => {
+      if (codeAuthLoading) return;
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/"); return; }
+      if (!session) {
+        if (codeSession?.user_type === "student") {
+          setUserId(codeSession.user_id);
+          setUserClass(codeSession.class_name || "");
+          setUserSchool(codeSession.school_name || "");
+          setAuthLoading(false);
+          return;
+        }
+        navigate("/");
+        return;
+      }
 
       setUserId(session.user.id);
 
@@ -42,8 +55,8 @@ const Boost = () => {
       }
       setAuthLoading(false);
     };
-    init();
-  }, [navigate]);
+    void init();
+  }, [navigate, codeSession, codeAuthLoading]);
 
   if (authLoading || gamification.loading) {
     return (

@@ -54,6 +54,7 @@ export class IOSHealthProvider implements HealthProvider {
         startDate: today,
         endDate: now,
         dataType: 'steps',
+        filterOutUserInput: true,
       });
       console.log('iOS HealthKit aggregated steps result:', aggregated);
       const aggregatedSteps = normalizeSteps(aggregated);
@@ -64,6 +65,7 @@ export class IOSHealthProvider implements HealthProvider {
         endDate: now,
         dataType: 'steps',
         limit: 1000,
+        filterOutUserInput: true,
       });
       console.log('iOS HealthKit raw steps result:', result);
       return normalizeSteps(result);

@@ -9,10 +9,12 @@ CREATE TABLE IF NOT EXISTS public.station_scans (
 
 ALTER TABLE public.station_scans ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can insert own scans" ON public.station_scans;
 CREATE POLICY "Users can insert own scans" ON public.station_scans
   FOR INSERT TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view own scans" ON public.station_scans;
 CREATE POLICY "Users can view own scans" ON public.station_scans
   FOR SELECT TO authenticated
   USING (auth.uid() = user_id);

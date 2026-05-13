@@ -4,14 +4,13 @@ import { Loader2, QrCode, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useCodeAuth } from "@/contexts/CodeAuthContext";
+import { activateQrAsSupabaseUser } from "@/services/codeAuthService";
 
 const normalizeCode = (value: string) => value.replace(/\s+/g, "").toUpperCase();
 
 export default function Activate() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activate } = useCodeAuth();
   const [hasQrCode] = useState(() => Boolean(normalizeCode(searchParams.get("code") || "")));
   const [submitting, setSubmitting] = useState(false);
 
@@ -24,10 +23,7 @@ export default function Activate() {
 
     setSubmitting(true);
     try {
-      const session = await activate(normalized);
-      if (session.user_type !== "student") {
-        throw new Error("Dieser Code ist kein Schülerzugang.");
-      }
+      await activateQrAsSupabaseUser(normalized);
       toast.success("Profil aktiviert.");
       navigate("/dashboard", { replace: true });
     } catch (error) {

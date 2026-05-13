@@ -41,6 +41,7 @@ GRANT EXECUTE ON FUNCTION public.is_demo_profile(uuid) TO authenticated;
 -- Profiles: demo users may only read the demo class; normal users keep
 -- existing own-profile/admin access and can discover classmates.
 DROP POLICY IF EXISTS "Authenticated users can view basic profile info" ON public.profiles;
+DROP POLICY IF EXISTS "Authenticated users can view scoped profile info" ON public.profiles;
 CREATE POLICY "Authenticated users can view scoped profile info"
 ON public.profiles
 FOR SELECT

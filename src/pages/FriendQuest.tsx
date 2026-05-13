@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCodeAuth } from '@/contexts/CodeAuthContext';
 import {
   Check,
   CheckCircle2,
@@ -89,6 +90,7 @@ const GENERIC_CODE_ERROR = 'Der Code ist leider ungültig oder abgelaufen.';
 
 const FriendQuest = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
   const [challengeForStart, setChallengeForStart] = useState<Record<string, Challenge | null>>({});
@@ -105,22 +107,25 @@ const FriendQuest = () => {
   const [activeBattle, setActiveBattle] = useState<ActiveBattle | null>(null);
 
   useEffect(() => {
-    void checkAuth();
-  }, []);
+    if (codeAuthLoading) return;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (codeSession?.user_type === 'student') {
+          setUserId(codeSession.user_id);
+          return;
+        }
+        navigate('/auth');
+        return;
+      }
+      setUserId(session.user.id);
+    })();
+  }, [navigate, codeSession, codeAuthLoading]);
 
   useEffect(() => {
     if (!userId) return;
     void loadMine();
   }, [userId]);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/auth');
-      return;
-    }
-    setUserId(session.user.id);
-  };
 
   const loadMine = async () => {
     setIsLoadingMine(true);

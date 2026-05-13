@@ -88,6 +88,17 @@ type StudentRank = {
 };
 
 const STREAK_THRESHOLD = 90;
+const ACTIVE_PROGRESS_THRESHOLD = 0;
+
+const getStudentProgressIds = (student: ClassStudent) =>
+  Array.from(new Set([
+    student.progress_user_id,
+    student.auth_user_id,
+    student.student_id,
+  ].filter(Boolean) as string[]));
+
+const getPrimaryProgressId = (student: ClassStudent) =>
+  student.progress_user_id || student.auth_user_id || student.student_id;
 
 function getDayProgress(row: DailyRow): number {
   const steps = row.steps_tracking_active ? Number(row.steps || 0) : 0;
@@ -272,7 +283,7 @@ export default function TeacherHome() {
       const weekEndStr = format(weekEnd, "yyyy-MM-dd");
       const todayStr = format(today, "yyyy-MM-dd");
       const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
-      const studentIds = students.map((s) => s.student_id);
+      const studentIds = Array.from(new Set(students.flatMap(getStudentProgressIds)));
 
       const { data: rows, error } = await supabase
         .from("daily_results")
@@ -292,13 +303,14 @@ export default function TeacherHome() {
       // Inject synthetic data for the demo student: 100% on past days, ~83% today
       const demoStudent = students.find((s) => s.display_name === DEMO_STUDENT_DISPLAY_NAME);
       if (demoStudent) {
+        const demoProgressId = getPrimaryProgressId(demoStudent);
         const pastDays = daysOfWeek.filter((d) => d <= today);
         for (const day of pastDays) {
           const dateStr = format(day, "yyyy-MM-dd");
-          if (!allRows.some((r) => r.user_id === demoStudent.student_id && r.date === dateStr)) {
+          if (!allRows.some((r) => getStudentProgressIds(demoStudent).includes(r.user_id) && r.date === dateStr)) {
             const isToday = dateStr === todayStr;
             allRows.push({
-              user_id: demoStudent.student_id,
+              user_id: demoProgressId,
               date: dateStr,
               push_ups: 10,
               squats: 10,
@@ -312,16 +324,9 @@ export default function TeacherHome() {
         }
       }
 
-      // Group by student
-      const byStudent = new Map<string, DailyRow[]>();
-      for (const r of allRows) {
-        const list = byStudent.get(r.user_id) ?? [];
-        list.push(r);
-        byStudent.set(r.user_id, list);
-      }
-
       const stats: StudentStat[] = students.map((s) => {
-        const sRows = byStudent.get(s.student_id) ?? [];
+        const progressIds = new Set(getStudentProgressIds(s));
+        const sRows = allRows.filter((r) => progressIds.has(r.user_id));
         const todayRow = sRows.find((r) => r.date === todayStr);
         const todayPercent = todayRow ? getDayProgress(todayRow) : 0;
         const weekActiveDays = sRows.filter((r) => getDayProgress(r) > STREAK_THRESHOLD).length;
@@ -332,8 +337,10 @@ export default function TeacherHome() {
 
       const days: DayStat[] = daysOfWeek.map((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
-        const dayRows = allRows.filter((r) => r.date === dateStr);
-        const activeCount = dayRows.filter((r) => getDayProgress(r) > STREAK_THRESHOLD).length;
+        const activeCount = students.filter((s) => {
+          const progressIds = new Set(getStudentProgressIds(s));
+          return allRows.some((r) => r.date === dateStr && progressIds.has(r.user_id) && getDayProgress(r) > STREAK_THRESHOLD);
+        }).length;
         return {
           date: dateStr,
           label: format(day, "EEE", { locale: de }),
@@ -368,7 +375,7 @@ export default function TeacherHome() {
   const loadRanking = async () => {
     setRankingLoading(true);
     try {
-      const studentIds = students.map((s) => s.student_id);
+      const studentIds = Array.from(new Set(students.flatMap(getStudentProgressIds)));
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, points")
@@ -385,7 +392,7 @@ export default function TeacherHome() {
       const rankMap = new Map(data.map((p: { id: string; username: string; points: number }) => [p.id, p]));
       const ranks: StudentRank[] = students
         .map((s) => {
-          const profile = rankMap.get(s.student_id);
+          const profile = rankMap.get(getPrimaryProgressId(s)) || rankMap.get(s.student_id);
           return {
             id: s.student_id,
             name: profile?.username || s.display_name,
@@ -841,9 +848,9 @@ export default function TeacherHome() {
       );
     }
 
-    const todayStats = dayStats.find((d) => d.date === todayStr);
-    const todayPct = todayStats && todayStats.totalCount > 0
-      ? Math.round((todayStats.activeCount / todayStats.totalCount) * 100)
+    const todayActiveCount = studentStats.filter((s) => s.todayPercent > ACTIVE_PROGRESS_THRESHOLD).length;
+    const todayPct = students.length > 0
+      ? Math.round((todayActiveCount / students.length) * 100)
       : 0;
     const weekPct = students.length > 0 && studentStats.length > 0
       ? Math.round(studentStats.reduce((s, x) => s + x.weekActiveDays, 0) / (students.length * 5) * 100)
@@ -859,7 +866,7 @@ export default function TeacherHome() {
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Heute aktiv</p>
             <p className="mt-1 text-3xl font-black text-foreground">{todayPct}%</p>
             <p className="text-xs font-semibold text-muted-foreground">
-              {todayStats?.activeCount ?? 0} von {students.length} Schüler:innen
+              {todayActiveCount} von {students.length} Schüler:innen
             </p>
           </Card>
           <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronRight, GraduationCap, Trophy, Zap } from "lucide-react";
@@ -40,6 +41,7 @@ const numberFormat = new Intl.NumberFormat("de-AT");
 
 const Klasse = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [userClass, setUserClass] = useState("");
   const [userSchool, setUserSchool] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -49,13 +51,30 @@ const Klasse = () => {
   const [classQuestGoal, setClassQuestGoal] = useState(1000);
   const [loading, setLoading] = useState(true);
   const [showAllRankings, setShowAllRankings] = useState(false);
+  const [showAllStudents, setShowAllStudents] = useState(false);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
 
   useEffect(() => {
     const init = async () => {
+      if (codeAuthLoading) return;
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { navigate("/"); return; }
+        if (!session) {
+          if (codeSession?.user_type === "student") {
+            setUserId(codeSession.user_id);
+            setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+            setUserClass(codeSession.class_name || "");
+            setUserSchool(codeSession.school_name || "");
+            await Promise.all([
+              loadClassRankings(),
+              loadCodeClassQuestProgress(codeSession.device_id, codeSession.session_token),
+              loadCodeClassStudentRankings(codeSession.device_id, codeSession.session_token),
+            ]);
+            return;
+          }
+          navigate("/");
+          return;
+        }
         setUserId(session.user.id);
         setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
 
@@ -69,7 +88,7 @@ const Klasse = () => {
           setUserClass(profile.class || "");
           setUserSchool(profile.school || "");
           await Promise.all([
-            loadStudentRankings(profile.class, profile.school),
+            loadStudentRankings(),
             loadClassRankings(),
             loadClassQuestProgress(),
           ]);
@@ -82,7 +101,7 @@ const Klasse = () => {
     };
 
     void init();
-  }, [navigate]);
+  }, [navigate, codeSession, codeAuthLoading]);
 
   useEffect(() => {
     if (!userId) return;
@@ -99,15 +118,36 @@ const Klasse = () => {
     };
   }, [userId]);
 
-  const loadStudentRankings = async (cls: string, school: string) => {
-    if (!cls || !school) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, username, points")
-      .eq("class", cls)
-      .eq("school", school)
-      .order("points", { ascending: false });
-    if (data) setStudentRankings(data);
+  const loadStudentRankings = async () => {
+    const { data, error } = await (supabase.rpc as any)("get_my_class_student_rankings");
+    if (error || !data) return;
+
+    const result = data as StudentRanking[] | { error?: string };
+    if (!Array.isArray(result)) return;
+    setStudentRankings(result);
+  };
+
+  const loadCodeClassStudentRankings = async (deviceId: string, sessionToken: string) => {
+    const { data, error } = await (supabase.rpc as any)("get_code_class_student_rankings", {
+      p_device_id: deviceId,
+      p_session_token: sessionToken,
+    });
+    if (error || !data) return;
+    const rows = Array.isArray(data) ? data : [];
+    setStudentRankings(rows as StudentRanking[]);
+  };
+
+  const loadCodeClassQuestProgress = async (deviceId: string, sessionToken: string) => {
+    const { data, error } = await (supabase.rpc as any)("get_code_class_quest_progress", {
+      p_device_id: deviceId,
+      p_session_token: sessionToken,
+      p_month_start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+    });
+    if (error || !data) return;
+    const result = data as Record<string, unknown>;
+    if (result.error) return;
+    setClassQuestTotal(Number(result.class_total || 0));
+    setClassQuestGoal(Number(result.goal || 1000));
   };
 
   const loadClassRankings = async () => {
@@ -341,7 +381,11 @@ const Klasse = () => {
 
           {!loading && studentRankings.length > 0 && (
             <div className="space-y-4">
-                <div className="overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+                <button
+                  type="button"
+                  onClick={() => setShowAllStudents(true)}
+                  className="block w-full overflow-hidden rounded-[24px] border border-black/5 bg-white text-left shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)] transition active:scale-[0.99]"
+                >
                   <div className="grid" style={{ gridTemplateColumns: "47.5% 52.5%" }}>
                   <div className="flex flex-col justify-center p-4">
                     <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary shadow-[0_8px_16px_rgba(31,224,102,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]">
@@ -385,7 +429,7 @@ const Klasse = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+                </button>
 
               <div className="mb-6 overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
                 <div className="grid min-h-[300px]" style={{ gridTemplateColumns: "47.5% 52.5%" }}>
@@ -436,6 +480,54 @@ const Klasse = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={showAllStudents} onOpenChange={setShowAllStudents}>
+        <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-[28px] border border-black/5 bg-background p-0 shadow-[0_24px_64px_rgba(0,0,0,0.18)]">
+          <div className="rounded-[28px] border border-black/5 bg-white p-5 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <DialogHeader className="mb-4 text-left">
+              <div className="pr-10">
+                <DialogTitle className="text-xl font-black text-foreground">Meine Klasse</DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  {userClass} • {studentRankings.length} Schüler:innen
+                </p>
+              </div>
+            </DialogHeader>
+
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+              {studentRankings.map((student, index) => {
+                const isCurrentUser = student.id === userId;
+                return (
+                  <div
+                    key={`student-${student.id}`}
+                    className={`flex items-center gap-3 rounded-[20px] border px-4 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)] ${
+                      isCurrentUser ? "border-primary bg-primary/10" : "border-black/5 bg-white"
+                    }`}
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-black text-muted-foreground">
+                      #{index + 1}
+                    </div>
+                    {renderStudentAvatar(student)}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-foreground">
+                        {formatDisplayName(student.username)}
+                        {isCurrentUser && (
+                          <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-black uppercase text-primary-foreground">
+                            Du
+                          </span>
+                        )}
+                      </p>
+                      <p className="flex items-center gap-1 text-xs font-bold text-primary">
+                        {numberFormat.format(student.points)}
+                        <Zap className="h-3 w-3 fill-current" />
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAllRankings} onOpenChange={setShowAllRankings}>
         <DialogContent className="w-[calc(100%-2rem)] max-w-xl rounded-[28px] border border-black/5 bg-background p-0 shadow-[0_24px_64px_rgba(0,0,0,0.18)]">

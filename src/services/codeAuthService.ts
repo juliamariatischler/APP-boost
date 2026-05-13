@@ -17,6 +17,26 @@ export interface CodeSession {
   school_name?: string;
 }
 
+export interface QrRegistrationContext {
+  student_id: string;
+  display_name: string;
+  first_name: string;
+  class_id: string;
+  class_name: string;
+  school_name: string;
+  email: string;
+}
+
+export interface QrRegistrationResult {
+  user_type: "student";
+  user_id: string;
+  student_id: string;
+  display_name: string;
+  class_id: string;
+  class_name: string;
+  school_name: string;
+}
+
 const SESSION_KEY = "boost:code_session";
 const DEVICE_KEY  = "boost:device_id";
 
@@ -91,6 +111,7 @@ export async function activateWithQrCode(code: string): Promise<CodeSession> {
   if (error) throw new Error(error.message);
 
   const result = data as Record<string, unknown>;
+  if (!result) throw new Error('Keine Antwort vom Server');
   if (result.error) throw new Error(result.error as string);
 
   const session: CodeSession = {
@@ -109,6 +130,82 @@ export async function activateWithQrCode(code: string): Promise<CodeSession> {
 
   saveSession(session);
   return session;
+}
+
+const normalizeQrCode = (code: string) => code.trim().toUpperCase();
+
+const getQrAccountPassword = (code: string, studentId: string) =>
+  `Boost-${normalizeQrCode(code)}-${studentId.slice(0, 8)}!`;
+
+export async function activateQrAsSupabaseUser(code: string): Promise<QrRegistrationResult> {
+  const normalizedCode = normalizeQrCode(code);
+  const device_id = getOrCreateDeviceId();
+
+  const { data: contextData, error: contextError } = await (supabase.rpc as any)(
+    "prepare_student_qr_registration",
+    { p_code: normalizedCode }
+  );
+
+  if (contextError) throw new Error(contextError.message);
+
+  const context = contextData as QrRegistrationContext & { error?: string };
+  if (!context) throw new Error("Keine Antwort vom Server");
+  if (context.error) throw new Error(context.error);
+
+  const password = getQrAccountPassword(normalizedCode, context.student_id);
+
+  clearSession();
+  await supabase.auth.signOut();
+
+  const signUpResult = await supabase.auth.signUp({
+    email: context.email,
+    password,
+    options: {
+      data: {
+        username: context.display_name,
+        school: context.school_name,
+        class: context.class_name,
+        age: 10,
+        account_type: "student",
+      },
+    },
+  });
+
+  if (signUpResult.error) {
+    const message = signUpResult.error.message.toLowerCase();
+    if (!message.includes("already") && !message.includes("registered")) {
+      throw signUpResult.error;
+    }
+  }
+
+  const currentSession = (await supabase.auth.getSession()).data.session;
+  if (!currentSession) {
+    const signInResult = await supabase.auth.signInWithPassword({
+      email: context.email,
+      password,
+    });
+
+    if (signInResult.error || !signInResult.data.session) {
+      throw signInResult.error ?? new Error("QR-Konto konnte nicht angemeldet werden.");
+    }
+  }
+
+  const { data: completionData, error: completionError } = await (supabase.rpc as any)(
+    "complete_student_qr_registration",
+    {
+      p_code: normalizedCode,
+      p_device_id: device_id,
+    }
+  );
+
+  if (completionError) throw new Error(completionError.message);
+
+  const result = completionData as QrRegistrationResult & { error?: string };
+  if (!result) throw new Error("Keine Antwort vom Server");
+  if (result.error) throw new Error(result.error);
+
+  clearSession();
+  return result;
 }
 
 // ── Validate existing session ────────────────────────────────
@@ -255,6 +352,8 @@ export async function getTeacherClasses(session: Pick<CodeSession, "device_id" |
 
 export interface ClassStudent {
   student_id: string;
+  auth_user_id?: string | null;
+  progress_user_id?: string | null;
   display_name: string;
   first_name: string;
   points?: number;

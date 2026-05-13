@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { Zap, Lock, CheckCircle, Users, User, Calendar, Swords, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,6 +68,7 @@ const fallbackMilestones: ClassMilestone[] = [
 
 const Rewards = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [activeCategory, setActiveCategory] = useState("alle");
   const [myFlashes, setMyFlashes] = useState(0);
   const [classFlashes, setClassFlashes] = useState(0);
@@ -77,15 +79,39 @@ const Rewards = () => {
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRewardsData();
-  }, []);
+    void loadRewardsData();
+  }, [codeSession, codeAuthLoading]);
 
   const loadRewardsData = async () => {
+    if (codeAuthLoading) return;
     setLoading(true);
     const { data: authData } = await supabase.auth.getSession();
     const uid = authData.session?.user?.id;
     const email = authData.session?.user?.email;
+
     if (!uid) {
+      if (codeSession?.user_type === "student") {
+        setUserId(codeSession.user_id);
+        setMyFlashes(codeSession.points ?? 0);
+        const [{ data: rewardRows, error: rewardsError }, { data: milestoneRows, error: milestonesError }] =
+          await Promise.all([
+            (supabase as any)
+              .from("reward_items")
+              .select("id, title, partner, threshold, category, icon")
+              .eq("is_active", true)
+              .order("threshold", { ascending: true }),
+            (supabase as any)
+              .from("class_milestones")
+              .select("id, threshold, title, description, icon, sort_order")
+              .eq("is_active", true)
+              .order("sort_order", { ascending: true })
+              .order("threshold", { ascending: true }),
+          ]);
+        setRewards(rewardsError ? fallbackRewards : (((rewardRows || []) as RewardItem[]).filter((r) => r.threshold > 0).length > 0 ? ((rewardRows || []) as RewardItem[]).filter((r) => r.threshold > 0) : fallbackRewards));
+        setMilestones(milestonesError ? fallbackMilestones : (((milestoneRows || []) as ClassMilestone[]).filter((m) => m.threshold > 0).length > 0 ? ((milestoneRows || []) as ClassMilestone[]).filter((m) => m.threshold > 0) : fallbackMilestones));
+        setLoading(false);
+        return;
+      }
       navigate("/auth");
       return;
     }
@@ -149,6 +175,13 @@ const Rewards = () => {
 
   const handleRedeem = async (rewardId: string) => {
     if (!userId) return;
+
+    const { data: authData } = await supabase.auth.getSession();
+    if (!authData.session) {
+      toast.error("Belohnungen können nur mit einem vollständigen Konto angefordert werden.");
+      return;
+    }
+
     setRedeemingId(rewardId);
 
     const { error } = await (supabase.rpc as any)("request_reward_redemption", {

@@ -4,23 +4,28 @@ import { BottomNav } from "@/components/BottomNav";
 import { TopHeader } from "@/components/TopHeader";
 import { WeekOverview } from "@/components/WeekOverview";
 import { supabase } from "@/integrations/supabase/client";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 
 const Activity = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-    setUserId(session.user.id);
-  };
+    if (codeAuthLoading) return;
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (codeSession?.user_type === "student") {
+          setUserId(codeSession.user_id);
+          return;
+        }
+        navigate("/auth");
+        return;
+      }
+      setUserId(session.user.id);
+    })();
+  }, [navigate, codeSession, codeAuthLoading]);
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { Award, Check, ChevronRight, HeartPulse, Lock, LogOut, MessageSquare, Scale, Send, Settings2, ShieldCheck, Star, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import {
@@ -49,6 +50,7 @@ type HealthSyncInfo = {
 const Profil = () => {
   const INITIAL_VISIBLE_AVATAR_ITEMS = 3;
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingHealth, setCheckingHealth] = useState(true);
@@ -68,12 +70,22 @@ const Profil = () => {
 
   useEffect(() => {
     const init = async () => {
+      if (codeAuthLoading) return;
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
         if (!session) {
+          if (codeSession?.user_type === "student") {
+            setUserId(codeSession.user_id);
+            setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+            setProfile({ username: codeSession.display_name || "Spieler" });
+            setHealthAvailable(false);
+            setCheckingHealth(false);
+            setLoading(false);
+            return;
+          }
           navigate("/");
           return;
         }
@@ -110,7 +122,7 @@ const Profil = () => {
     };
 
     void init();
-  }, [navigate]);
+  }, [navigate, codeSession, codeAuthLoading]);
 
   const loadWeeklyBlitze = async (uid: string) => {
     const today = new Date();

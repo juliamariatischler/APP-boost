@@ -12,6 +12,7 @@ import { formatDisplayName } from "@/lib/formatName";
 import { toast } from "sonner";
 import flashAvatarImg from "@/assets/quest-class-avatar.png";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 
 type ClassQuestProgressRow = {
   student_id: string;
@@ -27,13 +28,6 @@ type ClassQuestProgressRow = {
 const numberFormat = new Intl.NumberFormat("de-AT");
 const CLASS_QUEST_REWARD_POINTS = 2000;
 
-const getInitials = (name: string) => {
-  const cleanName = formatDisplayName(name);
-  if (!cleanName) return "?";
-  const parts = cleanName.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-};
 
 const getClassLabel = (className?: string | null) => {
   if (!className) return "Deine Klasse";
@@ -42,6 +36,7 @@ const getClassLabel = (className?: string | null) => {
 
 const ClassQuest = () => {
   const navigate = useNavigate();
+  const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ClassQuestProgressRow[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -53,11 +48,32 @@ const ClassQuest = () => {
 
   useEffect(() => {
     const loadClassQuest = async () => {
+      if (codeAuthLoading) return;
       setLoading(true);
       setErrorMessage(null);
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/"); return; }
+      if (!session) {
+        if (codeSession?.user_type === "student") {
+          setCurrentUserId(codeSession.user_id);
+          setEquippedItem(loadEquippedAvatarItem(codeSession.user_id));
+
+          const { data: codeData, error: codeError } = await (supabase.rpc as any)("get_code_class_quest_progress", {
+            p_device_id: codeSession.device_id,
+            p_session_token: codeSession.session_token,
+            p_month_start: monthStart,
+          });
+          if (!codeError && codeData && !codeData.error) {
+            const result = codeData as Record<string, unknown>;
+            const codeRows = (result.rows as ClassQuestProgressRow[]) ?? [];
+            setRows(codeRows);
+          }
+          setLoading(false);
+          return;
+        }
+        navigate("/");
+        return;
+      }
       setCurrentUserId(session.user.id);
       setEquippedItem(loadEquippedAvatarItem(session.user.id));
 
@@ -90,7 +106,7 @@ const ClassQuest = () => {
     };
 
     void loadClassQuest();
-  }, [monthStart, navigate]);
+  }, [monthStart, navigate, codeSession, codeAuthLoading]);
 
   const goal = rows[0]?.goal ?? 1000;
   const classTotal = rows[0]?.class_total ?? 0;

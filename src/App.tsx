@@ -32,7 +32,6 @@ const Legal = lazy(() => import("./pages/Legal"));
 const Settings = lazy(() => import("./pages/Settings"));
 const FriendQuest = lazy(() => import("./pages/FriendQuest"));
 const WeeklyAthleteChallenge = lazy(() => import("./pages/WeeklyAthleteChallenge"));
-const WeeklyGeoTracking = lazy(() => import("./pages/WeeklyGeoTracking"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -124,7 +123,6 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/challenge/friend" element={<FriendQuest />} />
                 <Route path="/challenge/weekly/athlete" element={<WeeklyAthleteChallenge />} />
-                <Route path="/challenge/weekly/geotracking" element={<WeeklyGeoTracking />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

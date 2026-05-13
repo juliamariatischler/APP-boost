@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS public.delete_my_account();
+
 CREATE OR REPLACE FUNCTION public.delete_my_account()
 RETURNS void
 LANGUAGE plpgsql

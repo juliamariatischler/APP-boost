@@ -20,7 +20,7 @@ import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
 import { DEMO_MIN_POINTS } from "@/lib/demo";
 import { getCurrentAppRole, routeForRole } from "@/lib/roles";
-import { useCodeAuth } from "@/contexts/CodeAuthContext";
+import { activateQrAsSupabaseUser } from "@/services/codeAuthService";
 import jsQR from "jsqr";
 
 const REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY = "boost:get_registered_schools_unavailable";
@@ -72,7 +72,6 @@ const signupSchema = z.object({
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activate } = useCodeAuth();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const activatingRef = useRef(false);
@@ -102,7 +101,7 @@ const Auth = () => {
     accountType: "student" as "student" | "teacher",
   });
 
-  const DEMO_SCHOOL = "DemoSchule";
+  const DEMO_SCHOOL = "BoostSchule";
   const DEMO_CLASS = "4a";
   const DEMO_STUDENT = {
     email: "demo@boost-challenge.de",
@@ -161,10 +160,7 @@ const Auth = () => {
     activatingRef.current = true;
     setQrLoading(true);
     try {
-      const session = await activate(code);
-      if (session.user_type !== "student") {
-        throw new Error("Dieser QR-Code gehört nicht zu einem Schülerprofil.");
-      }
+      await activateQrAsSupabaseUser(code);
       toast.success("Profil erfolgreich aktiviert.");
       setQrScannerOpen(false);
       navigate("/dashboard", { replace: true });
@@ -367,7 +363,8 @@ const Auth = () => {
                 stopStream();
                 return;
               }
-              // Activation failed — continue scanning so user can retry
+              // Activation failed — wait 3s before scanning again to prevent repeat errors
+              await new Promise<void>((resolve) => setTimeout(resolve, 3000));
             }
           } catch {
             setQrScannerError("Der QR-Code konnte nicht gelesen werden. Richte die Kamera direkt auf den Code oder gib den Code manuell ein.");
@@ -964,6 +961,21 @@ const Auth = () => {
                   onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                   placeholder="••••••••"
                 />
+                {signupData.password.length > 0 && (
+                  <p className={`mt-1 text-xs ${
+                    signupData.password.length < 6
+                      ? "text-destructive"
+                      : signupData.password.length >= 10
+                        ? "text-primary"
+                        : "text-amber-600"
+                  }`}>
+                    {signupData.password.length < 6
+                      ? `Mindestens 6 Zeichen (noch ${6 - signupData.password.length})`
+                      : signupData.password.length >= 10
+                        ? "Starkes Passwort ✓"
+                        : "Passwort ausreichend ✓"}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="signup-school">Schule</Label>

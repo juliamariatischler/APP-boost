@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { CheckCircle2, MapPin, Mountain, Play, Route, Trophy, Video, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
+import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { getCurrentWeeklyVideo, WEEKLY_VIDEO_REWARD_STORAGE_KEY, type WeeklyVideo } from "@/lib/weeklyVideo";
 
@@ -22,22 +22,23 @@ const REWARD_POINTS = BOOST_POINT_RULES.weeklyChallengeCompleted;
 type WeeklyRewardMap = Record<string, boolean>;
 
 const WeeklyAthleteChallenge = () => {
-  const navigate = useNavigate();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [isWeeklyVideoCompleted, setIsWeeklyVideoCompleted] = useState(false);
   const [rewardingVideo, setRewardingVideo] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const { session: codeSession } = useCodeAuth();
 
   const currentWeeklyVideo = useMemo<WeeklyVideo>(() => getCurrentWeeklyVideo(), []);
 
   useEffect(() => {
     const loadUser = async () => {
       const { data } = await supabase.auth.getUser();
-      setUserId(data.user?.id ?? null);
+      const supabaseUserId = data.user?.id ?? null;
+      setUserId(supabaseUserId ?? codeSession?.user_id ?? null);
     };
 
     void loadUser();
-  }, []);
+  }, [codeSession]);
 
   useEffect(() => {
     if (!userId) return;
@@ -82,16 +83,18 @@ const WeeklyAthleteChallenge = () => {
 
     setRewardingVideo(true);
 
-    try {
-      const { error } = await supabase.rpc("increment_points", { points_to_add: REWARD_POINTS });
+    const { data: authData } = await supabase.auth.getSession();
+    const hasSupabaseSession = !!authData.session;
 
-      if (error) {
-        throw error;
+    try {
+      if (hasSupabaseSession) {
+        const { error } = await supabase.rpc("increment_points", { points_to_add: REWARD_POINTS });
+        if (error) throw error;
+        window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: REWARD_POINTS } }));
       }
 
       persistWeeklyVideoReward(currentWeeklyVideo.weekKey);
-      window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: REWARD_POINTS } }));
-      toast.success(`Wochenvideo geschafft! +${REWARD_POINTS} Blitze`);
+      toast.success(`Wochenvideo geschafft!${hasSupabaseSession ? ` +${REWARD_POINTS} Blitze` : ""}`);
     } catch (error) {
       console.error("Weekly video reward failed", error);
       toast.error("Video beendet, aber die Blitze konnten nicht gutgeschrieben werden.");
@@ -313,13 +316,6 @@ const WeeklyAthleteChallenge = () => {
                       <span className="text-lg font-black text-foreground">Schöckl</span>
                     </div>
                   </div>
-
-                  <Button
-                    className="mt-5 w-full rounded-2xl"
-                    onClick={() => navigate("/challenge/weekly/geotracking")}
-                  >
-                    Tour vor Ort starten
-                  </Button>
                 </div>
               </div>
             </div>
