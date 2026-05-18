@@ -61,9 +61,43 @@ serve(async (req) => {
       );
     }
 
-    const appUrl = Deno.env.get("APP_URL") ?? "https://boostschule.at";
-    const confirmUrl = `${appUrl}/verify-guardian?token=${token}`;
+    // Fetch session + club details for the email
+    const { data: sessionData } = await supabase
+      .from("trial_sessions")
+      .select("*, clubs(*)")
+      .eq("id", session_id)
+      .single();
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const confirmUrl = `${supabaseUrl}/functions/v1/confirm-guardian?token=${token}`;
     const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") ?? "noreply@boostschule.at";
+
+    // Format session details
+    let sessionInfoHtml = "";
+    if (sessionData) {
+      const s = sessionData as any;
+      const club = s.clubs;
+      const sportType = club?.sport_type ?? s.title ?? "";
+      const clubName = club?.name ?? "";
+      const dateFormatted = new Date(s.date).toLocaleDateString("de-AT", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+      const startTime = (s.start_time ?? "").slice(0, 5);
+      const endTime = s.end_time ? `– ${(s.end_time).slice(0, 5)}` : "";
+      const timeFormatted = `${startTime}${endTime ? " " + endTime : ""} Uhr`;
+
+      sessionInfoHtml = `
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;border-radius:12px;overflow:hidden;background:#f6faf7">
+          <tr><td colspan="2" style="padding:12px 16px 6px;font-size:11px;font-weight:800;letter-spacing:0.08em;color:#16C653;text-transform:uppercase">Dein Angebot</td></tr>
+          ${sportType ? `<tr><td style="padding:6px 16px;font-size:13px;color:#666;width:30%">Sportart</td><td style="padding:6px 16px;font-size:13px;font-weight:700;color:#111">${sportType}</td></tr>` : ""}
+          ${clubName ? `<tr><td style="padding:6px 16px;font-size:13px;color:#666">Verein</td><td style="padding:6px 16px;font-size:13px;font-weight:700;color:#111">${clubName}</td></tr>` : ""}
+          <tr><td style="padding:6px 16px;font-size:13px;color:#666">Datum</td><td style="padding:6px 16px;font-size:13px;font-weight:700;color:#111">${dateFormatted}</td></tr>
+          <tr><td style="padding:6px 16px;font-size:13px;color:#666">Uhrzeit</td><td style="padding:6px 16px;font-size:13px;font-weight:700;color:#111">${timeFormatted}</td></tr>
+          ${s.location ? `<tr><td style="padding:6px 16px;font-size:13px;color:#666">Ort</td><td style="padding:6px 16px;font-size:13px;font-weight:700;color:#111">${s.location}${s.address ? `<br><span style="font-weight:400;color:#888">${s.address}</span>` : ""}</td></tr>` : ""}
+          ${s.requirements ? `<tr><td style="padding:6px 16px 12px;font-size:13px;color:#666">Mitbringen</td><td style="padding:6px 16px 12px;font-size:13px;color:#111">${s.requirements}</td></tr>` : ""}
+        </table>
+      `;
+    }
 
     const emailBody = {
       sender: { name: "BOOST", email: senderEmail },
@@ -71,12 +105,16 @@ serve(async (req) => {
       subject: "Freigabe für BOOST Try-It-Teilnahme",
       htmlContent: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-          <img src="https://boostschule.at/boost-logo.png" alt="BOOST" style="height:40px;margin-bottom:24px" />
+          <a href="https://www.boostschule.at" style="text-decoration:none">
+            <img src="https://srzhxzwxtrcotfhffhww.supabase.co/storage/v1/object/public/assets/boost-logo.png" alt="BOOST" style="height:44px;margin-bottom:24px;display:block" onerror="this.style.display='none';document.getElementById('boost-text').style.display='block'" />
+            <span id="boost-text" style="display:none;font-size:24px;font-weight:900;color:#16C653;letter-spacing:-0.5px">BOOST</span>
+          </a>
           <h2 style="margin:0 0 12px;color:#111">Freigabe erforderlich 👋</h2>
           <p style="color:#555;line-height:1.6">
             Dein Kind möchte an einem <strong>BOOST Try-It-Angebot</strong> teilnehmen –
             einer kostenlosen Schnupperstunde bei einem Sportverein in Graz.
           </p>
+          ${sessionInfoHtml}
           <p style="color:#555;line-height:1.6">
             Bitte bestätige die Teilnahme mit einem Klick auf den Button:
           </p>
@@ -88,6 +126,11 @@ serve(async (req) => {
           <p style="color:#999;font-size:12px;margin-top:24px">
             Dieser Link ist 30 Minuten gültig. Falls du diese E-Mail nicht erwartet hast,
             kannst du sie ignorieren.
+          </p>
+          <p style="margin-top:20px;padding-top:16px;border-top:1px solid #eee">
+            <a href="https://www.boostschule.at" style="color:#16C653;font-size:13px;font-weight:700;text-decoration:none">
+              🌐 www.boostschule.at
+            </a>
           </p>
         </div>
       `,

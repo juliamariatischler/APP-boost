@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, Clock, ExternalLink, MapPin, Users, Zap } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, Loader2, MapPin, Users, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,9 +36,15 @@ type SportOffer = {
   imageSubline: string;
   websiteUrl: string;
   bookingUrl: string;
+  trialAvailable: boolean;
+  trialInfo: string;
+  contactPhone?: string;
+  contactEmail?: string;
 };
 
 type OfferFilter = "all" | "Probetraining" | "Kurs";
+
+const TRIAL_STATUS = "Probetraining verfügbar";
 
 const offers: SportOffer[] = [
   {
@@ -63,29 +69,35 @@ const offers: SportOffer[] = [
     imageSubline: "Offenes Probetraining mit echtem Stadiongefühl.",
     websiteUrl: "https://www.eskgraz.at",
     bookingUrl: "https://www.eskgraz.at",
+    trialAvailable: false,
+    trialInfo: "",
   },
   {
     id: "football-giants",
     sport: "American Football",
     image: "/tryit-american-football.svg",
     club: "Graz Giants",
-    federation: "SPORTUNION",
+    federation: "ASKÖ",
     location: "Graz",
     address: "Weinzöttlstraße 16, 8054 Graz",
-    dateLabel: "Montag, 30.03.2026",
-    timeLabel: "18:00 bis 19:30 Uhr",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
     ageLabel: "8 bis 15 Jahre",
     meetingPoint: "Treffpunkt beim Vereinsgebäude 10 Minuten vorher",
     rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
     rewardPoints: BOOST_POINT_RULES.tryItCompleted,
-    formatLabel: "Kurs",
+    formatLabel: "Probetraining",
     summary: "American Football mit Teamplay, Taktik und explosiver Athletik.",
     details:
-      "Die Graz Giants sind einer der erfolgreichsten American-Football-Vereine Österreichs. Im Jugendkurs lernst du Wurftechnik, Laufspiel und Teamtaktik in einem motivierenden Umfeld. Sportschuhe und Trinkflasche reichen für den Einstieg.",
+      "Die Graz Giants sind einer der erfolgreichsten American-Football-Vereine Österreichs. Im Probetraining lernst du Wurftechnik, Laufspiel und Teamtaktik in einem motivierenden Umfeld. Sportschuhe und Trinkflasche reichen für den Einstieg.",
     imageHeadline: "Volle Kraft voraus",
-    imageSubline: "Football-Kurs mit Taktik, Teamgeist und echtem Gameday-Feeling.",
+    imageSubline: "Probetraining mit Taktik, Teamgeist und echtem Gameday-Feeling.",
     websiteUrl: "https://www.grazgiants.at/",
     bookingUrl: "https://www.grazgiants.at/",
+    trialAvailable: true,
+    trialInfo: "Probetraining jederzeit nach Vereinbarung möglich.",
+    contactPhone: "0660/3217248",
+    contactEmail: "office@grazgiants.at",
   },
   {
     id: "handball-graz",
@@ -109,6 +121,8 @@ const offers: SportOffer[] = [
     imageSubline: "Probetraining für schnelle Entscheidungen und starke Würfe.",
     websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
     bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
+    trialAvailable: false,
+    trialInfo: "",
   },
   {
     id: "volleyball-graz",
@@ -132,6 +146,8 @@ const offers: SportOffer[] = [
     imageSubline: "Volleyball-Kurs mit Vereinsdynamik und Teamenergie.",
     websiteUrl: "https://www.uvcgraz.at/",
     bookingUrl: "https://www.uvcgraz.at/",
+    trialAvailable: false,
+    trialInfo: "",
   },
   {
     id: "tennis-graz",
@@ -155,17 +171,19 @@ const offers: SportOffer[] = [
     imageSubline: "Probetraining mit Clubfeeling auf rotem Sand.",
     websiteUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
     bookingUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
+    trialAvailable: false,
+    trialInfo: "",
   },
   {
     id: "judo-graz",
     sport: "Judo",
     image: "/tryit-judo.svg",
-    club: "ASKÖ-Judo-Club-Graz",
+    club: "ASKÖ-Judoclub Graz",
     federation: "ASKÖ",
     location: "Graz",
     address: "8020 Graz",
-    dateLabel: "Dienstag, 24.03.2026",
-    timeLabel: "17:00 bis 18:15 Uhr",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
     ageLabel: "7 bis 12 Jahre",
     meetingPoint: "Treffpunkt vor dem Dojo, barfuß erst in der Halle",
     rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
@@ -173,34 +191,42 @@ const offers: SportOffer[] = [
     formatLabel: "Probetraining",
     summary: "Judo-Probetraining mit Respekt, Balance und sichtbarem Fortschritt.",
     details:
-      "Der ASKÖ-Judo-Club-Graz ist in der ASKÖ-Steiermark-Vereinssuche als Grazer Judo-Verein aufgeführt. Im Schnuppertraining lernen Kinder kontrollierte Bewegungen, Respekt im Dojo und erste Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
+      "Der ASKÖ-Judoclub Graz bietet ein offenes Probetraining für Kinder. Im Schnuppertraining lernen Kinder kontrollierte Bewegungen, Respekt im Dojo und erste Techniken. Lange Jogginghose und T-Shirt reichen für den Einstieg.",
     imageHeadline: "Stärke mit Haltung",
     imageSubline: "Probetraining mit Respekt, Mut und Körperkontrolle.",
     websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
     bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0650/4206694",
+    contactEmail: "office@judo-graz.at",
   },
   {
     id: "basketball-graz",
     sport: "Basketball",
     image: "/tryit-basketball.svg",
-    club: "Damen-Basketballclub Graz",
+    club: "Damen-Basketballclub Graz (DBBC)",
     federation: "ASKÖ",
     location: "Graz",
     address: "8047 Graz",
-    dateLabel: "Montag, 30.03.2026",
-    timeLabel: "16:45 bis 18:00 Uhr",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
     ageLabel: "10 bis 13 Jahre",
     meetingPoint: "Treffpunkt im Foyer beim Court A",
     rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
     rewardPoints: BOOST_POINT_RULES.tryItCompleted,
-    formatLabel: "Kurs",
-    summary: "Basketball-Kurs mit Energie, Teamplay und klarer Nachwuchsorientierung.",
+    formatLabel: "Probetraining",
+    summary: "Basketball-Probetraining mit Energie, Teamplay und klarer Nachwuchsorientierung.",
     details:
-      "Der Damen-Basketballclub Graz ist laut ASKÖ-Steiermark-Vereinssuche ein Grazer ASKÖ-Basketballverein. Der Kurs verbindet Dribbling, Wurf und kleine Spielformen mit klarer Trainerstruktur. Hallenschuhe und Trinkflasche genügen.",
+      "Der Damen-Basketballclub Graz (DBBC) ist laut ASKÖ-Steiermark ein Grazer ASKÖ-Basketballverein. Das Probetraining verbindet Dribbling, Wurf und kleine Spielformen mit klarer Trainerstruktur. Hallenschuhe und Trinkflasche genügen.",
     imageHeadline: "Volle Energie auf dem Court",
-    imageSubline: "Kurs mit Tempo, Teamplay und starker Clubidentität.",
+    imageSubline: "Probetraining mit Tempo, Teamplay und starker Clubidentität.",
     websiteUrl: "https://www.dbbc.at",
     bookingUrl: "https://www.dbbc.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining jederzeit nach Vereinbarung möglich.",
+    contactPhone: "0664/1870654",
+    contactEmail: "peter.dudau@dbbc.at",
   },
   {
     id: "swimming-graz",
@@ -224,13 +250,442 @@ const offers: SportOffer[] = [
     imageSubline: "Fechtkurs mit Stil, Fokus und echtem Neugierfaktor.",
     websiteUrl: "https://www.asvoe-steiermark.at/de/newsshow-richtig-fit-fuer-asvoe-vereine",
     bookingUrl: "https://www.asvoe-steiermark.at/de/newsshow-richtig-fit-fuer-asvoe-vereine",
+    trialAvailable: false,
+    trialInfo: "",
+  },
+  // --- Neue Anbieter mit Probetraining verfügbar ---
+  {
+    id: "aikido-graz",
+    sport: "Aikido",
+    image: "/tryit-judo.svg",
+    club: "ASKÖ-Aikido-Club Graz",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Kinder und Erwachsene",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Aikido – die Kampfkunst der harmonischen Bewegung für alle Altersgruppen.",
+    details:
+      "Der ASKÖ-Aikido-Club Graz bietet offenes Probetraining für Kinder und Erwachsene. Im Training lernst du fließende Bewegungen, Gleichgewicht und Selbstverteidigung ohne Wettkampf. Bequeme Kleidung genügt für den Einstieg.",
+    imageHeadline: "Harmonie und Kraft",
+    imageSubline: "Probetraining für Einsteiger aller Altersgruppen.",
+    websiteUrl: "mailto:guenther.steger@gmx.at",
+    bookingUrl: "mailto:guenther.steger@gmx.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.",
+    contactPhone: "0664/1012658",
+    contactEmail: "guenther.steger@gmx.at",
+  },
+  {
+    id: "badminton-smash",
+    sport: "Badminton",
+    image: "/tryit-tennis.svg",
+    club: "BC Smash Graz",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Badminton mit Speed, Technik und echtem Spielfeeling im Verein.",
+    details:
+      "Der BC Smash Graz ist ein etablierter Badmintonverein in Graz. Im Probetraining lernst du Grundschläge, Spielpositionen und erste Matches. Schläger können vor Ort ausgeliehen werden.",
+    imageHeadline: "Smash in die Saison",
+    imageSubline: "Badminton-Probetraining für alle Levels.",
+    websiteUrl: "mailto:ruediger_rudolf@yahoo.de",
+    bookingUrl: "mailto:ruediger_rudolf@yahoo.de",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0650/5809058",
+    contactEmail: "ruediger_rudolf@yahoo.de",
+  },
+  {
+    id: "badminton-dropin",
+    sport: "Badminton",
+    image: "/tryit-tennis.svg",
+    club: "Drop In Badminton",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Badminton zum Reinschnuppern – flexibel und unkompliziert.",
+    details:
+      "Drop In Badminton macht den Einstieg in den Badmintonsport so leicht wie möglich. Ohne komplizierte Anmeldung kannst du einfach vorbeikommen und das Spiel erleben. Einfach anrufen oder schreiben und Termin vereinbaren.",
+    imageHeadline: "Einfach reinkommen",
+    imageSubline: "Flexibles Badminton-Probetraining ohne große Vorbereitung.",
+    websiteUrl: "mailto:schmidt@dropin.at",
+    bookingUrl: "mailto:schmidt@dropin.at",
+    trialAvailable: true,
+    trialInfo: "Flexibles Probetraining nach Vereinbarung.",
+    contactPhone: "0699/11881222",
+    contactEmail: "schmidt@dropin.at",
+  },
+  {
+    id: "baseball-dirtysox",
+    sport: "Baseball",
+    image: "/tryit-american-football.svg",
+    club: "Baseballverein Dirty Sox",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "November bis März",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Baseball – amerikanischer Teamsport mit viel Technik und Dynamik.",
+    details:
+      "Der Baseballverein Dirty Sox lädt von November bis März zum Probetraining ein. Du lernst Wurfarm, Schlagtechnik und Spielpositionen im Teamumfeld. Sportschuhe und Motivation reichen für den Start.",
+    imageHeadline: "Raus aufs Feld",
+    imageSubline: "Baseball-Probetraining von November bis März.",
+    websiteUrl: "mailto:baseball@dirtysoxgraz.com",
+    bookingUrl: "mailto:baseball@dirtysoxgraz.com",
+    trialAvailable: true,
+    trialInfo: "Probetraining November bis März nach Vereinbarung.",
+    contactPhone: "0650/3006954",
+    contactEmail: "baseball@dirtysoxgraz.com",
+  },
+  {
+    id: "cheerleading-giants",
+    sport: "Cheerleading",
+    image: "/tryit-volleyball.svg",
+    club: "GIANTS Graz Cheerleading",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "Weinzöttlstraße 16, 8054 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Treffpunkt beim Vereinsgebäude",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Cheerleading mit Energie, Synchronität und echtem Teamgeist.",
+    details:
+      "Die Graz Giants bieten Cheerleading als eigenes Sportangebot. Im Probetraining erlernst du erste Cheer-Choreografien und erlebst die Energie des Teamsports hautnah.",
+    imageHeadline: "Power, Tempo, Team",
+    imageSubline: "Cheerleading-Probetraining mit den Graz Giants.",
+    websiteUrl: "https://www.grazgiants.at/",
+    bookingUrl: "https://www.grazgiants.at/",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0660/3217248",
+    contactEmail: "office@grazgiants.at",
+  },
+  {
+    id: "cheerleading-royals",
+    sport: "Cheerleading",
+    image: "/tryit-volleyball.svg",
+    club: "Graz Cheerleading Royals",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Cheerleading mit Stil, Kraft und mitreißender Teamatmosphäre.",
+    details:
+      "Die Graz Cheerleading Royals sind ein aufstrebendes Cheerleading-Team in Graz. Im Probetraining zeigst du ersten Einsatz, lernst Grundbewegungen und wirst Teil des Teams.",
+    imageHeadline: "Zeig deine Energie",
+    imageSubline: "Cheerleading-Probetraining mit den Graz Royals.",
+    websiteUrl: "mailto:office@grazroyals.at",
+    bookingUrl: "mailto:office@grazroyals.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0664/1256882",
+    contactEmail: "office@grazroyals.at",
+  },
+  {
+    id: "futsal-panthera",
+    sport: "Futsal",
+    image: "/tryit-football.svg",
+    club: "Panthera Graz Futsal Akademie",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Futsal – der Hallenfußball mit noch mehr Technik und Tempo.",
+    details:
+      "Die Panthera Graz Futsal Akademie bietet intensives Futsal-Probetraining. Futsal wird in der Halle gespielt und fördert Balltechnik, Schnelligkeit und Kreativität besonders stark.",
+    imageHeadline: "Futsal: schneller Fußball",
+    imageSubline: "Probetraining in der Futsal Akademie Graz.",
+    websiteUrl: "mailto:office@panthera-graz.at",
+    bookingUrl: "mailto:office@panthera-graz.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "6607245799",
+    contactEmail: "office@panthera-graz.at",
+  },
+  {
+    id: "fuenfkampf-atus",
+    sport: "Moderner Fünfkampf",
+    image: "/tryit-swimming.svg",
+    club: "ATUS Graz – Moderner Fünfkampf",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Moderner Fünfkampf – Schwimmen, Reiten, Fechten, Laufen und Schießen in einem.",
+    details:
+      "ATUS Graz bietet Einblicke in den Modernen Fünfkampf, eine olympische Sportart. Im Probetraining erlebst du die Vielseitigkeit dieser einzigartigen Disziplin aus fünf Teilsportarten.",
+    imageHeadline: "Fünf Sportarten, ein Athlet",
+    imageSubline: "Moderner Fünfkampf als olympische Herausforderung.",
+    websiteUrl: "mailto:familie@kranacher.at",
+    bookingUrl: "mailto:familie@kranacher.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0676/3971712",
+    contactEmail: "familie@kranacher.at",
+  },
+  {
+    id: "handball-hcssv",
+    sport: "Handball",
+    image: "/tryit-handball.svg",
+    club: "HC SSV Graz",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Handball – schnelles Spieltempo, starkes Team, großes Gefühl.",
+    details:
+      "Der HC SSV Graz lädt zum Handball-Probetraining ein. Du lernst Wurfkraft, schnelle Pässe und echten Hallensport mit motivierender Teamatmosphäre.",
+    imageHeadline: "Teamplay im Höchstformat",
+    imageSubline: "Handball-Probetraining beim HC SSV Graz.",
+    websiteUrl: "mailto:hsggraz@aon.at",
+    bookingUrl: "mailto:hsggraz@aon.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0676/6508281",
+    contactEmail: "hsggraz@aon.at",
+  },
+  {
+    id: "kickboxen-askoe",
+    sport: "Kickboxen",
+    image: "/tryit-judo.svg",
+    club: "ASKÖ-Kickboxcenter Graz",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Ab 16 Jahren",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Kickboxen – Stärke, Koordination und Selbstsicherheit für Jugendliche ab 16.",
+    details:
+      "Das ASKÖ-Kickboxcenter Graz bietet strukturiertes Kickbox-Training ab 16 Jahren. Im Probetraining lernst du Grundtechniken, sichere Übungsformen und die Grundlagen des Kampfsports.",
+    imageHeadline: "Technik, Kraft, Disziplin",
+    imageSubline: "Kickboxen ab 16 Jahren im ASKÖ-Kickboxcenter.",
+    websiteUrl: "mailto:peter.jerovsek@kickboxcenter.at",
+    bookingUrl: "mailto:peter.jerovsek@kickboxcenter.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining ab 16 Jahren nach Vereinbarung.",
+    contactPhone: "0664/9660066",
+    contactEmail: "peter.jerovsek@kickboxcenter.at",
+  },
+  {
+    id: "selbst-tigerdrache",
+    sport: "Selbstverteidigung",
+    image: "/tryit-judo.svg",
+    club: "Tiger und Drache",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Kinder und Erwachsene",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Selbstverteidigung mit östlicher Kampfkunst für Kinder und Erwachsene.",
+    details:
+      "Tiger und Drache bieten kindgerechte und erwachsenengerechte Selbstverteidigungstechniken. Im Probetraining erlebst du erste Bewegungsformen und lernst Selbstvertrauen aufzubauen.",
+    imageHeadline: "Stark für jede Situation",
+    imageSubline: "Selbstverteidigung für Kinder und Erwachsene.",
+    websiteUrl: "mailto:info@tigerdrache.at",
+    bookingUrl: "mailto:info@tigerdrache.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.",
+    contactPhone: "0650/5678335",
+    contactEmail: "info@tigerdrache.at",
+  },
+  {
+    id: "spikeball-roundnet",
+    sport: "Spikeball / Roundnet",
+    image: "/tryit-volleyball.svg",
+    club: "Roundnet Club Graz",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Roundnet (Spikeball) – der dynamische Outdoor-Teamsport für alle.",
+    details:
+      "Der Roundnet Club Graz bringt einen der angesagtesten Trendsports nach Graz. Im Probetraining lernst du die Grundregeln, Spieltechniken und erlebst viel Spaß und Dynamik.",
+    imageHeadline: "Ball ins Netz",
+    imageSubline: "Spikeball/Roundnet – der neue Trendsport in Graz.",
+    websiteUrl: "mailto:contact@roundnetclubgraz.at",
+    bookingUrl: "mailto:contact@roundnetclubgraz.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactEmail: "contact@roundnetclubgraz.at",
+  },
+  {
+    id: "trampolin-graz",
+    sport: "Trampolinturnen",
+    image: "/tryit-swimming.svg",
+    club: "Trampolin- und Freestyle-Club Graz",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Alle Altersgruppen",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Trampolinturnen und Freestyle – Höhe, Kontrolle und pure Freude.",
+    details:
+      "Der Trampolin- und Freestyle-Club Graz bietet Einstieg in akrobatischen Sprungsport. Im Probetraining erlebst du erste Sprünge und lernst Grundsicherheit auf dem Trampolin.",
+    imageHeadline: "Hoch hinaus mit Stil",
+    imageSubline: "Trampolinturnen und Freestyle für alle.",
+    websiteUrl: "mailto:hayngu@yahoo.com",
+    bookingUrl: "mailto:hayngu@yahoo.com",
+    trialAvailable: true,
+    trialInfo: "Probetraining nach Vereinbarung möglich.",
+    contactPhone: "0650/3907017",
+    contactEmail: "hayngu@yahoo.com",
+  },
+  {
+    id: "turnen-abenteuer",
+    sport: "Abenteuer- / Zirkusturnen / Parkour",
+    image: "/tryit-swimming.svg",
+    club: "ATUS Graz – Abenteuer- / Zirkusturnen / Parkour",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Kinder",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Abenteuerturnen, Zirkuskunst und Parkour – kreative Bewegung für neugierige Kinder.",
+    details:
+      "ATUS Graz bietet eine einzigartige Mischung aus Abenteuerturnen, Zirkuselementen und Parkour-Grundlagen. Im Probetraining entdeckst du kreative Bewegungsformen in einer inspirierenden Umgebung.",
+    imageHeadline: "Bewegen wie ein Künstler",
+    imageSubline: "Abenteuerturnen, Zirkus und Parkour für Kinder.",
+    websiteUrl: "mailto:veronika@sport-abenteuer-kittler.at",
+    bookingUrl: "mailto:veronika@sport-abenteuer-kittler.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining für Kinder nach Vereinbarung.",
+    contactPhone: "0681/81429142",
+    contactEmail: "veronika@sport-abenteuer-kittler.at",
+  },
+  {
+    id: "turnen-senioren",
+    sport: "Seniorenturnen",
+    image: "/tryit-swimming.svg",
+    club: "ATUS Graz – Seniorenturnen",
+    federation: "ASKÖ",
+    location: "Graz",
+    address: "8020 Graz",
+    dateLabel: "Nach Vereinbarung",
+    timeLabel: "Nach Vereinbarung",
+    ageLabel: "Erwachsene / Senioren",
+    meetingPoint: "Nach Vereinbarung",
+    rewardLabel: `Nimm teil und sichere dir ${BOOST_POINT_RULES.tryItCompleted} Blitze`,
+    rewardPoints: BOOST_POINT_RULES.tryItCompleted,
+    formatLabel: "Probetraining",
+    summary: "Seniorenturnen – sanfte Bewegung, Gemeinschaft und Wohlbefinden für Erwachsene.",
+    details:
+      "ATUS Graz bietet altersgerechtes Seniorenturnen mit sanften Übungen für Kraft, Balance und Koordination. Im Probetraining erlernst du einfache Übungen und wirst herzlich im Team aufgenommen.",
+    imageHeadline: "Aktiv und fit bleiben",
+    imageSubline: "Seniorenturnen für gesundes Wohlbefinden.",
+    websiteUrl: "mailto:fit@atus-graz.at",
+    bookingUrl: "mailto:fit@atus-graz.at",
+    trialAvailable: true,
+    trialInfo: "Probetraining für Senioren nach Vereinbarung.",
+    contactPhone: "0650/7700424",
+    contactEmail: "fit@atus-graz.at",
   },
 ];
+
+const validateGuardianPhone = (phone: string): boolean =>
+  /^\+?[0-9\s\/\-()]{7,20}$/.test(phone.trim());
 
 const GrazSportsGallery = () => {
   const [selectedOffer, setSelectedOffer] = useState<SportOffer | null>(null);
   const [activeFilter, setActiveFilter] = useState<OfferFilter>("all");
   const [claimingOfferId, setClaimingOfferId] = useState<string | null>(null);
+
+  // Inquiry form state
+  const [inquiryState, setInquiryState] = useState<"idle" | "form" | "submitting" | "success">("idle");
+  const [childName, setChildName] = useState("");
+  const [childNameError, setChildNameError] = useState("");
+  const [childAge, setChildAge] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianPhoneError, setGuardianPhoneError] = useState("");
+
+  useEffect(() => {
+    if (!selectedOffer) {
+      setInquiryState("idle");
+      setChildName("");
+      setChildNameError("");
+      setChildAge("");
+      setGuardianPhone("");
+      setGuardianPhoneError("");
+    }
+  }, [selectedOffer]);
 
   const filterCounts = useMemo(
     () => ({
@@ -305,6 +760,52 @@ const GrazSportsGallery = () => {
       window.location.href = offer.bookingUrl;
     } finally {
       setClaimingOfferId(null);
+    }
+  };
+
+  const handleInquirySubmit = async () => {
+    if (!selectedOffer) return;
+
+    let hasError = false;
+    if (!childName.trim()) {
+      setChildNameError("Bitte gib den Namen des Kindes ein.");
+      hasError = true;
+    } else {
+      setChildNameError("");
+    }
+    if (!validateGuardianPhone(guardianPhone)) {
+      setGuardianPhoneError("Bitte gib eine gültige Telefonnummer eines Erziehungsberechtigten ein.");
+      hasError = true;
+    } else {
+      setGuardianPhoneError("");
+    }
+    if (hasError) return;
+
+    setInquiryState("submitting");
+    try {
+      const { error } = await (supabase as any).from("try_it_trial_requests").insert({
+        sport_type: selectedOffer.sport,
+        provider_name: selectedOffer.club,
+        child_name: childName.trim(),
+        child_age: childAge ? parseInt(childAge, 10) : null,
+        guardian_phone: guardianPhone.trim(),
+        trial_training_status: TRIAL_STATUS,
+        trial_training_info: selectedOffer.trialInfo,
+        request_status: "requested",
+      });
+
+      if (error) {
+        console.error("Inquiry submit error:", error);
+        toast.error("Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.");
+        setInquiryState("form");
+        return;
+      }
+
+      setInquiryState("success");
+    } catch (e) {
+      console.error("Inquiry submit error:", e);
+      toast.error("Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.");
+      setInquiryState("form");
     }
   };
 
@@ -387,11 +888,21 @@ const GrazSportsGallery = () => {
                   </span>
                 </div>
               </div>
+              {offer.trialAvailable && (
+                <div className="absolute left-3 top-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
+                    ✓ {TRIAL_STATUS}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Badge className={getFormatBadgeClassName(offer.formatLabel)}>{offer.formatLabel}</Badge>
                 <Badge className={getFederationBadgeClassName(offer.federation)}>{offer.federation}</Badge>
+                {offer.trialAvailable && (
+                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{TRIAL_STATUS}</Badge>
+                )}
               </div>
               <div className="mb-3">
                 <RewardPill points={offer.rewardPoints} />
@@ -408,10 +919,17 @@ const GrazSportsGallery = () => {
                 <Clock className="h-4 w-4 text-primary" />
                 <span>{offer.timeLabel}</span>
               </div>
-              <div className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-                Nächstes Training am {offer.dateLabel.replace(/^[^,]+, /, "")} um{" "}
-                {offer.timeLabel.split(" bis ")[0]} in {offer.location}
-              </div>
+              {offer.trialAvailable && (
+                <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                  {offer.trialInfo}
+                </div>
+              )}
+              {!offer.trialAvailable && (
+                <div className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                  Nächstes Training am {offer.dateLabel.replace(/^[^,]+, /, "")} um{" "}
+                  {offer.timeLabel.split(" bis ")[0]} in {offer.location}
+                </div>
+              )}
               <p className="text-sm text-foreground">{offer.summary}</p>
             </div>
           </Card>
@@ -429,110 +947,312 @@ const GrazSportsGallery = () => {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[560px]">
           {selectedOffer && (
             <>
-              <DialogHeader>
-                <DialogTitle className="text-2xl">{selectedOffer.sport}</DialogTitle>
-                <DialogDescription className="text-base text-muted-foreground">
-                  {selectedOffer.club} in {selectedOffer.location}
-                </DialogDescription>
-              </DialogHeader>
+              {/* --- Inquiry form view --- */}
+              {(inquiryState === "form" || inquiryState === "submitting") && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setInquiryState("idle")}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Zurück
+                  </button>
+                  <DialogHeader>
+                    <DialogTitle className="text-xl">Probetraining anfragen</DialogTitle>
+                    <DialogDescription>
+                      {selectedOffer.club} · {selectedOffer.sport}
+                    </DialogDescription>
+                  </DialogHeader>
 
-              <div className="space-y-4">
-                <div className="relative h-48 w-full overflow-hidden rounded-md">
-                  <img
-                    src={selectedOffer.image}
-                    alt={selectedOffer.sport}
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                  <div className="absolute inset-x-0 top-0 p-4">
-                    <p className="max-w-[80%] text-2xl font-bold leading-tight text-white">
-                      {selectedOffer.imageHeadline}
-                    </p>
-                    <p className="mt-1 max-w-[85%] text-sm text-white/85">{selectedOffer.imageSubline}</p>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                    ✓ {TRIAL_STATUS} · {selectedOffer.trialInfo}
                   </div>
-                  <div className="absolute bottom-4 right-4">
-                    <span className={cn("rounded-full px-3 py-1 text-xs font-bold tracking-wide shadow-lg", getFederationBadgeClassName(selectedOffer.federation))}>
-                      {selectedOffer.federation}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Card className="p-3">
-                    <div className="flex items-start gap-2 text-sm text-foreground">
-                      <Calendar className="mt-0.5 h-4 w-4 text-primary" />
-                      <div>
-                        <p className="font-semibold">Datum</p>
-                        <p className="text-muted-foreground">{selectedOffer.dateLabel}</p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="p-3">
-                    <div className="flex items-start gap-2 text-sm text-foreground">
-                      <Clock className="mt-0.5 h-4 w-4 text-primary" />
-                      <div>
-                        <p className="font-semibold">Uhrzeit</p>
-                        <p className="text-muted-foreground">{selectedOffer.timeLabel}</p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="p-3">
-                    <div className="flex items-start gap-2 text-sm text-foreground">
-                      <MapPin className="mt-0.5 h-4 w-4 text-primary" />
-                      <div>
-                        <p className="font-semibold">Ort</p>
-                        <p className="text-muted-foreground">{selectedOffer.address}</p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="p-3">
-                    <div className="flex items-start gap-2 text-sm text-foreground">
-                      <Users className="mt-0.5 h-4 w-4 text-primary" />
-                      <div>
-                        <p className="font-semibold">Alter / Treffpunkt</p>
-                        <p className="text-muted-foreground">{selectedOffer.ageLabel}</p>
-                        <p className="text-muted-foreground">{selectedOffer.meetingPoint}</p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-                <p className="text-sm text-foreground">{selectedOffer.details}</p>
-                <Card className="border-primary/20 bg-primary/5 p-4">
-                  <p className="text-sm font-semibold text-foreground">
-                    Nächstes Training am {selectedOffer.dateLabel.replace(/^[^,]+, /, "")} um{" "}
-                    {selectedOffer.timeLabel.split(" bis ")[0]} Uhr in {selectedOffer.location}
-                    {" "}bei {selectedOffer.club}.
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <RewardPill points={selectedOffer.rewardPoints} />
-                    <Badge className={getFormatBadgeClassName(selectedOffer.formatLabel)}>{selectedOffer.formatLabel}</Badge>
-                    <Badge className={getFederationBadgeClassName(selectedOffer.federation)}>{selectedOffer.federation}</Badge>
-                  </div>
-                </Card>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild variant="outline">
-                    <a
-                      href={selectedOffer.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Vereinsseite
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
+                  <div className="space-y-3">
+                    {/* child_name */}
+                    <div>
+                      <label className="mb-1 block text-sm font-semibold text-foreground">
+                        Vorname Kind <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={childName}
+                        onChange={(e) => { setChildName(e.target.value); if (childNameError) setChildNameError(""); }}
+                        placeholder="z. B. Lena"
+                        className={cn(
+                          "w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors",
+                          childNameError
+                            ? "border-red-400 bg-red-50 focus:border-red-500"
+                            : "border-border bg-background focus:border-primary"
+                        )}
+                      />
+                      {childNameError && (
+                        <p className="mt-1 text-xs font-medium text-red-500">{childNameError}</p>
+                      )}
+                    </div>
+
+                    {/* child_age */}
+                    <div>
+                      <label className="mb-1 block text-sm font-semibold text-foreground">
+                        Alter Kind
+                      </label>
+                      <input
+                        type="number"
+                        value={childAge}
+                        onChange={(e) => setChildAge(e.target.value)}
+                        placeholder="z. B. 10"
+                        min={3}
+                        max={99}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                      />
+                    </div>
+
+                    {/* guardian_phone */}
+                    <div>
+                      <label className="mb-1 block text-sm font-semibold text-foreground">
+                        Telefonnummer Erziehungsberechtigte:r <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={guardianPhone}
+                        onChange={(e) => { setGuardianPhone(e.target.value); if (guardianPhoneError) setGuardianPhoneError(""); }}
+                        placeholder="z. B. +43 660 1234567"
+                        className={cn(
+                          "w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors",
+                          guardianPhoneError
+                            ? "border-red-400 bg-red-50 focus:border-red-500"
+                            : "border-border bg-background focus:border-primary"
+                        )}
+                      />
+                      {guardianPhoneError && (
+                        <p className="mt-1 text-xs font-medium text-red-500">{guardianPhoneError}</p>
+                      )}
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Die Telefonnummer wird verwendet, um die Freigabe durch eine erziehungsberechtigte Person zu ermöglichen.
+                      </p>
+                    </div>
+                  </div>
 
                   <Button
                     type="button"
-                    onClick={() => handleClaimReward(selectedOffer)}
-                    disabled={claimingOfferId === selectedOffer.id}
-                    className="inline-flex items-center gap-2"
+                    disabled={inquiryState === "submitting"}
+                    onClick={() => void handleInquirySubmit()}
+                    className="w-full"
                   >
-                      <Zap className="h-4 w-4 fill-current" />
-                      {claimingOfferId === selectedOffer.id ? "Wird gesichert..." : `${selectedOffer.rewardPoints} Blitze sichern`}
-                      <ExternalLink className="ml-2 h-4 w-4" />
+                    {inquiryState === "submitting" ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wird gesendet…</>
+                    ) : (
+                      "Anfragen absenden"
+                    )}
                   </Button>
                 </div>
-              </div>
+              )}
+
+              {/* --- Success view --- */}
+              {inquiryState === "success" && (
+                <div className="space-y-4 text-center">
+                  <div className="flex justify-center">
+                    <CheckCircle2 className="h-16 w-16 text-emerald-500" />
+                  </div>
+                  <DialogHeader>
+                    <DialogTitle className="text-xl">Anfrage gesendet!</DialogTitle>
+                    <DialogDescription className="text-base">
+                      Deine Anfrage beim <span className="font-semibold text-foreground">{selectedOffer.club}</span> wurde erfolgreich übermittelt.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {(selectedOffer.contactPhone || selectedOffer.contactEmail) && (
+                    <div className="rounded-lg border bg-muted/30 p-3 text-sm text-left space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Direkt Kontakt aufnehmen</p>
+                      {selectedOffer.contactPhone && (
+                        <a href={`tel:${selectedOffer.contactPhone}`} className="flex items-center gap-2 font-semibold text-foreground hover:text-primary">
+                          <span>📞</span>{selectedOffer.contactPhone}
+                        </a>
+                      )}
+                      {selectedOffer.contactEmail && (
+                        <a href={`mailto:${selectedOffer.contactEmail}`} className="flex items-center gap-2 font-semibold text-primary hover:underline">
+                          <span>✉️</span>{selectedOffer.contactEmail}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelectedOffer(null)}
+                    className="w-full"
+                  >
+                    Schließen
+                  </Button>
+                </div>
+              )}
+
+              {/* --- Normal offer detail view --- */}
+              {inquiryState === "idle" && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl">{selectedOffer.sport}</DialogTitle>
+                    <DialogDescription className="text-base text-muted-foreground">
+                      {selectedOffer.club} in {selectedOffer.location}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    {selectedOffer.trialAvailable && (
+                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        <div>
+                          <span>{TRIAL_STATUS}</span>
+                          {selectedOffer.trialInfo && (
+                            <span className="ml-1 font-normal text-emerald-600">· {selectedOffer.trialInfo}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="relative h-48 w-full overflow-hidden rounded-md">
+                      <img
+                        src={selectedOffer.image}
+                        alt={selectedOffer.sport}
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                      <div className="absolute inset-x-0 top-0 p-4">
+                        <p className="max-w-[80%] text-2xl font-bold leading-tight text-white">
+                          {selectedOffer.imageHeadline}
+                        </p>
+                        <p className="mt-1 max-w-[85%] text-sm text-white/85">{selectedOffer.imageSubline}</p>
+                      </div>
+                      <div className="absolute bottom-4 right-4">
+                        <span className={cn("rounded-full px-3 py-1 text-xs font-bold tracking-wide shadow-lg", getFederationBadgeClassName(selectedOffer.federation))}>
+                          {selectedOffer.federation}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Card className="p-3">
+                        <div className="flex items-start gap-2 text-sm text-foreground">
+                          <Calendar className="mt-0.5 h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-semibold">Datum</p>
+                            <p className="text-muted-foreground">{selectedOffer.dateLabel}</p>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="flex items-start gap-2 text-sm text-foreground">
+                          <Clock className="mt-0.5 h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-semibold">Uhrzeit</p>
+                            <p className="text-muted-foreground">{selectedOffer.timeLabel}</p>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="flex items-start gap-2 text-sm text-foreground">
+                          <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-semibold">Ort</p>
+                            <p className="text-muted-foreground">{selectedOffer.address}</p>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="p-3">
+                        <div className="flex items-start gap-2 text-sm text-foreground">
+                          <Users className="mt-0.5 h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-semibold">Alter / Treffpunkt</p>
+                            <p className="text-muted-foreground">{selectedOffer.ageLabel}</p>
+                            <p className="text-muted-foreground">{selectedOffer.meetingPoint}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                    <p className="text-sm text-foreground">{selectedOffer.details}</p>
+
+                    {/* Contact info */}
+                    {(selectedOffer.contactPhone || selectedOffer.contactEmail) && (
+                      <Card className="p-3 space-y-1">
+                        <p className="text-xs font-black uppercase tracking-[0.08em] text-muted-foreground">Kontakt</p>
+                        {selectedOffer.contactPhone && (
+                          <a href={`tel:${selectedOffer.contactPhone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary">
+                            <span>📞</span>{selectedOffer.contactPhone}
+                          </a>
+                        )}
+                        {selectedOffer.contactEmail && (
+                          <a href={`mailto:${selectedOffer.contactEmail}`} className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
+                            <span>✉️</span>{selectedOffer.contactEmail}
+                          </a>
+                        )}
+                      </Card>
+                    )}
+
+                    <Card className="border-primary/20 bg-primary/5 p-4">
+                      <p className="text-sm font-semibold text-foreground">
+                        {selectedOffer.dateLabel === "Nach Vereinbarung"
+                          ? `Termin nach Vereinbarung in ${selectedOffer.location} bei ${selectedOffer.club}.`
+                          : `Nächstes Training am ${selectedOffer.dateLabel.replace(/^[^,]+, /, "")} um ${selectedOffer.timeLabel.split(" bis ")[0]} Uhr in ${selectedOffer.location} bei ${selectedOffer.club}.`
+                        }
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <RewardPill points={selectedOffer.rewardPoints} />
+                        <Badge className={getFormatBadgeClassName(selectedOffer.formatLabel)}>{selectedOffer.formatLabel}</Badge>
+                        <Badge className={getFederationBadgeClassName(selectedOffer.federation)}>{selectedOffer.federation}</Badge>
+                        {selectedOffer.trialAvailable && (
+                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{TRIAL_STATUS}</Badge>
+                        )}
+                      </div>
+                    </Card>
+
+                    <div className="flex flex-wrap gap-2">
+                      {selectedOffer.trialAvailable ? (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={() => setInquiryState("form")}
+                            className="flex-1 inline-flex items-center gap-2"
+                          >
+                            Anfragen
+                          </Button>
+                          <Button asChild variant="outline" className="flex-1">
+                            <a
+                              href={selectedOffer.websiteUrl}
+                              target={selectedOffer.websiteUrl.startsWith("mailto:") ? undefined : "_blank"}
+                              rel="noopener noreferrer"
+                            >
+                              Mehr Infos
+                              <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button asChild variant="outline">
+                            <a
+                              href={selectedOffer.websiteUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Vereinsseite
+                              <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => handleClaimReward(selectedOffer)}
+                            disabled={claimingOfferId === selectedOffer.id}
+                            className="inline-flex items-center gap-2"
+                          >
+                            <Zap className="h-4 w-4 fill-current" />
+                            {claimingOfferId === selectedOffer.id ? "Wird gesichert..." : `${selectedOffer.rewardPoints} Blitze sichern`}
+                            <ExternalLink className="ml-2 h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </DialogContent>

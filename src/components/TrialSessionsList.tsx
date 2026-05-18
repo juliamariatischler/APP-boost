@@ -8,6 +8,10 @@ import tryitFootballNetImg from "@/assets/quest-tryit-football-net.png";
 
 const POINTS_PROBETRAINING = BOOST_POINT_RULES.tryItProbetraining;
 const POINTS_KURS = BOOST_POINT_RULES.tryItCompleted;
+const TRIAL_STATUS = "Probetraining verfügbar";
+const PHONE_REGEX = /^\+?[0-9\s\/\-()]{7,20}$/;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Club = {
   id: string;
@@ -44,6 +48,41 @@ type Registration = {
 
 type TryItFilter = "all" | "probetraining" | "highlight";
 
+type StaticProvider = {
+  id: string;
+  sport: string;
+  club: string;
+  trialInfo: string;
+  ageLabel: string;
+  contactPhone?: string;
+  contactEmail?: string;
+};
+
+// ─── Static providers (Probetraining verfügbar) ───────────────────────────────
+
+const STATIC_PROVIDERS: StaticProvider[] = [
+  { id: "aikido-graz", sport: "Aikido", club: "ASKÖ-Aikido-Club Graz", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0664/1012658", contactEmail: "guenther.steger@gmx.at" },
+  { id: "football-giants", sport: "American Football", club: "GIANTS Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "8 bis 15 Jahre", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
+  { id: "badminton-smash", sport: "Badminton", club: "BC Smash Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/5809058", contactEmail: "ruediger_rudolf@yahoo.de" },
+  { id: "badminton-dropin", sport: "Badminton", club: "Drop In Badminton", trialInfo: "Flexibles Probetraining nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0699/11881222", contactEmail: "schmidt@dropin.at" },
+  { id: "baseball-dirtysox", sport: "Baseball", club: "Baseballverein Dirty Sox", trialInfo: "Probetraining November bis März nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/3006954", contactEmail: "baseball@dirtysoxgraz.com" },
+  { id: "basketball-dbbc", sport: "Basketball", club: "Damen-Basketballclub Graz (DBBC)", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "10 bis 13 Jahre", contactPhone: "0664/1870654", contactEmail: "peter.dudau@dbbc.at" },
+  { id: "cheerleading-giants", sport: "Cheerleading", club: "GIANTS Graz Cheerleading", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
+  { id: "cheerleading-royals", sport: "Cheerleading", club: "Graz Cheerleading Royals", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0664/1256882", contactEmail: "office@grazroyals.at" },
+  { id: "futsal-panthera", sport: "Futsal", club: "Panthera Graz Futsal Akademie", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "6607245799", contactEmail: "office@panthera-graz.at" },
+  { id: "fuenfkampf-atus", sport: "Moderner Fünfkampf", club: "ATUS Graz – Moderner Fünfkampf", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/3971712", contactEmail: "familie@kranacher.at" },
+  { id: "handball-hcssv", sport: "Handball", club: "HC SSV Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/6508281", contactEmail: "hsggraz@aon.at" },
+  { id: "judo-graz", sport: "Judo", club: "ASKÖ-Judoclub Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "7 bis 12 Jahre", contactPhone: "0650/4206694", contactEmail: "office@judo-graz.at" },
+  { id: "kickboxen-askoe", sport: "Kickboxen", club: "ASKÖ-Kickboxcenter Graz", trialInfo: "Probetraining ab 16 Jahren nach Vereinbarung.", ageLabel: "Ab 16 Jahren", contactPhone: "0664/9660066", contactEmail: "peter.jerovsek@kickboxcenter.at" },
+  { id: "selbst-tigerdrache", sport: "Selbstverteidigung", club: "Tiger und Drache", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0650/5678335", contactEmail: "info@tigerdrache.at" },
+  { id: "spikeball-roundnet", sport: "Spikeball / Roundnet", club: "Roundnet Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactEmail: "contact@roundnetclubgraz.at" },
+  { id: "trampolin-graz", sport: "Trampolinturnen", club: "Trampolin- und Freestyle-Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/3907017", contactEmail: "hayngu@yahoo.com" },
+  { id: "turnen-abenteuer", sport: "Abenteuer- / Zirkusturnen / Parkour", club: "ATUS Graz – Abenteuerturnen", trialInfo: "Probetraining für Kinder nach Vereinbarung.", ageLabel: "Kinder", contactPhone: "0681/81429142", contactEmail: "veronika@sport-abenteuer-kittler.at" },
+  { id: "turnen-senioren", sport: "Seniorenturnen", club: "ATUS Graz – Seniorenturnen", trialInfo: "Probetraining für Senioren nach Vereinbarung.", ageLabel: "Erwachsene / Senioren", contactPhone: "0650/7700424", contactEmail: "fit@atus-graz.at" },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const getSessionPoints = (session: TrialSession) => {
   const label = getExperienceLabel(session);
   return label === "Highlight-Erlebnis" ? POINTS_KURS : POINTS_PROBETRAINING;
@@ -55,30 +94,43 @@ const getExperienceLabel = (session: TrialSession) => {
 
 const getSportEmoji = (sportType: string): string => {
   const t = (sportType || '').toLowerCase();
-  if (t.includes('fußball') || t.includes('football') || t.includes('soccer')) return '⚽';
+  if (t.includes('fußball') || t.includes('football') || t.includes('soccer') || t.includes('futsal')) return '⚽';
+  if (t.includes('american football')) return '🏈';
   if (t.includes('badminton')) return '🏸';
+  if (t.includes('baseball')) return '⚾';
+  if (t.includes('basketball')) return '🏀';
+  if (t.includes('cheerleading')) return '📣';
+  if (t.includes('fünfkampf')) return '🏅';
+  if (t.includes('handball')) return '🤾';
+  if (t.includes('judo') || t.includes('karate') || t.includes('aikido') || t.includes('kickbox') || t.includes('selbstverteidigung')) return '🥋';
   if (t.includes('tanz') || t.includes('dance')) return '🎵';
   if (t.includes('tennis')) return '🎾';
-  if (t.includes('basketball')) return '🏀';
   if (t.includes('schwimm')) return '🏊';
-  if (t.includes('turnen') || t.includes('gymnas')) return '🤸';
+  if (t.includes('trampolin') || t.includes('turnen') || t.includes('gymnas') || t.includes('zirkus') || t.includes('abenteuer') || t.includes('parkour')) return '🤸';
   if (t.includes('laufen') || t.includes('leichtathletik')) return '🏃';
   if (t.includes('volleyball')) return '🏐';
-  if (t.includes('handball')) return '🤾';
+  if (t.includes('spikeball') || t.includes('roundnet')) return '🎾';
   return '⚡';
 };
 
 const isFootballSport = (sportType: string) => {
   const t = (sportType || '').toLowerCase();
-  return t.includes('fußball') || t.includes('football') || t.includes('soccer');
+  return (t.includes('fußball') || t.includes('soccer')) && !t.includes('american') && !t.includes('futsal');
 };
 
 const validateGuardianEmail = (email: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
+const validateGuardianPhone = (phone: string): boolean =>
+  PHONE_REGEX.test(phone.trim());
+
 type VerificationStep = "input" | "sending" | "waiting" | "confirmed";
+type ProviderSheet = "info" | "form" | "submitting" | "success";
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const TrialSessionsList = () => {
+  // Dynamic sessions state
   const [sessions, setSessions] = useState<TrialSession[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
@@ -92,6 +144,15 @@ const TrialSessionsList = () => {
   const [verificationStep, setVerificationStep] = useState<VerificationStep>("input");
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Static provider sheet state
+  const [selectedProvider, setSelectedProvider] = useState<StaticProvider | null>(null);
+  const [providerSheet, setProviderSheet] = useState<ProviderSheet>("info");
+  const [childName, setChildName] = useState("");
+  const [childNameError, setChildNameError] = useState("");
+  const [childAge, setChildAge] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianPhoneError, setGuardianPhoneError] = useState("");
+
   useEffect(() => {
     loadData();
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
@@ -103,6 +164,17 @@ const TrialSessionsList = () => {
     setVerificationStep("input");
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
   }, [selectedSession]);
+
+  useEffect(() => {
+    if (!selectedProvider) {
+      setProviderSheet("info");
+      setChildName("");
+      setChildNameError("");
+      setChildAge("");
+      setGuardianPhone("");
+      setGuardianPhoneError("");
+    }
+  }, [selectedProvider]);
 
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -129,7 +201,6 @@ const TrialSessionsList = () => {
     }
 
     setSessions(data as TrialSession[] || []);
-
   };
 
   const loadUserRegistrations = async (uid: string) => {
@@ -181,7 +252,7 @@ const TrialSessionsList = () => {
   const startPolling = (sessionId: string) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("guardian_verifications")
         .select("confirmed_at")
         .eq("session_id", sessionId)
@@ -196,7 +267,7 @@ const TrialSessionsList = () => {
     }, 3000);
   };
 
-  const handleAttendance = async (sessionId: string, points: number) => {
+  const handleAttendance = async (sessionId: string) => {
     setIsAttending(true);
     try {
       const { data, error } = await (supabase.rpc as any)("record_trial_attendance", { p_session_id: sessionId });
@@ -224,7 +295,48 @@ const TrialSessionsList = () => {
     }
   };
 
+  const handleProviderInquiry = async (provider: StaticProvider) => {
+    let hasError = false;
+    if (!childName.trim()) {
+      setChildNameError("Bitte gib den Namen des Kindes ein.");
+      hasError = true;
+    } else {
+      setChildNameError("");
+    }
+    if (!validateGuardianPhone(guardianPhone)) {
+      setGuardianPhoneError("Bitte gib eine gültige Telefonnummer eines Erziehungsberechtigten ein.");
+      hasError = true;
+    } else {
+      setGuardianPhoneError("");
+    }
+    if (hasError) return;
 
+    setProviderSheet("submitting");
+    try {
+      const { error } = await (supabase as any).from("try_it_trial_requests").insert({
+        sport_type: provider.sport,
+        provider_name: provider.club,
+        child_name: childName.trim(),
+        child_age: childAge ? parseInt(childAge, 10) : null,
+        guardian_phone: guardianPhone.trim(),
+        trial_training_status: TRIAL_STATUS,
+        trial_training_info: provider.trialInfo,
+        request_status: "requested",
+      });
+
+      if (error) {
+        console.error("Provider inquiry error:", error);
+        toast.error("Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.");
+        setProviderSheet("form");
+        return;
+      }
+      setProviderSheet("success");
+    } catch (e) {
+      console.error("Provider inquiry error:", e);
+      toast.error("Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.");
+      setProviderSheet("form");
+    }
+  };
 
   const isRegistered = (sessionId: string) => registrations.some(r => r.session_id === sessionId);
 
@@ -308,36 +420,21 @@ const TrialSessionsList = () => {
 
         return (
           <div className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#18C957_0%,#10A048_55%,#0D7F38_100%)] shadow-[0_16px_40px_rgba(14,126,62,0.35)]">
-            {/* Sparkles */}
             <div className="pointer-events-none absolute right-[46%] top-4 text-2xl text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">✦</div>
             <div className="pointer-events-none absolute right-[38%] top-16 text-sm text-white/60">✦</div>
-
-            {/* Sport image – right side */}
             <div className="absolute right-0 top-0 h-full w-[52%]">
               {isFootball ? (
-                <img
-                  src={tryitFootballNetImg}
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute inset-0 h-full w-full object-cover object-center"
-                />
+                <img src={tryitFootballNetImg} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-center" />
               ) : (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[7rem] leading-none opacity-70">
-                  {sportEmoji}
-                </span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[7rem] leading-none opacity-70">{sportEmoji}</span>
               )}
             </div>
-
-            {/* Content left */}
             <div className="relative z-10 max-w-[52%] p-4 pb-3">
-              <div className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-white/90">
-                ⭐ Empfohlen
-              </div>
+              <div className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-white/90">⭐ Empfohlen</div>
               <h3 className="text-[1.7rem] font-black leading-none text-white">{sportType}</h3>
               {featuredSession.description && (
                 <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-white/80">{featuredSession.description}</p>
               )}
-              {/* Club row */}
               <div className="mt-2 flex items-center gap-2">
                 {club?.logo_url ? (
                   <img src={club.logo_url} alt={clubName} className="h-8 w-8 rounded-full border-2 border-white/30 object-cover" />
@@ -351,15 +448,12 @@ const TrialSessionsList = () => {
                   {featuredSession.location && <p className="truncate text-xs text-white/70">{featuredSession.location}</p>}
                 </div>
               </div>
-              {/* Blitze pill */}
               <div className="mt-3">
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-black/30 px-3.5 py-2 text-sm font-bold text-white">
                   ⚡ +{pointsReward} Blitze
                 </span>
               </div>
             </div>
-
-            {/* "Zum Angebot" – absolute bottom right */}
             <button
               type="button"
               onClick={() => setSelectedSession(featuredSession)}
@@ -371,14 +465,14 @@ const TrialSessionsList = () => {
         );
       })()}
 
-      {/* Empty state */}
+      {/* Empty state for dynamic sessions */}
       {filteredSessions.length === 0 && (
         <div className="rounded-[24px] bg-white p-8 text-center shadow-sm">
           <p className="text-muted-foreground">Für diesen Filter sind aktuell keine Angebote verfügbar.</p>
         </div>
       )}
 
-      {/* Small cards grid */}
+      {/* Small dynamic session cards */}
       {remainingSessions.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {remainingSessions.map((session) => {
@@ -398,20 +492,14 @@ const TrialSessionsList = () => {
                 className="overflow-hidden rounded-[22px] border border-black/5 bg-white text-left shadow-[0_8px_22px_rgba(0,0,0,0.07)]"
               >
                 <div className="grid min-h-[130px] grid-cols-[62px_1fr]">
-                  {/* Emoji image – left column */}
-                  <div className={`flex items-center justify-center text-[2.6rem] leading-none ${
-                    isHighlight ? "bg-purple-50" : "bg-primary/8"
-                  }`}>
+                  <div className={`flex items-center justify-center text-[2.6rem] leading-none ${isHighlight ? "bg-purple-50" : "bg-primary/8"}`}>
                     {sportEmoji}
                   </div>
-                  {/* Content – right column */}
                   <div className="flex flex-col justify-between p-2">
                     <div className="flex flex-col gap-0.5">
                       <p className="text-[13px] font-black leading-tight text-foreground">{sportType}</p>
                       <span className={`w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                        isHighlight
-                          ? "border border-purple-200 bg-purple-50 text-purple-600"
-                          : "border border-primary/25 bg-primary/8 text-primary"
+                        isHighlight ? "border border-purple-200 bg-purple-50 text-purple-600" : "border border-primary/25 bg-primary/8 text-primary"
                       }`}>
                         {isHighlight ? "Kurs" : "Probetraining"}
                       </span>
@@ -421,9 +509,7 @@ const TrialSessionsList = () => {
                     <div className="mt-1 flex items-center justify-between">
                       <p className="text-[10px] font-bold text-primary">⚡ +{pointsReward} Blitze</p>
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        {isRegisteredSession
-                          ? <span className="text-[8px] font-black">✓</span>
-                          : <ChevronRight className="h-3 w-3" />}
+                        {isRegisteredSession ? <span className="text-[8px] font-black">✓</span> : <ChevronRight className="h-3 w-3" />}
                       </span>
                     </div>
                   </div>
@@ -434,9 +520,54 @@ const TrialSessionsList = () => {
         </div>
       )}
 
+      {/* ─── Static providers section ─────────────────────────────────────────── */}
+      <div className="space-y-3 pt-2">
+        <div>
+          <h3 className="text-[1.15rem] font-black leading-tight text-foreground">Probetraining nach Vereinbarung</h3>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Diese Vereine bieten Probetraining nach Vereinbarung an – einfach anfragen.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {STATIC_PROVIDERS.map((provider) => {
+            const emoji = getSportEmoji(provider.sport);
+            return (
+              <button
+                key={provider.id}
+                type="button"
+                onClick={() => setSelectedProvider(provider)}
+                className="overflow-hidden rounded-[22px] border border-black/5 bg-white text-left shadow-[0_8px_22px_rgba(0,0,0,0.07)]"
+              >
+                <div className="grid min-h-[130px] grid-cols-[62px_1fr]">
+                  <div className="flex items-center justify-center text-[2.6rem] leading-none bg-primary/8">
+                    {emoji}
+                  </div>
+                  <div className="flex flex-col justify-between p-2">
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-[13px] font-black leading-tight text-foreground">{provider.sport}</p>
+                      <span className="w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold border border-emerald-300 bg-emerald-50 text-emerald-700">
+                        ✓ {TRIAL_STATUS}
+                      </span>
+                      <p className="text-[11px] font-semibold leading-snug text-foreground/80">{provider.club}</p>
+                      {provider.contactPhone && (
+                        <p className="text-[10px] leading-snug text-muted-foreground">📞 {provider.contactPhone}</p>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center justify-end">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Bottom promo cards */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Weitere Angebote */}
         <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.05]"
@@ -461,7 +592,6 @@ const TrialSessionsList = () => {
           </div>
         </div>
 
-        {/* Dein Fortschritt */}
         <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">
           <img
             src={AVATAR_BASE_ASSET}
@@ -485,7 +615,7 @@ const TrialSessionsList = () => {
 
       <div className="h-2" />
 
-      {/* Session detail bottom sheet */}
+      {/* ─── Dynamic session detail bottom sheet ──────────────────────────────── */}
       {selectedSession && (() => {
         const s = selectedSession;
         const club = s.clubs;
@@ -503,12 +633,9 @@ const TrialSessionsList = () => {
               className="relative w-full overflow-hidden rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Handle */}
               <div className="flex justify-center pt-3 pb-1">
                 <div className="h-1 w-10 rounded-full bg-black/10" />
               </div>
-
-              {/* Header */}
               <div className="flex items-start justify-between px-5 pb-3 pt-1">
                 <div className="flex items-center gap-3">
                   <span className="text-[2.4rem] leading-none">{sportEmoji}</span>
@@ -526,7 +653,6 @@ const TrialSessionsList = () => {
                 </button>
               </div>
 
-              {/* Details */}
               <div className="space-y-3 px-5 pb-2">
                 <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-foreground">
@@ -562,7 +688,6 @@ const TrialSessionsList = () => {
                 )}
               </div>
 
-              {/* Contact details */}
               {club && (club.contact_email || club.contact_phone || club.website) && (
                 <div className="mx-5 mb-3 rounded-[16px] bg-gray-50 p-3.5 space-y-2">
                   <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Kontakt</p>
@@ -584,7 +709,6 @@ const TrialSessionsList = () => {
                 </div>
               )}
 
-              {/* Blitze reward + Teilnahme Button */}
               <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-1 space-y-3">
                 <div className="flex items-center justify-center gap-2 rounded-[16px] bg-primary/8 py-3 text-sm font-bold text-primary">
                   ⚡ +{pointsReward} Blitze nach der Teilnahme
@@ -603,20 +727,13 @@ const TrialSessionsList = () => {
                     <input
                       type="email"
                       value={guardianEmail}
-                      onChange={(e) => {
-                        setGuardianEmail(e.target.value);
-                        if (guardianEmailError) setGuardianEmailError("");
-                      }}
+                      onChange={(e) => { setGuardianEmail(e.target.value); if (guardianEmailError) setGuardianEmailError(""); }}
                       placeholder="z. B. mama@beispiel.at"
                       className={`w-full rounded-[14px] border px-4 py-3 text-sm outline-none transition-colors ${
-                        guardianEmailError
-                          ? "border-red-400 bg-red-50 focus:border-red-500"
-                          : "border-black/10 bg-gray-50 focus:border-primary"
+                        guardianEmailError ? "border-red-400 bg-red-50 focus:border-red-500" : "border-black/10 bg-gray-50 focus:border-primary"
                       }`}
                     />
-                    {guardianEmailError && (
-                      <p className="text-xs font-medium text-red-500">{guardianEmailError}</p>
-                    )}
+                    {guardianEmailError && <p className="text-xs font-medium text-red-500">{guardianEmailError}</p>}
                     <p className="text-[11px] leading-relaxed text-muted-foreground">
                       Die E-Mail-Adresse wird verwendet, um die Freigabe durch eine erziehungsberechtigte Person einzuholen.
                     </p>
@@ -650,7 +767,6 @@ const TrialSessionsList = () => {
                     </button>
                   </div>
                 ) : (
-                  /* verificationStep === "confirmed" */
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 rounded-[16px] bg-primary/10 px-4 py-3 text-sm font-bold text-primary">
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -659,7 +775,7 @@ const TrialSessionsList = () => {
                     <button
                       type="button"
                       disabled={isAttending}
-                      onClick={() => void handleAttendance(s.id, pointsReward)}
+                      onClick={() => void handleAttendance(s.id)}
                       className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)] disabled:opacity-60"
                     >
                       {isAttending ? "Wird gespeichert…" : "✓ Erfolgreich teilgenommen"}
@@ -667,6 +783,215 @@ const TrialSessionsList = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── Static provider inquiry bottom sheet ─────────────────────────────── */}
+      {selectedProvider && (() => {
+        const p = selectedProvider;
+        const emoji = getSportEmoji(p.sport);
+        return (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSelectedProvider(null)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <div
+              className="relative w-full overflow-hidden rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-black/10" />
+              </div>
+
+              {/* ── Info view ── */}
+              {providerSheet === "info" && (
+                <>
+                  <div className="flex items-start justify-between px-5 pb-3 pt-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[2.4rem] leading-none">{emoji}</span>
+                      <div>
+                        <p className="text-[1.3rem] font-black leading-tight text-foreground">{p.sport}</p>
+                        <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                          ✓ {TRIAL_STATUS}
+                        </span>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setSelectedProvider(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/6 text-foreground/60">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 px-5 pb-2">
+                    <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <span className="text-base">🏛</span>
+                        <span className="font-semibold">{p.club}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <span className="text-base">👥</span>
+                        <span>{p.ageLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-emerald-700">
+                        <span className="text-base">✅</span>
+                        <span className="font-semibold">{p.trialInfo}</span>
+                      </div>
+                    </div>
+
+                    {(p.contactPhone || p.contactEmail) && (
+                      <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                        <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Kontakt</p>
+                        {p.contactPhone && (
+                          <a href={`tel:${p.contactPhone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            <span className="text-base">📞</span>{p.contactPhone}
+                          </a>
+                        )}
+                        {p.contactEmail && (
+                          <a href={`mailto:${p.contactEmail}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
+                            <span className="text-base">✉️</span>{p.contactEmail}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setProviderSheet("form")}
+                      className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)]"
+                    >
+                      Anfragen
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ── Form view ── */}
+              {(providerSheet === "form" || providerSheet === "submitting") && (
+                <>
+                  <div className="flex items-center justify-between px-5 pt-1 pb-3">
+                    <button
+                      type="button"
+                      onClick={() => setProviderSheet("info")}
+                      className="text-sm font-semibold text-muted-foreground"
+                    >
+                      ← Zurück
+                    </button>
+                    <button type="button" onClick={() => setSelectedProvider(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/6 text-foreground/60">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] space-y-3">
+                    <div>
+                      <p className="text-[1.1rem] font-black text-foreground">Probetraining anfragen</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{p.club} · {p.sport}</p>
+                    </div>
+
+                    {/* child_name */}
+                    <div className="space-y-1">
+                      <label className="block text-[13px] font-bold text-foreground/80">
+                        Vorname Kind <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={childName}
+                        onChange={(e) => { setChildName(e.target.value); if (childNameError) setChildNameError(""); }}
+                        placeholder="z. B. Lena"
+                        className={`w-full rounded-[14px] border px-4 py-3 text-sm outline-none transition-colors ${
+                          childNameError ? "border-red-400 bg-red-50" : "border-black/10 bg-gray-50 focus:border-primary"
+                        }`}
+                      />
+                      {childNameError && <p className="text-xs font-medium text-red-500">{childNameError}</p>}
+                    </div>
+
+                    {/* child_age */}
+                    <div className="space-y-1">
+                      <label className="block text-[13px] font-bold text-foreground/80">Alter Kind</label>
+                      <input
+                        type="number"
+                        value={childAge}
+                        onChange={(e) => setChildAge(e.target.value)}
+                        placeholder="z. B. 10"
+                        min={3}
+                        max={99}
+                        className="w-full rounded-[14px] border border-black/10 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    {/* guardian_phone */}
+                    <div className="space-y-1">
+                      <label className="block text-[13px] font-bold text-foreground/80">
+                        Telefonnummer Erziehungsberechtigte:r <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={guardianPhone}
+                        onChange={(e) => { setGuardianPhone(e.target.value); if (guardianPhoneError) setGuardianPhoneError(""); }}
+                        placeholder="z. B. +43 660 1234567"
+                        className={`w-full rounded-[14px] border px-4 py-3 text-sm outline-none transition-colors ${
+                          guardianPhoneError ? "border-red-400 bg-red-50" : "border-black/10 bg-gray-50 focus:border-primary"
+                        }`}
+                      />
+                      {guardianPhoneError && <p className="text-xs font-medium text-red-500">{guardianPhoneError}</p>}
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        Die Telefonnummer wird verwendet, um die Freigabe durch eine erziehungsberechtigte Person zu ermöglichen.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={providerSheet === "submitting"}
+                      onClick={() => void handleProviderInquiry(p)}
+                      className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)] disabled:opacity-60"
+                    >
+                      {providerSheet === "submitting" ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Wird gesendet…
+                        </span>
+                      ) : "Anfragen absenden"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ── Success view ── */}
+              {providerSheet === "success" && (
+                <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-2 space-y-4 text-center">
+                  <div className="flex justify-center pt-2">
+                    <CheckCircle2 className="h-14 w-14 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[1.2rem] font-black text-foreground">Anfrage gesendet!</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Deine Anfrage beim <span className="font-bold text-foreground">{p.club}</span> wurde übermittelt.
+                    </p>
+                  </div>
+                  {(p.contactPhone || p.contactEmail) && (
+                    <div className="rounded-[16px] bg-gray-50 p-3.5 text-left space-y-2">
+                      <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Direkt Kontakt aufnehmen</p>
+                      {p.contactPhone && (
+                        <a href={`tel:${p.contactPhone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <span>📞</span>{p.contactPhone}
+                        </a>
+                      )}
+                      {p.contactEmail && (
+                        <a href={`mailto:${p.contactEmail}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <span>✉️</span>{p.contactEmail}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProvider(null)}
+                    className="w-full rounded-[16px] border border-black/10 bg-white py-3 text-sm font-semibold text-foreground/70"
+                  >
+                    Schließen
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );

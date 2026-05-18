@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import boostLogo from "@/assets/boost-logo.png";
 
-type State = "loading" | "confirming" | "success" | "error";
+type State = "loading" | "success" | "error";
 
 const VerifyGuardian = () => {
   const [searchParams] = useSearchParams();
@@ -16,29 +16,29 @@ const VerifyGuardian = () => {
     if (!token) {
       setErrorMsg("Kein gültiger Link.");
       setState("error");
-    } else {
-      setState("confirming");
+      return;
     }
-  }, [token]);
-
-  const handleConfirm = async () => {
-    setState("loading");
-    try {
-      const { data, error } = await supabase.functions.invoke("confirm-guardian", {
-        body: { token },
-      });
-      if (error) throw error;
-      if (data?.error) {
-        setErrorMsg(data.error);
+    // Auto-confirm on page load — no button click needed
+    const confirm = async () => {
+      setState("loading");
+      try {
+        const { data, error } = await supabase.functions.invoke("confirm-guardian", {
+          body: { token },
+        });
+        if (error) throw error;
+        if (data?.error) {
+          setErrorMsg(data.error);
+          setState("error");
+        } else {
+          window.location.href = "https://www.boostschule.at/try-it/eltern-bestaetigung";
+        }
+      } catch (err) {
+        setErrorMsg("Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
         setState("error");
-      } else {
-        window.location.href = `https://www.boostschule.at/try-it/eltern-bestaetigung?token=${token}`;
       }
-    } catch (err) {
-      setErrorMsg("Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
-      setState("error");
-    }
-  };
+    };
+    confirm();
+  }, [token]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-5">
@@ -57,36 +57,6 @@ const VerifyGuardian = () => {
             </div>
           )}
 
-          {state === "confirming" && (
-            <>
-              <div className="space-y-1.5 text-center">
-                <span className="text-4xl">👋</span>
-                <h1 className="text-xl font-black text-foreground">Freigabe erforderlich</h1>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Dein Kind möchte an einem <span className="font-bold text-foreground">BOOST Try-It-Angebot</span> teilnehmen und benötigt deine Zustimmung.
-                </p>
-              </div>
-
-              <div className="rounded-[16px] bg-primary/8 p-4 space-y-1">
-                <p className="text-xs font-black uppercase tracking-[0.08em] text-primary/70">Was ist BOOST?</p>
-                <p className="text-sm leading-relaxed text-foreground/80">
-                  BOOST ist eine App, die Kinder motiviert, neue Sportarten auszuprobieren. Try-It-Angebote sind kostenlose Schnupperstunden bei lokalen Sportvereinen.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)]"
-              >
-                ✓ Teilnahme bestätigen
-              </button>
-
-              <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-                Mit der Bestätigung stimmst du zu, dass dein Kind an diesem Schnupperangebot teilnimmt.
-              </p>
-            </>
-          )}
 
           {state === "success" && (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
