@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, ChevronRight, Loader2, MapPin, X } from "lucide-react";
@@ -73,6 +73,11 @@ const isFootballSport = (sportType: string) => {
   return t.includes('fußball') || t.includes('football') || t.includes('soccer');
 };
 
+const validateGuardianEmail = (email: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+type VerificationStep = "input" | "sending" | "waiting" | "confirmed";
+
 const TrialSessionsList = () => {
   const [sessions, setSessions] = useState<TrialSession[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -81,14 +86,28 @@ const TrialSessionsList = () => {
   const [isAttending, setIsAttending] = useState(false);
   const [activeFilter, setActiveFilter] = useState<TryItFilter>("all");
   const [selectedSession, setSelectedSession] = useState<TrialSession | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [guardianEmailError, setGuardianEmailError] = useState("");
+  const [verificationStep, setVerificationStep] = useState<VerificationStep>("input");
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     loadData();
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, []);
+
+  useEffect(() => {
+    setGuardianEmail("");
+    setGuardianEmailError("");
+    setVerificationStep("input");
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+  }, [selectedSession]);
 
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
+      setUserId(session.user.id);
       await loadUserRegistrations(session.user.id);
     }
     await loadSessions();
@@ -124,6 +143,59 @@ const TrialSessionsList = () => {
     setAttendedIds(new Set((data || []).filter(r => r.status === "attended").map(r => r.session_id)));
   };
 
+  const handleSendEmail = async (sessionId: string) => {
+    if (!validateGuardianEmail(guardianEmail)) {
+      setGuardianEmailError("Bitte gib eine gültige E-Mail-Adresse eines Erziehungsberechtigten ein.");
+      return;
+    }
+    setGuardianEmailError("");
+    setVerificationStep("sending");
+    try {
+      const { data, error } = await supabase.functions.invoke("send-guardian-sms", {
+        body: { session_id: sessionId, guardian_email: guardianEmail },
+      });
+      if (error) {
+        let msg = "E-Mail konnte nicht gesendet werden.";
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch {}
+        toast.error(msg);
+        setVerificationStep("input");
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        setVerificationStep("input");
+        return;
+      }
+      setVerificationStep("waiting");
+      startPolling(sessionId);
+    } catch (e: any) {
+      console.error("Email error:", e);
+      toast.error("E-Mail konnte nicht gesendet werden. Bitte versuche es erneut.");
+      setVerificationStep("input");
+    }
+  };
+
+  const startPolling = (sessionId: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    pollingRef.current = setInterval(async () => {
+      const { data } = await supabase
+        .from("guardian_verifications")
+        .select("confirmed_at")
+        .eq("session_id", sessionId)
+        .not("confirmed_at", "is", null)
+        .maybeSingle();
+
+      if (data?.confirmed_at) {
+        clearInterval(pollingRef.current!);
+        pollingRef.current = null;
+        setVerificationStep("confirmed");
+      }
+    }, 3000);
+  };
+
   const handleAttendance = async (sessionId: string, points: number) => {
     setIsAttending(true);
     try {
@@ -133,7 +205,15 @@ const TrialSessionsList = () => {
       if (result.status === "already_attended") {
         toast.info("Du hast bereits teilgenommen.");
       } else {
+        if (userId) {
+          await supabase
+            .from("trial_registrations")
+            .update({ guardian_phone: guardianEmail })
+            .eq("user_id", userId)
+            .eq("session_id", sessionId);
+        }
         setAttendedIds(prev => new Set([...prev, sessionId]));
+        setSelectedSession(null);
         toast.success(`Super! +${result.points_awarded} Blitze erhalten! ⚡`);
       }
     } catch (e) {
@@ -509,20 +589,82 @@ const TrialSessionsList = () => {
                 <div className="flex items-center justify-center gap-2 rounded-[16px] bg-primary/8 py-3 text-sm font-bold text-primary">
                   ⚡ +{pointsReward} Blitze nach der Teilnahme
                 </div>
+
                 {attendedIds.has(s.id) ? (
                   <div className="flex items-center justify-center gap-2 rounded-[16px] bg-primary/10 py-4 text-sm font-bold text-primary">
                     <CheckCircle2 className="h-5 w-5" />
                     Teilnahme bestätigt
                   </div>
+                ) : verificationStep === "input" ? (
+                  <div className="space-y-1.5">
+                    <label className="block text-[13px] font-bold text-foreground/80">
+                      E-Mail Erziehungsberechtigte:r
+                    </label>
+                    <input
+                      type="email"
+                      value={guardianEmail}
+                      onChange={(e) => {
+                        setGuardianEmail(e.target.value);
+                        if (guardianEmailError) setGuardianEmailError("");
+                      }}
+                      placeholder="z. B. mama@beispiel.at"
+                      className={`w-full rounded-[14px] border px-4 py-3 text-sm outline-none transition-colors ${
+                        guardianEmailError
+                          ? "border-red-400 bg-red-50 focus:border-red-500"
+                          : "border-black/10 bg-gray-50 focus:border-primary"
+                      }`}
+                    />
+                    {guardianEmailError && (
+                      <p className="text-xs font-medium text-red-500">{guardianEmailError}</p>
+                    )}
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Die E-Mail-Adresse wird verwendet, um die Freigabe durch eine erziehungsberechtigte Person einzuholen.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleSendEmail(s.id)}
+                      className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)]"
+                    >
+                      ✉️ Freigabe per E-Mail anfordern
+                    </button>
+                  </div>
+                ) : verificationStep === "sending" ? (
+                  <div className="flex items-center justify-center gap-2 rounded-[16px] bg-gray-50 py-4 text-sm font-semibold text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    E-Mail wird gesendet…
+                  </div>
+                ) : verificationStep === "waiting" ? (
+                  <div className="space-y-3">
+                    <div className="rounded-[16px] bg-amber-50 border border-amber-200 p-4 space-y-1.5">
+                      <p className="text-sm font-black text-amber-800">⏳ Warte auf Bestätigung</p>
+                      <p className="text-xs leading-relaxed text-amber-700">
+                        Eine E-Mail wurde an <span className="font-bold">{guardianEmail}</span> gesendet. Sobald die erziehungsberechtigte Person den Link bestätigt, geht es automatisch weiter.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationStep("input")}
+                      className="w-full rounded-[16px] border border-black/10 bg-white py-3 text-sm font-semibold text-foreground/70"
+                    >
+                      Andere E-Mail eingeben
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={isAttending}
-                    onClick={() => void handleAttendance(s.id, pointsReward)}
-                    className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)] disabled:opacity-60"
-                  >
-                    {isAttending ? "Wird gespeichert…" : "✓ Erfolgreich teilgenommen"}
-                  </button>
+                  /* verificationStep === "confirmed" */
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 rounded-[16px] bg-primary/10 px-4 py-3 text-sm font-bold text-primary">
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      Freigabe erteilt!
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isAttending}
+                      onClick={() => void handleAttendance(s.id, pointsReward)}
+                      className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)] disabled:opacity-60"
+                    >
+                      {isAttending ? "Wird gespeichert…" : "✓ Erfolgreich teilgenommen"}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

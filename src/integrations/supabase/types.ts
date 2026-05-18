@@ -309,6 +309,7 @@ export type Database = {
       trial_registrations: {
         Row: {
           created_at: string
+          guardian_phone: string | null
           id: string
           notes: string | null
           session_id: string
@@ -318,6 +319,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          guardian_phone?: string | null
           id?: string
           notes?: string | null
           session_id: string
@@ -327,6 +329,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          guardian_phone?: string | null
           id?: string
           notes?: string | null
           session_id?: string

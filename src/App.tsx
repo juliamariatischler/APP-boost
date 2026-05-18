@@ -33,6 +33,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const FriendQuest = lazy(() => import("./pages/FriendQuest"));
 const WeeklyAthleteChallenge = lazy(() => import("./pages/WeeklyAthleteChallenge"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyGuardian = lazy(() => import("./pages/VerifyGuardian"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -124,6 +125,7 @@ const App = () => (
                 <Route path="/challenge/friend" element={<FriendQuest />} />
                 <Route path="/challenge/weekly/athlete" element={<WeeklyAthleteChallenge />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/verify-guardian" element={<VerifyGuardian />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
