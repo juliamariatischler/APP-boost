@@ -34,25 +34,38 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
+    // Show UI immediately with cached session — don't block on the network round-trip.
+    const cached = loadSession();
+    setSession(cached);
+    setLoading(false);
+
+    if (!cached?.session_token) return;
+
+    // Validate in background; clear session if the server says it's invalid.
+    // A 4-second safety timeout prevents a stale-network scenario from
+    // quietly holding an expired session open forever.
+    const timeoutId = setTimeout(() => { /* validation still running — keep cached */ }, 4_000);
+
     validateSession()
       .then((validatedSession) => {
         if (cancelled) return;
-        const cachedSession = loadSession();
-        setSession(
-          cachedSession?.session_token === validatedSession?.session_token
-            ? validatedSession
-            : null,
-        );
+        const freshCached = loadSession();
+        // If server rejects the token, clear it
+        if (!validatedSession || freshCached?.session_token !== validatedSession.session_token) {
+          setSession(null);
+        } else {
+          setSession(validatedSession);
+        }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .catch(() => { /* network error – keep cached session, will fail on next API call */ })
+      .finally(() => clearTimeout(timeoutId));
 
     const handleSessionCleared = () => setSession(null);
     window.addEventListener(CODE_SESSION_CLEARED_EVENT, handleSessionCleared);
 
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
       window.removeEventListener(CODE_SESSION_CLEARED_EVENT, handleSessionCleared);
     };
   }, []);

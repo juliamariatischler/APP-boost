@@ -1,11 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
-import { AnimatePresence, motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Capacitor } from "@capacitor/core";
-import { toast } from "sonner";
 import dailyImg from "@/assets/challenge-daily.jpg";
 import weeklyImg from "@/assets/challenge-weekly.jpg";
 import friendImg from "@/assets/friendquest1.svg";
@@ -19,21 +16,17 @@ import { TopHeader } from "@/components/TopHeader";
 import { BottomNav } from "@/components/BottomNav";
 import {
   CheckCircle2,
-  ChevronDown,
-  Loader2,
   MapPin,
   Nfc,
-  Package,
   Play,
   Search,
-  Sparkles,
   TreePine,
   Trophy,
   Zap,
 } from "lucide-react";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET } from "@/lib/avatarItems";
-import { scanForStation } from "@/lib/nfc";
+import { getActiveRoute, getRouteProgress, type NfcRouteWithStations, type NfcRouteProgress } from "@/lib/nfcRouteService";
 
 const challengeData: Record<string, { title: string; image: string; description: string }> = {
   daily: {
@@ -58,7 +51,6 @@ const challengeData: Record<string, { title: string; image: string; description:
   },
 };
 
-const SCHATZSUCHE_STATIONS: ReadonlyArray<{ id: string; label: string; lat: number; lng: number }> = [];
 
 const Blitz3D = ({ className = "" }: { className?: string }) => (
   <span className={`relative inline-flex shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(145deg,#baff76_0%,#61dc70_46%,#22a64a_100%)] text-white shadow-[0_9px_14px_rgba(31,224,102,0.34),0_3px_0_rgba(20,120,52,0.28),inset_0_2px_2px_rgba(255,255,255,0.68),inset_0_-3px_5px_rgba(0,0,0,0.18)] ${className}`}>
@@ -88,38 +80,14 @@ const QuestBuddy = () => {
   );
 };
 
-const TrackPlaceholder = () => (
-  <div className="mx-5 mb-5 mt-3 overflow-hidden rounded-[16px] border border-sky-100/80 bg-[linear-gradient(135deg,#e0f2fe_0%,#eff6ff_100%)]">
-    <div className="relative flex h-28 items-center justify-center">
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 300 112" preserveAspectRatio="none">
-        <path
-          d="M 20 95 C 60 88, 72 28, 122 48 S 198 78, 242 38 S 276 14, 286 17"
-          stroke="#bae6fd"
-          strokeWidth="3"
-          fill="none"
-          strokeDasharray="8 5"
-        />
-        <circle cx="20" cy="95" r="5" fill="#0ea5e9" fillOpacity="0.55" />
-        <circle cx="122" cy="48" r="5" fill="#0ea5e9" fillOpacity="0.55" />
-        <circle cx="286" cy="17" r="5" fill="#0ea5e9" fillOpacity="0.55" />
-      </svg>
-      <div className="relative z-10 flex flex-col items-center gap-1 text-center">
-        <MapPin className="h-5 w-5 text-sky-400" />
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-500">Track</p>
-        <p className="text-[9px] text-sky-400/80">Routenbild hier einfügen</p>
-      </div>
-    </div>
-  </div>
-);
 
 const ChallengeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [userId, setUserId] = useState<string | null>(null);
-  const [completedStations, setCompletedStations] = useState<Set<string>>(new Set());
-  const [scanningStation, setScanningStation] = useState<string | null>(null);
-  const [showScanSection, setShowScanSection] = useState(false);
+  const [nfcRoute, setNfcRoute] = useState<NfcRouteWithStations | null>(null);
+  const [nfcProgress, setNfcProgress] = useState<NfcRouteProgress | null>(null);
 
   useEffect(() => {
     if (codeAuthLoading) return;
@@ -138,54 +106,19 @@ const ChallengeDetail = () => {
   }, [navigate, codeSession, codeAuthLoading]);
 
   useEffect(() => {
-    if (!userId || id !== "weekly") return;
+    if (id !== "weekly") return;
     const load = async () => {
-      const { data } = await (supabase.from("station_scans") as any)
-        .select("station_id")
-        .eq("user_id", userId)
-        .eq("challenge_id", "schatzsuche");
-      if (data) setCompletedStations(new Set(data.map((d: any) => d.station_id as string)));
+      const route = await getActiveRoute();
+      setNfcRoute(route);
+      if (route) {
+        const deviceId = codeSession?.device_id;
+        const sessionToken = codeSession?.session_token;
+        const prog = await getRouteProgress(route.id, deviceId, sessionToken);
+        setNfcProgress(prog);
+      }
     };
     void load();
-  }, [userId, id]);
-
-  const openInMaps = (lat: number, lng: number, label: string) => {
-    const url =
-      Capacitor.getPlatform() === "ios"
-        ? `maps://?q=${encodeURIComponent(label)}&ll=${lat},${lng}`
-        : `https://www.google.com/maps?q=${lat},${lng}`;
-    window.open(url, "_blank");
-  };
-
-  const handleScanStation = async (stationId: string, label: string) => {
-    if (scanningStation || completedStations.has(stationId)) return;
-    setScanningStation(stationId);
-    try {
-      const result = await scanForStation({
-        expectedStationId: stationId,
-        alertMessage: `Halte dein iPhone an ${label}`,
-      });
-      if (result === "success") {
-        if (userId) {
-          await (supabase.from("station_scans") as any).upsert({
-            user_id: userId,
-            challenge_id: "schatzsuche",
-            station_id: stationId,
-          });
-        }
-        setCompletedStations((prev) => new Set([...prev, stationId]));
-        toast.success(`${label} erfolgreich gescannt! ✓`);
-      } else if (result === "wrong_tag") {
-        toast.error("Falsche Station – bitte scanne die richtige Station.");
-      } else if (result === "unavailable") {
-        toast.error("NFC nicht verfügbar auf diesem Gerät.");
-      }
-    } catch {
-      toast.error("Scan fehlgeschlagen. Bitte erneut versuchen.");
-    } finally {
-      setScanningStation(null);
-    }
-  };
+  }, [id, codeSession]);
 
   const challenge = id ? challengeData[id] : null;
   const headerReward =
@@ -251,14 +184,17 @@ const ChallengeDetail = () => {
               </div>
             </Card>
 
-            {/* Mission 1 – Schatzsuche */}
+            {/* Mission 1 – NFC-Route */}
             <Card className="overflow-hidden rounded-[24px] border-2 border-sky-200 bg-white p-0 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
-              {/* Header grid */}
               <div className="relative grid grid-cols-[minmax(0,1fr)_155px]">
                 <div className="p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">Mission 1</p>
-                  <h3 className="mt-2 text-xl font-black text-foreground">Schatzsuche</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Finde Orte draussen und sammle Funde.</p>
+                  <h3 className="mt-2 text-xl font-black text-foreground">
+                    {nfcRoute?.name ?? "NFC-Route"}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {nfcRoute?.description ?? "Laufe die Route und scanne alle NFC-Stationen."}
+                  </p>
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
                       <TreePine className="h-4 w-4 text-sky-500" />
@@ -266,27 +202,35 @@ const ChallengeDetail = () => {
                     </div>
                     <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
                       <Search className="h-4 w-4 text-sky-500" />
-                      Versteck finden
+                      Stationen finden
                     </div>
-                    {SCHATZSUCHE_STATIONS.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowScanSection((v) => !v)}
-                        className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                          showScanSection
-                            ? "bg-sky-500 text-white shadow-[0_4px_12px_rgba(14,165,233,0.28)]"
-                            : "bg-[#f3f8ff] text-foreground"
-                        }`}
-                      >
-                        <Nfc className={`h-4 w-4 shrink-0 ${showScanSection ? "text-white" : "text-sky-500"}`} />
-                        <span className="flex-1">Station scannen</span>
-                        <ChevronDown
-                          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-                            showScanSection ? "rotate-180 text-white" : "text-sky-400"
-                          }`}
-                        />
-                      </button>
-                    )}
+                    {/* Progress or start button */}
+                    {nfcProgress && nfcProgress.total_count > 0 ? (
+                      <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${
+                        nfcProgress.is_complete
+                          ? "bg-green-100 text-green-700"
+                          : "bg-[#f3f8ff] text-foreground"
+                      }`}>
+                        {nfcProgress.is_complete ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Nfc className="h-4 w-4 text-sky-500" />
+                        )}
+                        {nfcProgress.is_complete
+                          ? "Route abgeschlossen ✓"
+                          : `${nfcProgress.scanned_count} von ${nfcProgress.total_count} Stationen gescannt`}
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/nfc-route")}
+                      className="flex w-full items-center gap-2 rounded-2xl bg-sky-500 px-3 py-2 text-left text-sm font-black text-white shadow-[0_4px_12px_rgba(14,165,233,0.28)] active:scale-95 transition-transform"
+                    >
+                      <Nfc className="h-4 w-4 shrink-0" />
+                      <span className="flex-1">
+                        {nfcProgress?.is_complete ? "Route ansehen" : "Route starten"}
+                      </span>
+                    </button>
                   </div>
                 </div>
                 <div className="relative overflow-hidden">
@@ -301,92 +245,6 @@ const ChallengeDetail = () => {
                   />
                 </div>
               </div>
-
-              {/* NFC Scan Stations – animated reveal */}
-              <AnimatePresence initial={false}>
-                {showScanSection && (
-              <motion.div
-                key="scan-section"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-              <div className="border-t border-sky-100 px-5 pb-2 pt-4">
-                <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-sky-600">Scan Station</p>
-                <div className="space-y-2">
-                  {SCHATZSUCHE_STATIONS.map((station) => {
-                    const isDone = completedStations.has(station.id);
-                    const isScanning = scanningStation === station.id;
-                    return (
-                      <div
-                        key={station.id}
-                        className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition-colors ${
-                          isDone ? "border-green-200 bg-green-50" : "border-sky-200 bg-[#f3f8ff]"
-                        }`}
-                      >
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                            isDone ? "bg-green-100" : "bg-sky-100"
-                          }`}
-                        >
-                          {isDone ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Package className="h-4 w-4 text-sky-500" />
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-foreground">{station.label}</p>
-                          <button
-                            type="button"
-                            onClick={() => openInMaps(station.lat, station.lng, station.label)}
-                            className="mt-0.5 flex items-center gap-1 text-[10px] text-sky-500 active:text-sky-700"
-                          >
-                            <MapPin className="h-2.5 w-2.5" />
-                            {station.lat.toFixed(4)}° N, {station.lng.toFixed(4)}° E
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => void handleScanStation(station.id, station.label)}
-                          disabled={isDone || isScanning}
-                          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition-all active:scale-95 ${
-                            isDone
-                              ? "cursor-default bg-green-100 text-green-600"
-                              : isScanning
-                                ? "bg-sky-100 text-sky-500"
-                                : "bg-sky-500 text-white shadow-[0_4px_12px_rgba(14,165,233,0.3)]"
-                          }`}
-                        >
-                          {isScanning ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              Scanne…
-                            </>
-                          ) : isDone ? (
-                            "Gescannt ✓"
-                          ) : (
-                            <>
-                              <Nfc className="h-3.5 w-3.5" />
-                              Scan NFC
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Track image placeholder */}
-              <TrackPlaceholder />
-              </motion.div>
-              )}
-              </AnimatePresence>
             </Card>
 
             {/* Mission 2 – Coming Soon */}

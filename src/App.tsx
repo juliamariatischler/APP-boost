@@ -32,6 +32,7 @@ const Legal = lazy(() => import("./pages/Legal"));
 const Settings = lazy(() => import("./pages/Settings"));
 const FriendQuest = lazy(() => import("./pages/FriendQuest"));
 const WeeklyAthleteChallenge = lazy(() => import("./pages/WeeklyAthleteChallenge"));
+const NfcRouteChallenge = lazy(() => import("./pages/NfcRouteChallenge"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyGuardian = lazy(() => import("./pages/VerifyGuardian"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -124,6 +125,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/challenge/friend" element={<FriendQuest />} />
                 <Route path="/challenge/weekly/athlete" element={<WeeklyAthleteChallenge />} />
+                <Route path="/nfc-route" element={<NfcRouteChallenge />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-guardian" element={<VerifyGuardian />} />
                 <Route path="*" element={<NotFound />} />
