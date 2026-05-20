@@ -13,16 +13,13 @@ const Activity = () => {
 
   useEffect(() => {
     if (codeAuthLoading) return;
+    if (codeSession?.user_type === "student") {
+      setUserId(codeSession.user_id);
+      return;
+    }
     void (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (codeSession?.user_type === "student") {
-          setUserId(codeSession.user_id);
-          return;
-        }
-        navigate("/auth");
-        return;
-      }
+      if (!session) { navigate("/auth"); return; }
       setUserId(session.user.id);
     })();
   }, [navigate, codeSession, codeAuthLoading]);

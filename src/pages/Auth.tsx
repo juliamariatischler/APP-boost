@@ -713,20 +713,22 @@ const Auth = () => {
         throw assignError;
       }
 
-      // Fallback: ensure explicit demo student -> demo teacher mapping when table exists.
-      try {
-        const { error: directAssignError } = await (supabase.rpc as any)("admin_assign_student", {
-          p_student_id: studentId,
-        });
+      // Fallback: explicit student→teacher mapping — only needed if class-assignment didn't work.
+      if (!assignmentSucceeded) {
+        try {
+          const { error: directAssignError } = await (supabase.rpc as any)("admin_assign_student", {
+            p_student_id: studentId,
+          });
 
-        if (!directAssignError) {
-          assignmentSucceeded = true;
-        } else if (!isAssignmentInfraMissing(directAssignError)) {
-          throw directAssignError;
-        }
-      } catch (directAssignThrown: any) {
-        if (!isAssignmentInfraMissing(directAssignThrown)) {
-          throw directAssignThrown;
+          if (!directAssignError) {
+            assignmentSucceeded = true;
+          } else if (!isAssignmentInfraMissing(directAssignError)) {
+            throw directAssignError;
+          }
+        } catch (directAssignThrown: any) {
+          if (!isAssignmentInfraMissing(directAssignThrown)) {
+            throw directAssignThrown;
+          }
         }
       }
 

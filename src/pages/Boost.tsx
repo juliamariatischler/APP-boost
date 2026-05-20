@@ -28,15 +28,15 @@ const Boost = () => {
   useEffect(() => {
     const init = async () => {
       if (codeAuthLoading) return;
+      if (codeSession?.user_type === "student") {
+        setUserId(codeSession.user_id);
+        setUserClass(codeSession.class_name || "");
+        setUserSchool(codeSession.school_name || "");
+        setAuthLoading(false);
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        if (codeSession?.user_type === "student") {
-          setUserId(codeSession.user_id);
-          setUserClass(codeSession.class_name || "");
-          setUserSchool(codeSession.school_name || "");
-          setAuthLoading(false);
-          return;
-        }
         navigate("/");
         return;
       }

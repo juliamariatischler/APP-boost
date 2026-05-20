@@ -27,17 +27,16 @@ interface CodeAuthContextValue {
 const CodeAuthContext = createContext<CodeAuthContextValue | null>(null);
 
 export function CodeAuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<CodeSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize synchronously from localStorage — no render cycle blocked waiting for useEffect.
+  const [session, setSession] = useState<CodeSession | null>(() => loadSession());
+  const [loading, setLoading] = useState(false);
 
   // Restore session on mount
   useEffect(() => {
     let cancelled = false;
 
-    // Show UI immediately with cached session — don't block on the network round-trip.
     const cached = loadSession();
     setSession(cached);
-    setLoading(false);
 
     if (!cached?.session_token) return;
 

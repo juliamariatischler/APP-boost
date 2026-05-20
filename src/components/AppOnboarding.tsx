@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Shield, Trophy, Users, X, Zap } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -268,7 +268,8 @@ const AppOnboarding = () => {
   }, []);
 
   const role: OnboardingRole | null = codeSession?.user_type ?? supabaseRole;
-  const authReady = !codeLoading && supabaseReady;
+  // Code-auth sessions are known immediately — no need to wait for Supabase
+  const authReady = !codeLoading && (codeSession != null || supabaseReady);
   const slides = useMemo(() => (role === "teacher" ? TEACHER_SLIDES : STUDENT_SLIDES), [role]);
 
   useEffect(() => {
@@ -281,13 +282,12 @@ const AppOnboarding = () => {
 
   useEffect(() => {
     const handleOpen = () => {
-      if (!role) return;
       setCurrentIndex(0);
       setOpen(true);
     };
     window.addEventListener(ONBOARDING_OPEN_EVENT, handleOpen);
     return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, handleOpen);
-  }, [role]);
+  }, []);
 
   if (!open || !role || HIDDEN_PATHS.includes(location.pathname)) return null;
 
@@ -300,8 +300,33 @@ const AppOnboarding = () => {
     setOpen(false);
   };
 
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 50) return;
+    if (delta < 0) {
+      // swipe left → next
+      if (isLast) closeOnboarding();
+      else setCurrentIndex((prev) => prev + 1);
+    } else {
+      // swipe right → back
+      if (currentIndex > 0) setCurrentIndex((prev) => prev - 1);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-[#f0ece4]">
+    <div
+      className="fixed inset-0 z-[120] overflow-y-auto bg-[#f0ece4]"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-5 pb-8 pt-16">
 
         {/* Header row */}
@@ -372,10 +397,10 @@ const AppOnboarding = () => {
         <div className="mt-6 flex items-center gap-4">
           <button
             type="button"
-            onClick={closeOnboarding}
+            onClick={currentIndex > 0 ? () => setCurrentIndex((prev) => prev - 1) : closeOnboarding}
             className="flex-1 py-3.5 text-sm font-black text-foreground/60"
           >
-            Überspringen
+            {currentIndex > 0 ? "Zurück" : "Überspringen"}
           </button>
           <button
             type="button"

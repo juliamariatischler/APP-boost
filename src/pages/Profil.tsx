@@ -72,20 +72,20 @@ const Profil = () => {
     const init = async () => {
       if (codeAuthLoading) return;
       try {
+        if (codeSession?.user_type === "student") {
+          setUserId(codeSession.user_id);
+          setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+          setProfile({ username: codeSession.display_name || "Spieler" });
+          setHealthAvailable(false);
+          setCheckingHealth(false);
+          setLoading(false);
+          return;
+        }
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
         if (!session) {
-          if (codeSession?.user_type === "student") {
-            setUserId(codeSession.user_id);
-            setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
-            setProfile({ username: codeSession.display_name || "Spieler" });
-            setHealthAvailable(false);
-            setCheckingHealth(false);
-            setLoading(false);
-            return;
-          }
           navigate("/");
           return;
         }

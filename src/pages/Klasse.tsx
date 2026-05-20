@@ -58,20 +58,20 @@ const Klasse = () => {
     const init = async () => {
       if (codeAuthLoading) return;
       try {
+        if (codeSession?.user_type === "student") {
+          setUserId(codeSession.user_id);
+          setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+          setUserClass(codeSession.class_name || "");
+          setUserSchool(codeSession.school_name || "");
+          await Promise.all([
+            loadClassRankings(),
+            loadCodeClassQuestProgress(codeSession.device_id, codeSession.session_token),
+            loadCodeClassStudentRankings(codeSession.device_id, codeSession.session_token),
+          ]);
+          return;
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          if (codeSession?.user_type === "student") {
-            setUserId(codeSession.user_id);
-            setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
-            setUserClass(codeSession.class_name || "");
-            setUserSchool(codeSession.school_name || "");
-            await Promise.all([
-              loadClassRankings(),
-              loadCodeClassQuestProgress(codeSession.device_id, codeSession.session_token),
-              loadCodeClassStudentRankings(codeSession.device_id, codeSession.session_token),
-            ]);
-            return;
-          }
           navigate("/");
           return;
         }

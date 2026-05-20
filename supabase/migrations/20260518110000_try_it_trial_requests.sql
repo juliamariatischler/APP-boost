@@ -17,12 +17,14 @@ check (guardian_phone ~ '^\+?[0-9\s\/\-()]{7,20}$');
 
 alter table public.try_it_trial_requests enable row level security;
 
+drop policy if exists "Authenticated users can insert trial requests" on public.try_it_trial_requests;
 create policy "Authenticated users can insert trial requests"
   on public.try_it_trial_requests
   for insert
   to authenticated
   with check (true);
 
+drop policy if exists "Authenticated users can view trial requests" on public.try_it_trial_requests;
 create policy "Authenticated users can view trial requests"
   on public.try_it_trial_requests
   for select

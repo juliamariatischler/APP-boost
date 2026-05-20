@@ -85,12 +85,8 @@ const Rewards = () => {
   const loadRewardsData = async () => {
     if (codeAuthLoading) return;
     setLoading(true);
-    const { data: authData } = await supabase.auth.getSession();
-    const uid = authData.session?.user?.id;
-    const email = authData.session?.user?.email;
 
-    if (!uid) {
-      if (codeSession?.user_type === "student") {
+    if (codeSession?.user_type === "student") {
         setUserId(codeSession.user_id);
         setMyFlashes(codeSession.points ?? 0);
         const [{ data: rewardRows, error: rewardsError }, { data: milestoneRows, error: milestonesError }] =
@@ -112,9 +108,11 @@ const Rewards = () => {
         setLoading(false);
         return;
       }
-      navigate("/auth");
-      return;
-    }
+    // Supabase-auth fallback
+    const { data: authData } = await supabase.auth.getSession();
+    const uid = authData.session?.user?.id;
+    const email = authData.session?.user?.email;
+    if (!uid) { navigate("/auth"); return; }
     setUserId(uid);
 
     const { data: profile, error: profileError } = await supabase

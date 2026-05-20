@@ -408,7 +408,7 @@ export default function TeacherManagement() {
     exportableStudents.length > 0 && selectedExportStudentIds.length === exportableStudents.length;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav-safe">
       <style>{`
         .teacher-print-export {
           display: none;
@@ -502,7 +502,7 @@ export default function TeacherManagement() {
       `}</style>
 
       <div className="teacher-management-screen">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-4 backdrop-blur">
+      <header className="border-b border-border bg-background/95 px-4 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Verwaltung</p>
@@ -514,7 +514,7 @@ export default function TeacherManagement() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 pb-24 lg:grid-cols-[19rem_minmax(0,1fr)]">
+      <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Klassen</h2>

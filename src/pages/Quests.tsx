@@ -123,16 +123,15 @@ const Quests = () => {
 
   useEffect(() => {
     const loadProfile = async () => {
+      if (codeAuthLoading) return;
+      if (codeSession?.user_type === "student") {
+        setUserId(codeSession.user_id);
+        setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+        setLoading(false);
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
-
       if (!session) {
-        if (codeAuthLoading) return;
-        if (codeSession?.user_type === "student") {
-          setUserId(codeSession.user_id);
-          setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
-          setLoading(false);
-          return;
-        }
         navigate("/");
         return;
       }

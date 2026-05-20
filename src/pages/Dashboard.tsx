@@ -70,16 +70,12 @@ const Dashboard = () => {
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) {
-          if (codeAuthLoading) return;
-
+        // Fast path: code-auth session is already resolved — skip the Supabase getSession round-trip
+        if (!codeAuthLoading) {
           if (codeSession?.user_type === "teacher") {
             navigate("/teacher-home", { replace: true });
             return;
           }
-
           if (codeSession?.user_type === "student") {
             setUserId(codeSession.user_id);
             setUsername(codeSession.display_name || "Spieler");
@@ -92,7 +88,12 @@ const Dashboard = () => {
             setLoading(false);
             return;
           }
+        }
 
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          if (codeAuthLoading) return;
           navigate("/");
           return;
         }
