@@ -289,6 +289,8 @@ const AppOnboarding = () => {
     return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, handleOpen);
   }, []);
 
+  const touchStartX = useRef<number | null>(null);
+
   if (!open || !role || HIDDEN_PATHS.includes(location.pathname)) return null;
 
   const slide = slides[currentIndex];
@@ -299,8 +301,6 @@ const AppOnboarding = () => {
     markOnboardingSeen(role);
     setOpen(false);
   };
-
-  const touchStartX = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;

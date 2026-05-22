@@ -1,4 +1,4 @@
-import { FileText, Scale, ShieldCheck } from "lucide-react";
+import { ChevronRight, FileText, Scale, ShieldCheck } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { TopHeader } from "@/components/TopHeader";
@@ -228,16 +228,15 @@ const Legal = () => {
               </div>
             </section>
 
-            <section className="rounded-[20px] border border-dashed border-black/10 bg-white/80 px-4 py-4">
-              <div className="flex items-start gap-3">
+            <section className="rounded-[20px] border border-black/10 bg-white/80 px-4 py-4">
+              <a href="/nutzungsbedingungen.html" target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 group">
                 <Scale className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                <div>
-                  <p className="font-bold text-foreground">Nutzungsbedingungen</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Noch nicht hinterlegt. Sobald die Nutzungsbedingungen final sind, können sie hier ergänzt werden.
-                  </p>
+                <div className="flex-1">
+                  <p className="font-bold text-foreground group-hover:text-green-700 transition-colors">Nutzungsbedingungen</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Allgemeine Nutzungsbedingungen für die BOOST-App</p>
                 </div>
-              </div>
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-green-700 transition-colors" />
+              </a>
             </section>
           </div>
         </Card>

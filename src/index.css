@@ -8,15 +8,18 @@
   }
 }
 
-/* Prevent iOS rubber-band bounce without disabling scrolling */
+/* Prevent iOS rubber-band bounce and horizontal scroll/pan */
 html {
   overscroll-behavior: none;
   height: 100%;
+  overflow-x: hidden;
 }
 
 body {
   overscroll-behavior: none;
   height: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
   -webkit-overflow-scrolling: touch;
 }
 

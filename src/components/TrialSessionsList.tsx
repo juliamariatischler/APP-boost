@@ -630,7 +630,7 @@ const TrialSessionsList = () => {
           <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSelectedSession(null)}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
             <div
-              className="relative w-full overflow-hidden rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
+              className="relative w-full max-h-[90vh] overflow-y-auto rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-center pt-3 pb-1">
@@ -796,7 +796,7 @@ const TrialSessionsList = () => {
           <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSelectedProvider(null)}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
             <div
-              className="relative w-full overflow-hidden rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
+              className="relative w-full max-h-[90vh] overflow-y-auto rounded-t-[32px] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-center pt-3 pb-1">

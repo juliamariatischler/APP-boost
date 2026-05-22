@@ -112,12 +112,20 @@ const Dashboard = () => {
         // Kick off weekly progress fetch immediately — runs in parallel with profile queries
         void loadWeeklyProgress(uid, isDemoEmail(session.user.email));
 
-        const [{ data: profileData, error: profileError }, { data: adminRoleData }] = await Promise.all([
-          supabase
+        // Retry up to 4 times — new accounts may have a brief race condition
+        // between session creation and the DB trigger creating the profile row.
+        let profileData: { username: string | null; points: number | null; school: string | null; class: string | null } | null = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 600 * attempt));
+          const { data } = await supabase
             .from("profiles")
             .select("username, points, school, class")
             .eq("id", uid)
-            .single(),
+            .maybeSingle();
+          if (data) { profileData = data; break; }
+        }
+
+        const [{ data: adminRoleData }] = await Promise.all([
           supabase
             .from("user_roles")
             .select("role")
@@ -126,9 +134,10 @@ const Dashboard = () => {
             .maybeSingle(),
         ]);
 
-        if (profileError || !profileData) {
-          console.error("Error loading profile:", profileError);
-          navigate("/");
+        if (!profileData) {
+          console.error("Profile not found after retries — signing out to prevent redirect loop");
+          await supabase.auth.signOut();
+          navigate("/auth", { replace: true });
           return;
         }
 
@@ -145,7 +154,7 @@ const Dashboard = () => {
         setUserClass(profileData.class || "");
       } catch (error) {
         console.error("Error loading dashboard:", error);
-        navigate("/");
+        navigate("/auth", { replace: true });
       } finally {
         setLoading(false);
       }

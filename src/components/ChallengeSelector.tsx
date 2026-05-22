@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { BOOST_POINT_RULES } from '@/lib/gamification';
 
 interface Challenge {
   id: string;
@@ -78,7 +78,7 @@ export const ChallengeSelector = ({ selectedChallenge, onChallengeSelect }: Chal
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1">
                 <Zap className="h-3 w-3 fill-primary text-primary" />
-                <span className="text-xs font-black text-primary">+{challenge.winner_points} pro Person</span>
+                <span className="text-xs font-black text-primary">+{BOOST_POINT_RULES.friendQuestCompleted} pro Person</span>
               </div>
               <span className="text-[10px] text-muted-foreground">Für beide Teilnehmer:innen</span>
             </div>

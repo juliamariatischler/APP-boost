@@ -5,7 +5,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>KI-Kniebeugen-Zähler</title>
+  <title>Kniebeugen-Zähler</title>
 
   <style>
     :root{
@@ -18,11 +18,13 @@
     body{
       font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
       background:var(--bg); color:var(--text); min-height:100vh;
-      display:flex; align-items:center; justify-content:center; padding:12px;
+      display:flex; align-items:flex-start; justify-content:center; padding:12px; overflow-y:auto;
     }
     .container{width:100%; max-width:950px;}
     .title{ text-align:center; font-weight:800; font-size:1.8rem; margin-bottom:4px; }
     .subtitle{ text-align:center; color:var(--muted); font-size:.95rem; margin-bottom:16px; }
+    .info-box { margin: 0 auto 16px; max-width: 560px; border-radius: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 14px; color: #065f46; }
+    .info-box p { font-size: 0.92rem; line-height: 1.45; text-align: center; }
 
     .card{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
 
@@ -56,8 +58,11 @@
 
 <body>
   <div class="container">
-    <h1 class="title">KI-Kniebeugen-Zähler</h1>
+    <h1 class="title">Kniebeugen-Zähler</h1>
     <p class="subtitle">Stell dich seitlich vor die Kamera.</p>
+    <div class="info-box">
+      <p>Erkannt wird eine Kniebeuge, wenn Schulter, Hüfte und Knie gut sichtbar sind. Stelle das Handy ca. 1 m entfernt auf, damit du gut im Bild bist. Belohnung: 1 Kniebeuge = 1 Blitz.</p>
+    </div>
 
     <div class="card">
       <!-- Loading -->
@@ -97,10 +102,10 @@
               <p id="feedback" class="feedback">Initialisiere…</p>
             </div>
 
+            <button id="finish-button" class="btn btn--green">Fertig</button>
             <button id="fit-button" class="btn">Mehr im Bild</button>
             <button id="switch-camera-button" class="btn">Kamera wechseln</button>
             <button id="reset-button" class="btn">Zurücksetzen</button>
-            <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <div id="debug-log" class="debug"></div>
           </div>

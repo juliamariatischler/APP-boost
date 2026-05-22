@@ -26,7 +26,7 @@ export const BOOST_POINT_RULES = {
   tryItCompleted: 25,
   tryItProbetraining: 10,
   tryItNewSportDiscovered: 15,
-  friendQuestCompleted: 12,
+  friendQuestCompleted: 10,
   friendQuestInvite: 8,
   friendQuestNewClassmate: 10,
   personalBestImproved: 15,

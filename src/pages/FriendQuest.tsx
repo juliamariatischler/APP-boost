@@ -27,6 +27,7 @@ import { ChallengeSelector } from '@/components/ChallengeSelector';
 import { LiveBattle } from '@/components/LiveBattle';
 import { BottomNav } from '@/components/BottomNav';
 import friendQuestImg from '@/assets/friendquest1.svg';
+import { BOOST_POINT_RULES } from '@/lib/gamification';
 
 interface Challenge {
   id: string;
@@ -288,8 +289,8 @@ const FriendQuest = () => {
         challengeData: {
           name: friendquest.challenge_name,
           icon: friendquest.challenge_icon,
-          winner_points: friendquest.winner_points || 25,
-          loser_points: friendquest.loser_points || 25,
+          winner_points: BOOST_POINT_RULES.friendQuestCompleted,
+          loser_points: BOOST_POINT_RULES.friendQuestCompleted,
         },
         isChallenger: true,
         challengerName: 'Du',
@@ -318,8 +319,8 @@ const FriendQuest = () => {
         challengeData: {
           name: challenge.name,
           icon: challenge.icon,
-          winner_points: challenge.winner_points,
-          loser_points: challenge.loser_points,
+          winner_points: BOOST_POINT_RULES.friendQuestCompleted,
+          loser_points: BOOST_POINT_RULES.friendQuestCompleted,
         },
         isChallenger: true,
         challengerName: 'Du',

@@ -5,7 +5,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>KI Plank-Timer</title>
+  <title>Plank-Timer</title>
 
   <style>
     :root {
@@ -29,9 +29,10 @@
       color: var(--text);
       min-height: 100vh;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       padding: 12px;
+      overflow-y: auto;
     }
 
     .container { width: 100%; max-width: 950px; }
@@ -228,7 +229,7 @@
 
 <body>
   <div class="container">
-    <h1 class="title">KI Plank-Timer</h1>
+    <h1 class="title">Plank-Timer</h1>
     <p class="subtitle">Stell die Kamera seitlich auf und zeig dich im Profil.</p>
     <div class="info-box">
       <p>Erkannt wird dein Plank, wenn Schulter sichtbar, Hüfte sichtbar und dein Torso möglichst horizontal ist. Halte dabei ca. 1,2 m Abstand zur Kamera. Belohnung: 1 Sekunde = 1 Blitz.</p>
@@ -270,10 +271,10 @@
               <p id="feedback" class="feedback">Kamera: seitlich aufstellen.</p>
             </div>
 
+            <button id="finish-button" class="btn btn--green">Fertig</button>
             <button id="fit-button" class="btn">Mehr im Bild</button>
             <button id="switch-camera-button" class="btn">Kamera wechseln</button>
             <button id="reset-button" class="btn">Zurücksetzen</button>
-            <button id="finish-button" class="btn btn--green">Fertig</button>
 
             <div class="debug" id="debug-log"></div>
           </div>
@@ -281,14 +282,6 @@
       </div>
     </div>
   </div>
-  <div id="rewardOverlay" class="reward-overlay">
-    <div class="reward-card">
-      <p class="reward-title">Ziel erreicht!</p>
-      <p id="rewardPoints" class="reward-points">+0 Blitze</p>
-      <p id="rewardText" class="reward-text">Deine Blitze werden ins Konto gebucht.</p>
-    </div>
-  </div>
-  <div id="fxLayer" class="fx-layer"></div>
 
   <!-- TensorFlow -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
@@ -312,10 +305,6 @@
     const finishBtn=document.getElementById('finish-button');
     const fitButton=document.getElementById('fit-button');
     const switchCameraButton=document.getElementById('switch-camera-button');
-    const rewardOverlay=document.getElementById('rewardOverlay');
-    const rewardPoints=document.getElementById('rewardPoints');
-    const rewardText=document.getElementById('rewardText');
-    const fxLayer=document.getElementById('fxLayer');
 
     let detector,isPlanking=false,time=0,timerInterval=null;
     let currentFacingMode='user';
@@ -369,12 +358,6 @@
       }
     }
 
-    function showReward(points, text){
-      rewardPoints.textContent = `+${points} Blitze`;
-      rewardText.textContent = text;
-      rewardOverlay.style.display = 'flex';
-      launchBoltFx(points);
-    }
 
     async function submitWorkoutToAccount(exerciseId, achievedValue){
       const userId = localStorage.getItem('boost_user_id');
@@ -692,19 +675,12 @@
       finishBtn.textContent = 'Speichere...';
       localStorage.setItem('planks_result', String(time));
       localStorage.setItem('planks_total', String(time));
-      const localPoints = Math.max(0, Math.floor(time));
       try{
-        const result = await submitWorkoutToAccount('ex_plank', time);
-        const points = Number(result.calculated_points || localPoints);
-        showReward(points, points > 0
-          ? 'Stark! Die Blitze wurden auf dein Blitzekonto gebucht.'
-          : 'Workout gespeichert. Heute wurden keine zusätzlichen Blitze gutgeschrieben.');
+        await submitWorkoutToAccount('ex_plank', time);
       }catch(err){
-        showReward(localPoints, `Lokal gespeichert. Buchen nicht möglich: ${err.message}`);
+        console.error('Workout submit failed:', err);
       }
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1600);
+      createCelebration(time, 'SEKUNDEN!', 'planks_result', '/dashboard');
     });
 
     async function main(){
@@ -733,5 +709,6 @@
     }
     main();
   </script>
+  <script src="/celebration.js"></script>
 </body>
 </html>

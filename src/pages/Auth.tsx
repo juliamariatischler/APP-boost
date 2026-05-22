@@ -4,8 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
-import { Loader2, QrCode } from "lucide-react";
+import { Loader2, QrCode, ChevronRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
 import { DEMO_MIN_POINTS } from "@/lib/demo";
@@ -90,6 +88,8 @@ const Auth = () => {
   const [requestedSchool, setRequestedSchool] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginType, setLoginType] = useState<"student" | "teacher">("student");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({
     username: "",
@@ -474,6 +474,8 @@ const Auth = () => {
 
       if (data.session) {
         toast.success("Erfolgreich registriert! Du wirst weitergeleitet...", LOGIN_SUCCESS_TOAST_OPTIONS);
+        // Brief pause so the DB trigger that creates the profile row can complete
+        await new Promise((resolve) => setTimeout(resolve, 1200));
         const role = await getCurrentAppRole();
         navigate(routeForRole(role), { replace: true });
       } else if (data.user) {
@@ -785,294 +787,306 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-6">
-        <div className="flex justify-center mb-6">
-          <img src={boostLogo} alt="BOOST Logo" className="h-16 w-auto" />
+    <div className="relative h-screen overflow-hidden flex flex-col" style={{ background: "linear-gradient(180deg, #cce8f8 0%, #ddf0fa 40%, #eef8f0 75%, #d4f0dc 100%)" }}>
+
+      {/* Clouds */}
+      <div className="absolute top-4 right-6 flex flex-col gap-1 select-none pointer-events-none">
+        <div className="w-20 h-7 rounded-full bg-white opacity-90" style={{ filter: "blur(2px)" }} />
+        <div className="w-12 h-5 rounded-full bg-white opacity-80 ml-3" style={{ filter: "blur(2px)" }} />
+      </div>
+      <div className="absolute top-10 left-1 flex flex-col gap-1 select-none pointer-events-none">
+        <div className="w-14 h-6 rounded-full bg-white opacity-70" style={{ filter: "blur(2px)" }} />
+        <div className="w-8 h-4 rounded-full bg-white opacity-60 ml-2" style={{ filter: "blur(2px)" }} />
+      </div>
+
+      {/* Stars */}
+      <div className="absolute top-5 right-14 text-yellow-400 text-2xl select-none pointer-events-none drop-shadow">⭐</div>
+      <div className="absolute top-16 left-10 text-yellow-300 text-base select-none pointer-events-none">✦</div>
+      <div className="absolute top-8 left-28 text-yellow-400 text-sm select-none pointer-events-none">✦</div>
+
+      {/* Hero area */}
+      <div className="relative flex items-center gap-4 px-5 pt-7 pb-4 flex-shrink-0">
+        <img
+          src={boostLogo}
+          alt="BOOST Maskottchen"
+          className="w-28 h-28 object-contain flex-shrink-0 drop-shadow-lg"
+        />
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-black leading-tight text-gray-800">
+            Hi! Schön, dass<br />
+            <span style={{ color: "#22c55e" }}>du da bist!</span>
+          </h1>
+          <p className="mt-1 text-sm text-gray-600 leading-snug">
+            Scanne deinen QR-Code und starte dein Abenteuer mit{" "}
+            <span className="font-bold" style={{ color: "#16a34a" }}>BOOST</span>.
+          </p>
         </div>
-        
-        <h1 className="text-2xl font-bold text-center mb-2 text-foreground">
-          Willkommen bei BOOST
-        </h1>
-        <p className="mb-6 text-center text-sm text-muted-foreground">
-          Scanne deinen QR-Code oder melde dich unten an.
-        </p>
+      </div>
 
-        <div className="mb-6 space-y-3">
-          <Button
-            type="button"
-            className="h-12 w-full text-base font-bold"
-            onClick={() => {
-              setQrScannerError("");
-              setManualQrCode("");
-              setQrScannerOpen(true);
-            }}
-            disabled={qrLoading}
-          >
-            {qrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-5 w-5" />}
-            QR-Code scannen
-          </Button>
+      {/* White card */}
+      {activeTab === "login" ? (
+        /* ── LOGIN VIEW ── */
+        <div className="bg-white rounded-t-3xl shadow-2xl px-5 pt-5 pb-6 flex-1 flex flex-col overflow-y-auto overflow-x-hidden gap-5">
 
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            oder Demo ausprobieren
-            <div className="h-px flex-1 bg-border" />
+          {/* TOP: QR + Rollen-Karten */}
+          <div>
+            <button
+              type="button"
+              disabled={qrLoading}
+              onClick={() => { setQrScannerError(""); setManualQrCode(""); setQrScannerOpen(true); }}
+              className="w-full flex items-center gap-3 rounded-2xl text-white mb-4 transition active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", padding: "13px 18px" }}
+            >
+              <div className="rounded-xl p-2.5 flex-shrink-0" style={{ background: "rgba(0,0,0,0.15)" }}>
+                {qrLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <QrCode className="w-6 h-6" />}
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-black text-xl leading-tight">QR-Code scannen</div>
+                <div className="text-sm opacity-80">Los geht's!</div>
+              </div>
+              <div className="rounded-full bg-white flex items-center justify-center w-9 h-9 flex-shrink-0" style={{ color: "#16a34a" }}>
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </button>
+
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs font-bold tracking-widest text-gray-400 whitespace-nowrap">⭐ SO GEHT'S WEITER ⭐</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button
+                type="button"
+                className="rounded-2xl px-3 py-3 text-left transition active:scale-[0.97] flex items-center gap-2"
+                style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}
+                onClick={() => { setSignupData({ ...signupData, accountType: "student" }); setActiveTab("signup"); }}
+              >
+                <span className="text-2xl flex-shrink-0">🎒</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-gray-500">Ich bin</div>
+                  <div className="font-black text-sm whitespace-nowrap" style={{ color: "#16a34a" }}>Schüler:in</div>
+                </div>
+                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#22c55e" }} />
+              </button>
+              <button
+                type="button"
+                className="rounded-2xl px-3 py-3 text-left transition active:scale-[0.97] flex items-center gap-2"
+                style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe" }}
+                onClick={() => { setSignupData({ ...signupData, accountType: "teacher" }); setActiveTab("signup"); }}
+              >
+                <span className="text-2xl flex-shrink-0">📚</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-gray-500">Ich bin</div>
+                  <div className="font-black text-sm whitespace-nowrap" style={{ color: "#2563eb" }}>Lehrer:in</div>
+                </div>
+                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#3b82f6" }} />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="w-full text-center text-sm font-bold py-1"
+              style={{ color: "#16a34a" }}
+              onClick={() => setActiveTab("signup")}
+            >
+              Neu hier? Jetzt registrieren →
+            </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 text-sm font-bold"
-              onClick={handleDemoStudentLogin}
-              disabled={demoStudentLoading || demoTeacherLoading}
-            >
-              {demoStudentLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              Demo Schüler:in
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 text-sm font-bold"
-              onClick={handleDemoTeacherLogin}
-              disabled={demoStudentLoading || demoTeacherLoading}
-            >
-              {demoTeacherLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              Demo Lehrer:in
-            </Button>
-          </div>
+          {/* MITTE: Login-Formular */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs font-bold tracking-widest text-gray-400 whitespace-nowrap">🔒 ANMELDEN</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
 
-        </div>
-
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "signup")} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="login">Anmelden</TabsTrigger>
-            <TabsTrigger value="signup">Registrieren</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="login">
             {showForgotPassword ? (
               <ForgotPassword onBack={() => setShowForgotPassword(false)} />
             ) : (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <Label htmlFor="login-account-type">Login als</Label>
-                  <select
-                    id="login-account-type"
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={loginType}
-                    onChange={(e) => setLoginType(e.target.value as "student" | "teacher")}
-                  >
-                    <option value="student">Schüler:in</option>
-                    <option value="teacher">Lehrkraft</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    required
-                    value={loginData.email}
+              <form onSubmit={handleLogin} className="space-y-3">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <input type="email" required value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    placeholder="deine@email.de"
+                    placeholder="Deine E-Mail-Adresse"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 pl-12 pr-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="login-password">Passwort</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    required
-                    value={loginData.password}
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <input type={showPassword ? "text" : "password"} required value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    placeholder="••••••••"
+                    placeholder="Dein Passwort"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 pl-12 pr-12 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
                   />
+                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
-                <div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={loading || demoStudentLoading || demoTeacherLoading}
-                  >
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Anmelden
-                  </Button>
+                <div className="flex items-center justify-between px-1">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded accent-green-500" />
+                    Angemeldet bleiben
+                  </label>
+                  <button type="button" className="text-sm font-semibold" style={{ color: "#16a34a" }} onClick={() => setShowForgotPassword(true)}>
+                    Passwort vergessen?
+                  </button>
                 </div>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full text-sm"
-                  onClick={() => setShowForgotPassword(true)}
+                <button type="submit" disabled={loading || demoStudentLoading || demoTeacherLoading}
+                  className="w-full flex items-center gap-3 rounded-2xl text-white transition active:scale-[0.98] disabled:opacity-60"
+                  style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", padding: "13px 18px" }}
                 >
-                  Passwort vergessen?
-                </Button>
+                  <div className="rounded-xl p-2 flex-shrink-0 text-xl leading-none" style={{ background: "rgba(0,0,0,0.15)" }}>
+                    {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <span>🚀</span>}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-black text-xl leading-tight">Einloggen</div>
+                    <div className="text-sm opacity-80">Weiter geht's!</div>
+                  </div>
+                  <div className="rounded-full bg-white flex items-center justify-center w-9 h-9 flex-shrink-0" style={{ color: "#16a34a" }}>
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
+                </button>
               </form>
             )}
-          </TabsContent>
+          </div>
 
-          <TabsContent value="signup">
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div>
-                <Label htmlFor="signup-account-type">Konto-Typ</Label>
-                <select
-                  id="signup-account-type"
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={signupData.accountType}
-                  onChange={(e) =>
-                    setSignupData({
-                      ...signupData,
-                      accountType: e.target.value as "student" | "teacher",
-                    })
-                  }
-                >
-                  <option value="student">Schüler:in</option>
-                  <option value="teacher">Lehrkraft</option>
-                </select>
+          {/* UNTEN: Demo + Footer */}
+          <div className="space-y-3 pb-2">
+            <button
+              type="button"
+              onClick={handleDemoStudentLogin}
+              disabled={demoStudentLoading || demoTeacherLoading}
+              className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 transition active:scale-[0.98] disabled:opacity-60"
+            >
+              <span className="text-2xl flex-shrink-0">🎮</span>
+              <div className="flex-1 text-left">
+                <div className="text-sm font-black text-gray-700">Demo ausprobieren</div>
+                <div className="text-xs text-gray-400">Ohne Registrierung testen</div>
               </div>
-              <div>
-                <Label htmlFor="signup-username">Benutzername</Label>
-                <Input
-                  id="signup-username"
-                  type="text"
-                  required
-                  value={signupData.username}
-                  onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
-                  placeholder="Max123"
-                />
+              {demoStudentLoading ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+            </button>
+            <p className="text-center text-xs text-gray-400">Sammle Punkte, meistere Challenges und bewege dich mit deiner Klasse! 🏆</p>
+          </div>
+
+        </div>
+      ) : (
+        /* ── SIGNUP VIEW: scrollbar ── */
+        <div className="bg-white rounded-t-3xl shadow-2xl flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="px-5 pt-5 pb-8">
+
+            {/* Zurück-Button */}
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 mb-4"
+              onClick={() => setActiveTab("login")}
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" /> Zurück zum Login
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs font-bold tracking-widest text-gray-400 whitespace-nowrap">🎉 REGISTRIEREN</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            <form onSubmit={handleSignup} className="space-y-3">
+              <div className="flex gap-2">
+                <button type="button" className="flex-1 rounded-xl py-2.5 text-sm font-bold border-2 transition"
+                  style={signupData.accountType === "student" ? { background: "#dcfce7", borderColor: "#22c55e", color: "#15803d" } : { background: "#f9fafb", borderColor: "#e5e7eb", color: "#6b7280" }}
+                  onClick={() => setSignupData({ ...signupData, accountType: "student" })}>
+                  🎒 Schüler:in
+                </button>
+                <button type="button" className="flex-1 rounded-xl py-2.5 text-sm font-bold border-2 transition"
+                  style={signupData.accountType === "teacher" ? { background: "#dbeafe", borderColor: "#3b82f6", color: "#1d4ed8" } : { background: "#f9fafb", borderColor: "#e5e7eb", color: "#6b7280" }}
+                  onClick={() => setSignupData({ ...signupData, accountType: "teacher" })}>
+                  📚 Lehrkraft
+                </button>
               </div>
-              <div>
-                <Label htmlFor="signup-email">Email</Label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  required
-                  value={signupData.email}
-                  onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                  placeholder="deine@email.de"
-                />
-              </div>
-              <div>
-                <Label htmlFor="signup-password">Passwort</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={signupData.password}
+
+              <input type="text" required value={signupData.username}
+                onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                placeholder="Benutzername (z.B. Max123)"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
+              />
+              <input type="email" required value={signupData.email}
+                onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                placeholder="E-Mail-Adresse"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
+              />
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} required minLength={6} value={signupData.password}
                   onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                  placeholder="••••••••"
+                  placeholder="Passwort (min. 6 Zeichen)"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 pr-12 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
                 />
-                {signupData.password.length > 0 && (
-                  <p className={`mt-1 text-xs ${
-                    signupData.password.length < 6
-                      ? "text-destructive"
-                      : signupData.password.length >= 10
-                        ? "text-primary"
-                        : "text-amber-600"
-                  }`}>
-                    {signupData.password.length < 6
-                      ? `Mindestens 6 Zeichen (noch ${6 - signupData.password.length})`
-                      : signupData.password.length >= 10
-                        ? "Starkes Passwort ✓"
-                        : "Passwort ausreichend ✓"}
-                  </p>
-                )}
+                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-              <div>
-                <Label htmlFor="signup-school">Schule</Label>
-                <div className="space-y-2">
-                  <select
-                    id="signup-school"
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    required
-                    value={signupData.school}
-                    onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
-                    disabled={schoolsLoading}
-                  >
-                    <option value="">
-                      {schoolsLoading
-                        ? "Schulen werden geladen..."
-                        : registeredSchools.length > 0
-                        ? "Schule auswählen"
-                        : "Noch keine Schule registriert"}
-                    </option>
-                    {registeredSchools.map((school) => (
-                      <option key={school} value={school}>
-                        {school}
-                      </option>
-                    ))}
-                  </select>
+              {signupData.password.length > 0 && (
+                <p className={`text-xs px-1 ${signupData.password.length < 6 ? "text-red-500" : signupData.password.length >= 10 ? "text-green-600" : "text-amber-600"}`}>
+                  {signupData.password.length < 6 ? `Noch ${6 - signupData.password.length} Zeichen` : signupData.password.length >= 10 ? "Starkes Passwort ✓" : "Passwort ausreichend ✓"}
+                </p>
+              )}
 
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="h-auto p-0 text-sm"
-                    onClick={() => setShowSchoolRequest((prev) => !prev)}
-                  >
-                    Schule nicht dabei? Neu hinzufügen
+              <select required value={signupData.school}
+                onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
+                disabled={schoolsLoading}
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400"
+              >
+                <option value="">{schoolsLoading ? "Schulen werden geladen..." : registeredSchools.length > 0 ? "Schule auswählen" : "Noch keine Schule registriert"}</option>
+                {registeredSchools.map((school) => <option key={school} value={school}>{school}</option>)}
+              </select>
+              <button type="button" className="text-sm font-semibold px-1" style={{ color: "#16a34a" }} onClick={() => setShowSchoolRequest((prev) => !prev)}>
+                Schule nicht dabei? Neu hinzufügen
+              </button>
+              {showSchoolRequest && (
+                <div className="space-y-2 rounded-2xl border border-gray-200 p-3 bg-gray-50">
+                  <Input value={requestedSchool} onChange={(e) => setRequestedSchool(e.target.value)} placeholder="Name deiner Schule" className="rounded-xl" />
+                  <Button type="button" onClick={handleSchoolRequest} disabled={schoolRequestLoading} className="w-full rounded-xl">
+                    {schoolRequestLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Schule hinzufügen
                   </Button>
-
-                  {showSchoolRequest && (
-                    <div className="space-y-2 rounded-md border border-border p-3">
-                      <Input
-                        value={requestedSchool}
-                        onChange={(e) => setRequestedSchool(e.target.value)}
-                        placeholder="Name deiner Schule"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleSchoolRequest}
-                        disabled={schoolRequestLoading}
-                        className="w-full"
-                      >
-                        {schoolRequestLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Schule hinzufügen
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="signup-class">
-                  {signupData.accountType === "teacher" ? "Klasse/Fach" : "Klasse"}
-                </Label>
-                <Input
-                  id="signup-class"
-                  type="text"
-                  required
-                  value={signupData.class}
-                  onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
-                  placeholder={signupData.accountType === "teacher" ? "z. B. Sport" : "5a"}
-                />
-              </div>
-              {signupData.accountType === "student" && (
-                <div>
-                  <Label htmlFor="signup-age">Alter</Label>
-                  <Input
-                    id="signup-age"
-                    type="number"
-                    min={6}
-                    max={19}
-                    required
-                    value={signupData.age}
-                    onChange={(e) => setSignupData({ ...signupData, age: e.target.value })}
-                    placeholder="z. B. 10"
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Das Alter hilft uns, Tageschallenges und Trainingshinweise altersgerechter einzuordnen.
-                  </p>
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Registrieren
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </Card>
 
+              <input type="text" required value={signupData.class}
+                onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
+                placeholder={signupData.accountType === "teacher" ? "Klasse/Fach (z.B. Sport)" : "Klasse (z.B. 5a)"}
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
+              />
+              {signupData.accountType === "student" && (
+                <input type="number" min={6} max={19} required value={signupData.age}
+                  onChange={(e) => setSignupData({ ...signupData, age: e.target.value })}
+                  placeholder="Alter (z.B. 10)"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
+                />
+              )}
+
+              <button type="submit" disabled={loading}
+                className="w-full flex items-center gap-3 rounded-2xl text-white transition active:scale-[0.98] disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", padding: "13px 18px" }}
+              >
+                <div className="rounded-xl p-2 flex-shrink-0 text-xl leading-none" style={{ background: "rgba(0,0,0,0.15)" }}>
+                  {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <span>🎉</span>}
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-black text-xl leading-tight">Registrieren</div>
+                  <div className="text-sm opacity-80">Los geht's!</div>
+                </div>
+                <div className="rounded-full bg-white flex items-center justify-center w-9 h-9 flex-shrink-0" style={{ color: "#16a34a" }}>
+                  <ChevronRight className="w-5 h-5" />
+                </div>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Scanner Dialog */}
       <Dialog open={qrScannerOpen} onOpenChange={(open) => !qrLoading && setQrScannerOpen(open)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
