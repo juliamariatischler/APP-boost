@@ -18,7 +18,7 @@
   "dependencies": {
     "@awesome-cordova-plugins/core": "^8.1.0",
     "@awesome-cordova-plugins/health": "^8.1.0",
-    "@capacitor/android": "^7.4.3",
+    "@capacitor/android": "^7.6.5",
     "@capacitor/cli": "^7.6.2",
     "@capacitor/core": "^7.4.3",
     "@capacitor/ios": "^7.4.3",
