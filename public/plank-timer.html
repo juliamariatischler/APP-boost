@@ -690,7 +690,7 @@
       finishBtn.textContent = 'Speichere...';
       if (BATTLE_MODE && BATTLE_INVITATION_ID) {
         localStorage.setItem('fq_battle_result', JSON.stringify({ invitation_id: BATTLE_INVITATION_ID, result: time }));
-        window.location.href = '/friend-quest';
+        window.location.href = '/challenge/friend';
         return;
       }
       localStorage.setItem('planks_result', String(time));

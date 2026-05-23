@@ -331,7 +331,7 @@ BEGIN
     VALUES (
       'Wochenchallenge Waldweg',
       'Laufe den kompletten Waldweg und scanne alle 3 NFC-Stationen: Start, Mitte und Ziel!',
-      100,
+      20,
       true,
       CURRENT_DATE
     )

@@ -739,28 +739,13 @@ const Dashboard = () => {
             <div className="relative overflow-hidden rounded-[24px] border border-white/45 bg-[linear-gradient(135deg,hsl(var(--primary)/0.24)_0%,hsl(var(--primary)/0.5)_100%)] shadow-[0_22px_44px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-3px_0_rgba(0,0,0,0.08)]">
               <div className="relative">
                 <div className="relative aspect-[16/8.5]">
-                  <video
-                    key={currentWeeklyVideo.id}
-                    src={currentWeeklyVideo.videoUrl}
-                    poster={currentWeeklyVideo.image}
-                    muted
-                    loop
-                    autoPlay
-                    playsInline
-                    preload="metadata"
-                    aria-label={currentWeeklyVideo.title}
+                  <img
+                    src={currentWeeklyVideo.image}
+                    alt={currentWeeklyVideo.title}
                     className="h-full w-full object-cover opacity-35 mix-blend-multiply"
                   />
                   <div className="absolute left-3 top-3 rounded-full bg-yellow-400 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-zinc-950">
                     Neu · {currentWeeklyVideo.weekKey}
-                  </div>
-                  <div className="absolute right-3 top-3 rounded-lg bg-primary/80 px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
-                    So 23:58
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-primary text-primary-foreground shadow-[0_16px_28px_rgba(0,0,0,0.16),inset_0_-2px_0_rgba(0,0,0,0.08)]">
-                      <Play className="ml-0.5 h-5 w-5 fill-current" />
-                    </div>
                   </div>
                   <div className="absolute bottom-3 right-3 rounded-lg bg-primary/80 px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
                     {currentWeeklyVideo.duration}

@@ -169,7 +169,7 @@
       if (BATTLE_INVITATION_ID) {
         localStorage.setItem('fq_battle_result', JSON.stringify({ invitation_id: BATTLE_INVITATION_ID, result: counter }));
       }
-      window.location.href = '/friend-quest';
+      window.location.href = '/challenge/friend';
     }
 
     let detector;
@@ -377,6 +377,7 @@
           countEl.textContent = counter;
           stageEl.textContent = 'CLOSED';
           feedbackEl.textContent = 'Super! Weiter so!';
+          if(BATTLE_MODE && BATTLE_GOAL !== null && counter >= BATTLE_GOAL){ finishBattle(); return; }
         } else {
           stageEl.textContent = 'OPEN';
           feedbackEl.textContent = 'Noch oben/weit!';

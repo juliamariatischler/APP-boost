@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { buildCameraUrl, CHALLENGE_CAMERA } from '@/lib/friendQuestChallenges';
 import { useNavigate } from 'react-router-dom';
 import { useCodeAuth } from '@/contexts/CodeAuthContext';
 import {
@@ -353,19 +354,28 @@ const FriendQuest = () => {
   };
 
   const handleStartFriendquest = async (friendquest: Friendquest) => {
-    if (friendquest.challenge_invitation_id && friendquest.challenge_name && friendquest.challenge_icon) {
-      setActiveBattle({
-        invitationId: friendquest.challenge_invitation_id,
-        challengeData: {
-          name: friendquest.challenge_name,
-          icon: friendquest.challenge_icon,
-          winner_points: BOOST_POINT_RULES.friendQuestCompleted,
-          loser_points: BOOST_POINT_RULES.friendQuestCompleted,
-        },
-        isChallenger: true,
-        challengerName: 'Du',
-        opponentName: friendquest.friend_name,
-      });
+    // Already has an active challenge invitation → navigate directly to camera (or LiveBattle fallback)
+    if (friendquest.challenge_invitation_id && friendquest.challenge_name) {
+      const url = buildCameraUrl(friendquest.challenge_name, friendquest.challenge_invitation_id);
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      // Non-camera challenge: fall back to LiveBattle
+      if (friendquest.challenge_icon) {
+        setActiveBattle({
+          invitationId: friendquest.challenge_invitation_id,
+          challengeData: {
+            name: friendquest.challenge_name,
+            icon: friendquest.challenge_icon,
+            winner_points: BOOST_POINT_RULES.friendQuestCompleted,
+            loser_points: BOOST_POINT_RULES.friendQuestCompleted,
+          },
+          isChallenger: true,
+          challengerName: 'Du',
+          opponentName: friendquest.friend_name,
+        });
+      }
       return;
     }
 
@@ -384,8 +394,15 @@ const FriendQuest = () => {
 
       if (error) throw error;
 
+      const invitationId = data as string;
+      const url = buildCameraUrl(challenge.name, invitationId);
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      // Non-camera challenge: fall back to LiveBattle
       setActiveBattle({
-        invitationId: data as string,
+        invitationId,
         challengeData: {
           name: challenge.name,
           icon: challenge.icon,

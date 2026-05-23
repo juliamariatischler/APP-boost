@@ -55,7 +55,7 @@ const offers: SportOffer[] = [
     federation: "ASKÖ",
     location: "Kainbach bei Graz",
     address: "ASKÖ Stadion Eggenberg, Schloßstraße 20, 8020 Graz",
-    dateLabel: "Sonntag, 29.03.2026",
+    dateLabel: "Sonntags",
     timeLabel: "15:30 bis 17:00 Uhr",
     ageLabel: "8 bis 12 Jahre",
     meetingPoint: "Treffpunkt 15 Minuten vorher beim Vereinsheim",
@@ -69,8 +69,10 @@ const offers: SportOffer[] = [
     imageSubline: "Offenes Probetraining mit echtem Stadiongefühl.",
     websiteUrl: "https://www.eskgraz.at",
     bookingUrl: "https://www.eskgraz.at",
-    trialAvailable: false,
-    trialInfo: "",
+    trialAvailable: true,
+    trialInfo: "Für genaue Termine bitte beim Verein anrufen.",
+    contactPhone: "0676/889 44 80 44",
+    contactEmail: "office@eskgraz.at",
   },
   {
     id: "football-giants",
@@ -107,7 +109,7 @@ const offers: SportOffer[] = [
     federation: "ASKÖ",
     location: "Graz",
     address: "ASKÖ Stadion Eggenberg, Schloßstraße 20, 8020 Graz",
-    dateLabel: "Freitag, 27.03.2026",
+    dateLabel: "Freitags",
     timeLabel: "18:00 bis 19:30 Uhr",
     ageLabel: "9 bis 13 Jahre",
     meetingPoint: "Treffpunkt direkt beim Halleneingang links",
@@ -121,8 +123,8 @@ const offers: SportOffer[] = [
     imageSubline: "Probetraining für schnelle Entscheidungen und starke Würfe.",
     websiteUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
     bookingUrl: "https://www.askoe-steiermark.at/de/service/vereinssuche",
-    trialAvailable: false,
-    trialInfo: "",
+    trialAvailable: true,
+    trialInfo: "Für genaue Termine bitte beim Verein anrufen.",
   },
   {
     id: "volleyball-graz",
@@ -132,7 +134,7 @@ const offers: SportOffer[] = [
     federation: "SPORTUNION",
     location: "Graz",
     address: "Pfanghofweg 2b, 8045 Graz",
-    dateLabel: "Montag, 30.03.2026",
+    dateLabel: "Montags",
     timeLabel: "17:15 bis 18:45 Uhr",
     ageLabel: "10 bis 14 Jahre",
     meetingPoint: "Treffpunkt vor Court 2",
@@ -146,8 +148,10 @@ const offers: SportOffer[] = [
     imageSubline: "Volleyball-Kurs mit Vereinsdynamik und Teamenergie.",
     websiteUrl: "https://www.uvcgraz.at/",
     bookingUrl: "https://www.uvcgraz.at/",
-    trialAvailable: false,
-    trialInfo: "",
+    trialAvailable: true,
+    trialInfo: "Für genaue Termine bitte beim Verein anrufen.",
+    contactPhone: "0664/4261804",
+    contactEmail: "office@uvcgraz.at",
   },
   {
     id: "tennis-graz",
@@ -157,7 +161,7 @@ const offers: SportOffer[] = [
     federation: "ASVÖ",
     location: "Graz",
     address: "Körösistraße 57, 8010 Graz",
-    dateLabel: "Sonntag, 29.03.2026",
+    dateLabel: "Sonntags",
     timeLabel: "10:00 bis 11:30 Uhr",
     ageLabel: "8 bis 14 Jahre",
     meetingPoint: "Treffpunkt am Clubhaus beim Platzplan",
@@ -169,10 +173,12 @@ const offers: SportOffer[] = [
       "GAK Tennis wird in einem aktuellen ASVÖ-Steiermark-Beitrag als ASVÖ-Verein im Vereinscoaching-Kontext genannt. Das Probetraining setzt auf Schlagtechnik, Bewegung am Platz und schnelle Matchformen. Schläger können vor Ort ausgeliehen werden.",
     imageHeadline: "Dein erster sauberer Treffer",
     imageSubline: "Probetraining mit Clubfeeling auf rotem Sand.",
-    websiteUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
-    bookingUrl: "https://www.asvoe-steiermark.at/de/aktuelles-service/newsshow-fit-fuer-die-zukunft-8211-verein.vernetzt-2025",
-    trialAvailable: false,
-    trialInfo: "",
+    websiteUrl: "https://www.gak-tennis.at/",
+    bookingUrl: "https://www.gak-tennis.at/",
+    trialAvailable: true,
+    trialInfo: "Für genaue Termine bitte beim Verein anrufen.",
+    contactPhone: "0664/541 41 02",
+    contactEmail: "office@gak-tennis.at",
   },
   {
     id: "judo-graz",
@@ -236,7 +242,7 @@ const offers: SportOffer[] = [
     federation: "ASVÖ",
     location: "Graz",
     address: "8010 Graz",
-    dateLabel: "Sonntag, 29.03.2026",
+    dateLabel: "Sonntags",
     timeLabel: "09:00 bis 10:15 Uhr",
     ageLabel: "9 bis 14 Jahre",
     meetingPoint: "Treffpunkt beim Drehkreuz im Eingangsbereich",
@@ -248,10 +254,11 @@ const offers: SportOffer[] = [
       "Der Steirische Landesfechtclub in Graz wird in einem ASVÖ-Steiermark-Beitrag als ASVÖ-Verein genannt. Der Kurs fokussiert Reaktion, Koordination und den spielerischen Einstieg in eine besondere Sportart.",
     imageHeadline: "Schnell denken, schnell reagieren",
     imageSubline: "Fechtkurs mit Stil, Fokus und echtem Neugierfaktor.",
-    websiteUrl: "https://www.asvoe-steiermark.at/de/newsshow-richtig-fit-fuer-asvoe-vereine",
-    bookingUrl: "https://www.asvoe-steiermark.at/de/newsshow-richtig-fit-fuer-asvoe-vereine",
-    trialAvailable: false,
-    trialInfo: "",
+    websiteUrl: "https://www.fechtclub.at/de",
+    bookingUrl: "https://www.fechtclub.at/de",
+    trialAvailable: true,
+    trialInfo: "Für genaue Termine bitte beim Verein anrufen.",
+    contactPhone: "0676/845276301",
   },
   // --- Neue Anbieter mit Probetraining verfügbar ---
   {
@@ -1191,7 +1198,9 @@ const GrazSportsGallery = () => {
                       <p className="text-sm font-semibold text-foreground">
                         {selectedOffer.dateLabel === "Nach Vereinbarung"
                           ? `Termin nach Vereinbarung in ${selectedOffer.location} bei ${selectedOffer.club}.`
-                          : `Nächstes Training am ${selectedOffer.dateLabel.replace(/^[^,]+, /, "")} um ${selectedOffer.timeLabel.split(" bis ")[0]} Uhr in ${selectedOffer.location} bei ${selectedOffer.club}.`
+                          : selectedOffer.dateLabel.includes(",")
+                            ? `Nächstes Training am ${selectedOffer.dateLabel.replace(/^[^,]+, /, "")} um ${selectedOffer.timeLabel.split(" bis ")[0]} Uhr in ${selectedOffer.location} bei ${selectedOffer.club}.`
+                            : `Training ${selectedOffer.dateLabel.toLowerCase()} um ${selectedOffer.timeLabel.split(" bis ")[0]} Uhr in ${selectedOffer.location} bei ${selectedOffer.club}.`
                         }
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-2">

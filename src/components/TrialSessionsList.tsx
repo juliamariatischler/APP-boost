@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, ChevronRight, Loader2, MapPin, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, Loader2, X } from "lucide-react";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
-import { AVATAR_BASE_ASSET } from "@/lib/avatarItems";
 import tryitFootballNetImg from "@/assets/quest-tryit-football-net.png";
 
 const POINTS_PROBETRAINING = BOOST_POINT_RULES.tryItProbetraining;
@@ -78,7 +77,6 @@ const STATIC_PROVIDERS: StaticProvider[] = [
   { id: "spikeball-roundnet", sport: "Spikeball / Roundnet", club: "Roundnet Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactEmail: "contact@roundnetclubgraz.at" },
   { id: "trampolin-graz", sport: "Trampolinturnen", club: "Trampolin- und Freestyle-Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/3907017", contactEmail: "hayngu@yahoo.com" },
   { id: "turnen-abenteuer", sport: "Abenteuer- / Zirkusturnen / Parkour", club: "ATUS Graz – Abenteuerturnen", trialInfo: "Probetraining für Kinder nach Vereinbarung.", ageLabel: "Kinder", contactPhone: "0681/81429142", contactEmail: "veronika@sport-abenteuer-kittler.at" },
-  { id: "turnen-senioren", sport: "Seniorenturnen", club: "ATUS Graz – Seniorenturnen", trialInfo: "Probetraining für Senioren nach Vereinbarung.", ageLabel: "Erwachsene / Senioren", contactPhone: "0650/7700424", contactEmail: "fit@atus-graz.at" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -431,7 +429,7 @@ const TrialSessionsList = () => {
             </div>
             <div className="relative z-10 max-w-[52%] p-4 pb-3">
               <div className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-bold text-white/90">⭐ Empfohlen</div>
-              <h3 className="text-[1.7rem] font-black leading-none text-white">{sportType}</h3>
+              <h3 className="text-[1.7rem] font-black leading-none text-white break-words">{sportType}</h3>
               {featuredSession.description && (
                 <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-white/80">{featuredSession.description}</p>
               )}
@@ -497,14 +495,14 @@ const TrialSessionsList = () => {
                   </div>
                   <div className="flex flex-col justify-between p-2">
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-[13px] font-black leading-tight text-foreground">{sportType}</p>
+                      <p className="text-[13px] font-black leading-tight text-foreground break-words">{sportType}</p>
                       <span className={`w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                         isHighlight ? "border border-purple-200 bg-purple-50 text-purple-600" : "border border-primary/25 bg-primary/8 text-primary"
                       }`}>
                         {isHighlight ? "Kurs" : "Probetraining"}
                       </span>
-                      <p className="text-[11px] font-semibold leading-snug text-foreground/80">{clubName}</p>
-                      {session.location && <p className="text-[10px] leading-snug text-muted-foreground">{session.location}</p>}
+                      <p className="text-[11px] font-semibold leading-snug text-foreground/80 break-words">{clubName}</p>
+                      {session.location && <p className="text-[10px] leading-snug text-muted-foreground break-words">{session.location}</p>}
                     </div>
                     <div className="mt-1 flex items-center justify-between">
                       <p className="text-[10px] font-bold text-primary">⚡ +{pointsReward} Blitze</p>
@@ -544,11 +542,11 @@ const TrialSessionsList = () => {
                   </div>
                   <div className="flex flex-col justify-between p-2">
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-[13px] font-black leading-tight text-foreground">{provider.sport}</p>
+                      <p className="text-[13px] font-black leading-tight text-foreground break-words">{provider.sport}</p>
                       <span className="w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold border border-emerald-300 bg-emerald-50 text-emerald-700">
                         ✓ {TRIAL_STATUS}
                       </span>
-                      <p className="text-[11px] font-semibold leading-snug text-foreground/80">{provider.club}</p>
+                      <p className="text-[11px] font-semibold leading-snug text-foreground/80 break-words">{provider.club}</p>
                       {provider.contactPhone && (
                         <p className="text-[10px] leading-snug text-muted-foreground">📞 {provider.contactPhone}</p>
                       )}
@@ -576,53 +574,6 @@ const TrialSessionsList = () => {
         </p>
       </div>
 
-      {/* Bottom promo cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.05]"
-            style={{
-              backgroundImage: "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
-              backgroundSize: "18px 18px",
-            }}
-          />
-          <div className="relative flex flex-1 flex-col gap-1.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <p className="mt-0.5 text-sm font-black text-foreground">Weitere Angebote</p>
-            <p className="text-xs leading-snug text-muted-foreground">
-              Entdecke noch mehr Sportmöglichkeiten in deiner Nähe.
-            </p>
-          </div>
-          <div className="mt-2 flex justify-end">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <ChevronRight className="h-3.5 w-3.5" />
-            </span>
-          </div>
-        </div>
-
-        <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">
-          <img
-            src={AVATAR_BASE_ASSET}
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-1 -right-1 h-[5rem] w-[5rem] select-none object-contain opacity-40"
-          />
-          <div className="relative space-y-1.5">
-            <p className="text-sm font-black text-foreground">⚡ Dein Fortschritt</p>
-            <p className="text-xs text-muted-foreground">{registrations.length} Sportarten ausprobiert</p>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary/10">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${Math.min((registrations.length / 10) * 100, 100)}%` }}
-              />
-            </div>
-            <p className="text-xs font-bold text-primary">{registrations.length} / 10</p>
-          </div>
-        </div>
-      </div>
-
       <div className="h-2" />
 
       {/* ─── Dynamic session detail bottom sheet ──────────────────────────────── */}
@@ -633,7 +584,7 @@ const TrialSessionsList = () => {
         const sportEmoji = getSportEmoji(sportType);
         const isHighlight = getExperienceLabel(s) === "Highlight-Erlebnis";
         const pointsReward = getSessionPoints(s);
-        const dateFormatted = new Date(s.date).toLocaleDateString("de-AT", { weekday: "long", day: "numeric", month: "long" });
+        const dateFormatted = new Date(s.date).toLocaleDateString("de-AT", { weekday: "long" }) + "s";
         const timeFormatted = `${s.start_time.slice(0, 5)}${s.end_time ? ` – ${s.end_time.slice(0, 5)}` : ""} Uhr`;
 
         return (

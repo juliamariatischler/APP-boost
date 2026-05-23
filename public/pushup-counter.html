@@ -242,7 +242,7 @@
       if (BATTLE_INVITATION_ID) {
         localStorage.setItem('fq_battle_result', JSON.stringify({ invitation_id: BATTLE_INVITATION_ID, result: counter }));
       }
-      window.location.href = '/friend-quest';
+      window.location.href = '/challenge/friend';
     }
 
     let detector;
@@ -542,6 +542,7 @@
           counter++;
           feedbackEl.textContent = 'Sehr gut! 💪';
           feedbackEl.style.color = '#059669';
+          if (BATTLE_MODE && BATTLE_GOAL !== null && counter >= BATTLE_GOAL) { finishBattle(); return; }
         }
         stage = 'up';
       } else if (angle < DOWN_ANGLE_THRESHOLD) {
