@@ -3,12 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Zap, Clock } from 'lucide-react';
+import { ArrowLeft, Camera, Zap, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import boostLogo from '@/assets/boost-logo.png';
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from '@/lib/avatarItems';
+import { FRIENDQUEST_EXERCISE_GOALS } from '@/lib/gamification';
+
+const CHALLENGE_CAMERA: Record<string, { url: string; goal: number; time: number }> = {
+  'Kniebeugen-Battle':  { url: '/squat-counter.html',        goal: FRIENDQUEST_EXERCISE_GOALS.squats,        time: 120 },
+  'Liegestütz-Duell':   { url: '/pushup-counter.html',       goal: FRIENDQUEST_EXERCISE_GOALS.push_ups,      time: 120 },
+  'Sit-ups-Battle':     { url: '/situp-counter.html',        goal: FRIENDQUEST_EXERCISE_GOALS.sit_ups,       time: 120 },
+  'Jumping-Jacks':      { url: '/jumping-jacks-counter.html',goal: FRIENDQUEST_EXERCISE_GOALS.jumping_jacks, time: 60  },
+  'Plank-Challenge':    { url: '/plank-timer.html',          goal: FRIENDQUEST_EXERCISE_GOALS.planks,        time: 0   },
+};
 
 interface Challenge {
   name: string;
@@ -403,6 +412,27 @@ export const LiveBattle = ({
               </Card>
             </div>
 
+            {/* Camera Button (for supported challenges) */}
+            {CHALLENGE_CAMERA[challengeData.name] && (
+              <Button
+                size="lg"
+                className="w-full h-16 text-lg font-black gap-2"
+                onClick={() => {
+                  const cam = CHALLENGE_CAMERA[challengeData.name];
+                  const params = new URLSearchParams({
+                    mode: 'battle',
+                    invitation_id: invitationId,
+                    goal: String(cam.goal),
+                    ...(cam.time > 0 ? { time: String(cam.time) } : {}),
+                  });
+                  window.location.href = `${cam.url}?${params.toString()}`;
+                }}
+              >
+                <Camera className="h-5 w-5" />
+                Kamera verwenden
+              </Button>
+            )}
+
             {/* Tap Button */}
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -415,8 +445,8 @@ export const LiveBattle = ({
             </motion.button>
 
             {/* Submit Early */}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
               onClick={submitResult}
             >

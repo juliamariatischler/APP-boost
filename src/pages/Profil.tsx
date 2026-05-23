@@ -351,7 +351,7 @@ const Profil = () => {
 
   return (
     <div className="min-h-screen bg-background pb-nav-safe">
-      <div className="mx-auto max-w-screen-xl px-4 pt-3">
+      <div className="mx-auto max-w-screen-xl overflow-x-hidden px-4 pt-3">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white text-zinc-950 shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
@@ -453,7 +453,7 @@ const Profil = () => {
                     className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${isActive ? "border-primary bg-primary/10" : "border-black/5 bg-white"
                       } ${weeklyItemUnlocked ? "opacity-100" : "opacity-55"}`}
                   >
-                    <div className="relative mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.08)]">
+                    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.08)]">
                       <img src={AVATAR_BASE_ASSET} alt={item.name} className="h-full w-full object-contain" />
                       <img src={item.asset} alt={item.name} className="absolute inset-0 h-full w-full object-contain" />
                     </div>

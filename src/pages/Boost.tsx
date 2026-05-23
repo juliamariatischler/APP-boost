@@ -3,14 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Zap } from "lucide-react";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { BottomNav } from "@/components/BottomNav";
-import { StreakCard } from "@/components/boost/StreakCard";
-import { BadgesCard } from "@/components/boost/BadgesCard";
-import { ClassLeaderboard } from "@/components/boost/ClassLeaderboard";
-import { ClassParticipationCard } from "@/components/boost/ClassParticipationCard";
-import { EnergyRankCard } from "@/components/boost/EnergyRankCard";
-import { useGamification } from "@/hooks/useGamification";
 import { supabase } from "@/integrations/supabase/client";
-import { Skeleton } from "@/components/ui/skeleton";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 
 // Must match STEP_TASK_REWARD in Dashboard.tsx
@@ -94,52 +87,24 @@ const EARN_ROWS = [
 const Boost = () => {
   const navigate = useNavigate();
   const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userClass, setUserClass] = useState("");
-  const [userSchool, setUserSchool] = useState("");
   const [authLoading, setAuthLoading] = useState(true);
-
-  const gamification = useGamification(userId, userClass, userSchool);
 
   useEffect(() => {
     const init = async () => {
       if (codeAuthLoading) return;
       if (codeSession?.user_type === "student") {
-        setUserId(codeSession.user_id);
-        setUserClass(codeSession.class_name || "");
-        setUserSchool(codeSession.school_name || "");
         setAuthLoading(false);
         return;
       }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/"); return; }
-      setUserId(session.user.id);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("class, school")
-        .eq("id", session.user.id)
-        .single();
-      if (profile) {
-        setUserClass(profile.class);
-        setUserSchool(profile.school);
-      }
       setAuthLoading(false);
     };
     void init();
   }, [navigate, codeSession, codeAuthLoading]);
 
-  if (authLoading || gamification.loading) {
-    return (
-      <div className="min-h-screen bg-background pb-nav-safe">
-        <div className="mx-auto max-w-screen-xl space-y-4 px-4 pt-3">
-          <Skeleton className="h-10 w-40 rounded-full" />
-          <Skeleton className="h-44 w-full rounded-[28px]" />
-          <Skeleton className="h-[22rem] w-full rounded-[26px]" />
-          <Skeleton className="h-40 w-full rounded-[26px]" />
-        </div>
-        <BottomNav />
-      </div>
-    );
+  if (authLoading) {
+    return null;
   }
 
   return (
@@ -213,24 +178,6 @@ const Boost = () => {
           ))}
         </div>
 
-        {/* Stats components */}
-        <div className="space-y-3">
-          <StreakCard streak={gamification.streak} weeklyCompletedDays={gamification.weeklyCompletedDays} />
-          {gamification.classParticipation && (
-            <ClassParticipationCard
-              participation={gamification.classParticipation}
-              userClass={userClass}
-              rescueDaysUsed={gamification.rescueDaysUsed}
-            />
-          )}
-          <EnergyRankCard
-            userPoints={gamification.points}
-            classAverage={gamification.classAverage}
-            energyRank={gamification.energyRank}
-          />
-          <BadgesCard allBadges={gamification.allBadges} earnedBadgeIds={gamification.earnedBadgeIds} />
-          <ClassLeaderboard userClass={userClass} userSchool={userSchool} />
-        </div>
 
       </div>
       <BottomNav />

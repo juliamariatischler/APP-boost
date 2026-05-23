@@ -12,7 +12,7 @@ export async function scanForStation(params: {
   expectedStationId: string;
   alertMessage?: string;
 }): Promise<NfcScanResult> {
-  const { expectedStationId, alertMessage = 'Halte dein iPhone an die Station' } = params;
+  const { expectedStationId, alertMessage = 'Halte dein Handy an die Station' } = params;
 
   if (!Capacitor.isNativePlatform()) {
     const input = window.prompt(
@@ -84,7 +84,7 @@ export async function scanForStation(params: {
  * Use this for the route-based NFC scan flow where the server determines which station was scanned.
  */
 export async function readNfcTag(
-  alertMessage = 'Halte dein iPhone an die Station',
+  alertMessage = 'Halte dein Handy an die Station',
 ): Promise<NfcTagRead> {
   if (!Capacitor.isNativePlatform()) {
     const input = window.prompt(

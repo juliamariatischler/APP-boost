@@ -73,7 +73,7 @@ const NfcRouteChallenge = () => {
     if (scanning || !route || progress?.is_complete) return;
     setScanning(true);
     try {
-      const tagRead = await readNfcTag("Halte dein iPhone an die Station");
+      const tagRead = await readNfcTag("Halte dein Handy an die Station");
 
       if (tagRead.status === "cancelled") return;
 
@@ -285,7 +285,7 @@ const NfcRouteChallenge = () => {
 
             {!isComplete && (
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Halte dein iPhone direkt an den NFC-Chip der Station.
+                Halte dein Handy direkt an den NFC-Chip der Station.
               </p>
             )}
           </Card>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useCodeAuth } from '@/contexts/CodeAuthContext';
 import {
@@ -87,6 +88,14 @@ interface ActiveBattle {
   opponentName: string;
 }
 
+interface CameraResult {
+  invitationId: string;
+  myResult: number;
+  opponentResult: number | null;
+  winnerId: string | null;
+  status: 'submitting' | 'waiting' | 'done';
+}
+
 const GENERIC_CODE_ERROR = 'Der Code ist leider ungültig oder abgelaufen.';
 
 const FriendQuest = () => {
@@ -106,6 +115,7 @@ const FriendQuest = () => {
   const [busyInviteId, setBusyInviteId] = useState<string | null>(null);
   const [busyFriendquestId, setBusyFriendquestId] = useState<string | null>(null);
   const [activeBattle, setActiveBattle] = useState<ActiveBattle | null>(null);
+  const [cameraResult, setCameraResult] = useState<CameraResult | null>(null);
 
   useEffect(() => {
     if (codeAuthLoading) return;
@@ -126,7 +136,67 @@ const FriendQuest = () => {
   useEffect(() => {
     if (!userId) return;
     void loadMine();
+    void checkCameraResult(userId);
   }, [userId]);
+
+  const checkCameraResult = async (uid: string) => {
+    const raw = localStorage.getItem('fq_battle_result');
+    if (!raw) return;
+    localStorage.removeItem('fq_battle_result');
+
+    let parsed: { invitation_id: string; result: number } | null = null;
+    try { parsed = JSON.parse(raw); } catch { return; }
+    if (!parsed?.invitation_id) return;
+
+    const invitationId = parsed.invitation_id;
+    const myResult = parsed.result;
+
+    setCameraResult({ invitationId, myResult, opponentResult: null, winnerId: null, status: 'submitting' });
+
+    const { error } = await (supabase.rpc as any)('submit_friendquest_battle_result', {
+      p_invitation_id: invitationId,
+      p_result: myResult,
+    });
+
+    if (error) {
+      toast.error('Ergebnis konnte nicht gespeichert werden.');
+      setCameraResult(null);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('challenge_invitations')
+      .select('challenger_result,opponent_result,winner_id,challenger_id,status')
+      .eq('id', invitationId)
+      .single();
+
+    const bothDone = data?.challenger_result !== null && data?.opponent_result !== null;
+    const opponentResult = bothDone
+      ? (data.challenger_id === uid ? data.opponent_result : data.challenger_result)
+      : null;
+
+    setCameraResult({
+      invitationId,
+      myResult,
+      opponentResult,
+      winnerId: data?.winner_id ?? null,
+      status: bothDone ? 'done' : 'waiting',
+    });
+
+    if (!bothDone) {
+      const channel = supabase
+        .channel(`fq-camera-result-${invitationId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'challenge_invitations', filter: `id=eq.${invitationId}` }, (payload) => {
+          const d = payload.new as any;
+          if (d.challenger_result !== null && d.opponent_result !== null) {
+            const oppRes = d.challenger_id === uid ? d.opponent_result : d.challenger_result;
+            setCameraResult((prev) => prev ? { ...prev, opponentResult: oppRes, winnerId: d.winner_id, status: 'done' } : null);
+            supabase.removeChannel(channel);
+          }
+        })
+        .subscribe();
+    }
+  };
 
   const loadMine = async () => {
     setIsLoadingMine(true);
@@ -351,6 +421,55 @@ const FriendQuest = () => {
   );
 
   if (!userId) return null;
+
+  if (cameraResult) {
+    const isWinner = cameraResult.winnerId === userId;
+    const isTie = cameraResult.status === 'done' && cameraResult.winnerId === null;
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-6 gap-6">
+        {cameraResult.status === 'submitting' && (
+          <Card className="p-8 text-center space-y-3 w-full max-w-sm">
+            <div className="animate-pulse text-4xl">⏳</div>
+            <p className="text-lg font-black">Ergebnis wird gespeichert…</p>
+          </Card>
+        )}
+        {cameraResult.status === 'waiting' && (
+          <Card className="p-8 text-center space-y-4 w-full max-w-sm">
+            <div className="text-5xl">💪</div>
+            <p className="text-xl font-black">Du: {cameraResult.myResult}</p>
+            <p className="text-sm text-muted-foreground animate-pulse">Warte auf das Ergebnis deines Gegners…</p>
+          </Card>
+        )}
+        {cameraResult.status === 'done' && (
+          <Card className="p-8 text-center space-y-4 w-full max-w-sm">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.5 }}>
+              <span className="text-6xl">{isTie ? '🤝' : isWinner ? '🏆' : '💪'}</span>
+            </motion.div>
+            <h3 className="text-2xl font-bold">
+              {isTie ? 'Unentschieden!' : isWinner ? 'Du hast gewonnen!' : 'Stark mitgemacht!'}
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Du</p>
+                <p className="text-3xl font-bold">{cameraResult.myResult}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Gegner</p>
+                <p className="text-3xl font-bold">{cameraResult.opponentResult ?? '–'}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-lg">
+              <Zap className="h-6 w-6 text-yellow-500" />
+              <span className="font-bold">+{BOOST_POINT_RULES.friendQuestCompleted} Blitze</span>
+            </div>
+            <Button className="w-full" size="lg" onClick={() => { setCameraResult(null); void loadMine(); }}>
+              Zurück
+            </Button>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   if (activeBattle) {
     return (

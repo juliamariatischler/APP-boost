@@ -18,6 +18,14 @@ export const DAILY_EXERCISE_GOALS = {
   jumping_jacks: 40,
 } as const;
 
+export const FRIENDQUEST_EXERCISE_GOALS = {
+  push_ups: DAILY_EXERCISE_GOALS.push_ups * 3,
+  squats: DAILY_EXERCISE_GOALS.squats * 3,
+  planks: DAILY_EXERCISE_GOALS.planks * 3,
+  sit_ups: DAILY_EXERCISE_GOALS.sit_ups * 3,
+  jumping_jacks: DAILY_EXERCISE_GOALS.jumping_jacks * 3,
+} as const;
+
 export const BOOST_POINT_RULES = {
   repOrSecond: 1,
   exerciseCompleted: 1,

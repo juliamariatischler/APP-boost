@@ -566,6 +566,16 @@ const TrialSessionsList = () => {
         </div>
       </div>
 
+      <div className="rounded-[22px] border border-primary/20 bg-primary/5 p-4">
+        <p className="text-sm font-black text-foreground">Probetrainings</p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Wenn auch dein Verein Lust hat mitzumachen, gerne anmelden unter:{" "}
+          <a href="mailto:office@boostschule.at" className="font-semibold text-primary">
+            office@boostschule.at
+          </a>
+        </p>
+      </div>
+
       {/* Bottom promo cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="relative flex min-h-[148px] flex-col overflow-hidden rounded-[22px] border border-black/5 bg-white p-4 shadow-[0_8px_22px_rgba(0,0,0,0.07)]">

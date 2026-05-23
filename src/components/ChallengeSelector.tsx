@@ -34,7 +34,13 @@ export const ChallengeSelector = ({ selectedChallenge, onChallengeSelect }: Chal
         .order('winner_points', { ascending: false });
 
       if (error) throw error;
-      setChallenges(data || []);
+      const seen = new Set<string>();
+      const unique = (data || []).filter((c) => {
+        if (seen.has(c.name)) return false;
+        seen.add(c.name);
+        return true;
+      });
+      setChallenges(unique);
     } catch (error) {
       console.error('Error loading challenges:', error);
     } finally {

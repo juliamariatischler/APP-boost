@@ -1,0 +1,19 @@
+✔ Copying web assets from dist to ios/App/App/public in 52.84ms
+✔ Creating capacitor.config.json in ios/App/App in 1.39ms
+[info] Found 1 Cordova plugin for ios:
+       cordova-plugin-health@3.2.4
+✔ copy ios in 135.12ms
+✔ Updating iOS plugins in 11.27ms
+[info] Found 1 Cordova plugin for ios:
+       cordova-plugin-health@3.2.4
+[warn] Some installed packages are not compatable with SPM
+[info] Writing Package.swift
+[warn] @capacitor/core@7.6.5 version doesn't match @capacitor/ios@7.4.3 version.
+       Consider updating to a matching version, e.g. w/ npm install @capacitor/core@7.4.3
+[info] Found 3 Capacitor plugins for ios:
+       @capacitor/splash-screen@7.0.5
+       @capacitor/status-bar@7.0.6
+       @capgo/capacitor-nfc@7.2.0
+✔ update ios in 94.45ms
+[info] Sync finished in 0.304s
+[info] Sync finished in 0.327s

@@ -58,6 +58,10 @@
 
 <body>
   <div class="container">
+    <div id="battle-banner" style="display:none;background:#22c55e;color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:12px;text-align:center;">
+      <div style="font-size:1rem;font-weight:800;">⚔️ Battle läuft!</div>
+      <div style="font-size:.9rem;margin-top:2px;">Ziel: <span id="battle-goal-text">–</span> Kniebeugen &nbsp;|&nbsp; Zeit: <span id="battle-timer-text">–</span></div>
+    </div>
     <h1 class="title">Kniebeugen-Zähler</h1>
     <p class="subtitle">Stell dich seitlich vor die Kamera.</p>
     <div class="info-box">
@@ -137,6 +141,35 @@
     const debugLog = document.getElementById('debug-log');
     const fitButton = document.getElementById('fit-button');
     const switchCameraButton = document.getElementById('switch-camera-button');
+
+    // Battle mode
+    const _bp = new URLSearchParams(window.location.search);
+    const BATTLE_MODE = _bp.get('mode') === 'battle';
+    const BATTLE_GOAL = BATTLE_MODE ? parseInt(_bp.get('goal') || '30', 10) : null;
+    const BATTLE_INVITATION_ID = BATTLE_MODE ? _bp.get('invitation_id') : null;
+    let battleTimeLeft = BATTLE_MODE ? parseInt(_bp.get('time') || '120', 10) : null;
+    let battleTimerInterval = null;
+
+    if (BATTLE_MODE) {
+      document.getElementById('battle-banner').style.display = 'block';
+      document.getElementById('battle-goal-text').textContent = BATTLE_GOAL;
+    }
+
+    function updateBattleTimer() {
+      const el = document.getElementById('battle-timer-text');
+      if (!el) return;
+      const m = Math.floor(battleTimeLeft / 60);
+      const s = battleTimeLeft % 60;
+      el.textContent = m + ':' + String(s).padStart(2, '0');
+    }
+
+    function finishBattle() {
+      if (battleTimerInterval) clearInterval(battleTimerInterval);
+      if (BATTLE_INVITATION_ID) {
+        localStorage.setItem('fq_battle_result', JSON.stringify({ invitation_id: BATTLE_INVITATION_ID, result: counter }));
+      }
+      window.location.href = '/friend-quest';
+    }
 
     let detector;
     let currentFacingMode = 'user';
@@ -372,6 +405,7 @@
     switchCameraButton.addEventListener("click", toggleCamera);
 
     document.getElementById("finish-button").addEventListener("click", () => {
+      if (BATTLE_MODE) { finishBattle(); return; }
       if(counter === 0){
         localStorage.setItem("squats_result", 0);
         window.location.href = "/dashboard";
@@ -398,6 +432,14 @@
         await loadModel();
         feedbackEl.textContent = "Bereit!";
         feedbackEl.style.color = "#059669";
+        if (BATTLE_MODE && battleTimeLeft !== null) {
+          updateBattleTimer();
+          battleTimerInterval = setInterval(() => {
+            battleTimeLeft--;
+            updateBattleTimer();
+            if (battleTimeLeft <= 0) finishBattle();
+          }, 1000);
+        }
         loop();
       }catch(e){
         feedbackEl.textContent = "KI-Fehler: " + e.message;
