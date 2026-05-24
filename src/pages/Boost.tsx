@@ -144,11 +144,31 @@ const Boost = () => {
               { label: "Serien-Bonus", value: "bis +15 ⚡" },
               { label: "Wochenmission", value: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡` },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-[14px] bg-white/14 px-2 py-2 text-center backdrop-blur-sm">
+              <div key={stat.label} className="rounded-[14px] bg-white/20 px-2 py-2 text-center">
                 <p className="text-[11px] font-black text-white">{stat.value}</p>
                 <p className="mt-0.5 text-[9px] font-semibold text-white/75 leading-tight">{stat.label}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Items */}
+        <div className="mb-4 overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+          <div className="border-b border-black/[0.05] px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+              Items freischalten
+            </p>
+          </div>
+          <div className="px-4 py-4 flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-violet-500/12 text-lg">
+              🎁
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-black leading-tight text-foreground">40 Blitze = 1 Item</p>
+              <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
+                Hast du <span className="font-black text-foreground">40 Blitze</span> gesammelt, schaltest du ein Item frei – du suchst dir eines aus, und es gehört dir für immer. Du kannst jederzeit zwischen deinen freigeschalteten Items <span className="font-black text-foreground">wechseln</span> und das aktive Item selbst bestimmen.
+              </p>
+            </div>
           </div>
         </div>
 

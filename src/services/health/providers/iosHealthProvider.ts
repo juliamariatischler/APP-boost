@@ -50,16 +50,18 @@ export class IOSHealthProvider implements HealthProvider {
     today.setHours(0, 0, 0, 0);
     const now = new Date();
     try {
+      // queryAggregated needs bucket:'day' to return data correctly
       const aggregated = await callCordovaHealth('queryAggregated', {
         startDate: today,
         endDate: now,
         dataType: 'steps',
-        filterOutUserInput: true,
+        bucket: 'day',
       });
       console.log('iOS HealthKit aggregated steps result:', aggregated);
       const aggregatedSteps = normalizeSteps(aggregated);
       if (aggregatedSteps > 0) return aggregatedSteps;
 
+      // Fallback: raw samples, manual entries excluded
       const result = await callCordovaHealth('query', {
         startDate: today,
         endDate: now,
@@ -68,7 +70,18 @@ export class IOSHealthProvider implements HealthProvider {
         filterOutUserInput: true,
       });
       console.log('iOS HealthKit raw steps result:', result);
-      return normalizeSteps(result);
+      const rawSteps = normalizeSteps(result);
+      if (rawSteps > 0) return rawSteps;
+
+      // DEBUG: check if steps exist at all without filter (log only, not returned as points)
+      const debug = await callCordovaHealth('query', {
+        startDate: today,
+        endDate: now,
+        dataType: 'steps',
+        limit: 1000,
+      });
+      console.log('iOS HealthKit DEBUG (unfiltered, not used for points):', debug, 'count:', normalizeSteps(debug));
+      return 0;
     } catch (error) {
       console.error('iOS HealthKit step query failed:', error);
       return 0;

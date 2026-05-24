@@ -266,6 +266,10 @@ export type Database = {
           class: string
           created_at: string
           current_streak: number
+          feedback_prompt_shown: boolean
+          feedback_prompt_shown_at: string | null
+          feedback_submitted: boolean
+          feedback_submitted_at: string | null
           id: string
           last_rescue_reset: string
           level: number
@@ -280,6 +284,10 @@ export type Database = {
           class: string
           created_at?: string
           current_streak?: number
+          feedback_prompt_shown?: boolean
+          feedback_prompt_shown_at?: string | null
+          feedback_submitted?: boolean
+          feedback_submitted_at?: string | null
           id: string
           last_rescue_reset?: string
           level?: number
@@ -294,6 +302,10 @@ export type Database = {
           class?: string
           created_at?: string
           current_streak?: number
+          feedback_prompt_shown?: boolean
+          feedback_prompt_shown_at?: string | null
+          feedback_submitted?: boolean
+          feedback_submitted_at?: string | null
           id?: string
           last_rescue_reset?: string
           level?: number

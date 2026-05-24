@@ -65,7 +65,7 @@
     <h1 class="title">Kniebeugen-Zähler</h1>
     <p class="subtitle">Stell dich seitlich vor die Kamera.</p>
     <div class="info-box">
-      <p>Erkannt wird eine Kniebeuge, wenn Schulter, Hüfte und Knie gut sichtbar sind. Stelle das Handy ca. 1 m entfernt auf, damit du gut im Bild bist. Belohnung: 1 Kniebeuge = 1 Blitz.</p>
+      <p>Erkannt wird eine Kniebeuge, wenn Schulter, Hüfte und Knie gut sichtbar sind. Stelle das Handy ca. 1 m entfernt auf, damit du gut im Bild bist.</p>
     </div>
 
     <div class="card">
@@ -176,9 +176,11 @@
     let currentDeviceId = '';
     let counter = 0;
     let stage = "up"; // up = stehen, down = unten
+    let hipYAtUp = null; // Hüfthöhe in der Ausgangsposition (für Hip-Drop-Check)
     const KEYPOINT_CONFIDENCE = 0.35;
-    const UP_ANGLE_THRESHOLD = 150;
-    const DOWN_ANGLE_THRESHOLD = 105;
+    const UP_ANGLE_THRESHOLD = 155;
+    const DOWN_ANGLE_THRESHOLD = 90;  // Knie müssen mindestens 90° angewinkelt sein
+    const HIP_DROP_RATIO = 0.12;      // Hüfte muss mind. 12% der Körperhöhe sinken
 
     function angle(a,b,c){
       const r=Math.atan2(c.y-b.y,c.x-b.x)-Math.atan2(a.y-b.y,a.x-b.x);
@@ -348,10 +350,11 @@
     function processSquat(pose){
       const k = pose.keypoints;
 
-      // Nimm die Seite mit höherer Confidence
-      const hip   = pickSide(k,'hip');
-      const knee  = pickSide(k,'knee');
-      const ankle = pickSide(k,'ankle');
+      // Nimm die Seite mit höherer Confidence (Seitenansicht)
+      const hip      = pickSide(k,'hip');
+      const knee     = pickSide(k,'knee');
+      const ankle    = pickSide(k,'ankle');
+      const shoulder = pickSide(k,'shoulder');
 
       if(!(hip?.score>KEYPOINT_CONFIDENCE && knee?.score>KEYPOINT_CONFIDENCE && ankle?.score>KEYPOINT_CONFIDENCE)){
         feedbackEl.textContent = "Stell dich seitlich hin.";
@@ -361,20 +364,41 @@
 
       const kneeAngle = angle(hip, knee, ankle);
 
-      if(kneeAngle > UP_ANGLE_THRESHOLD){ // oben/gestreckt
+      // Körperhöhe in Pixeln (Schulter → Knöchel) für Hip-Drop-Berechnung
+      const bodyH = shoulder?.score > KEYPOINT_CONFIDENCE
+        ? Math.abs(ankle.y - shoulder.y)
+        : Math.abs(ankle.y - hip.y) * 1.8;
+
+      if(kneeAngle > UP_ANGLE_THRESHOLD){
+        // Aufgerichtet: Kniebeuge abgeschlossen
         if(stage === "down"){
           counter++;
           feedbackEl.textContent = "Sauber!";
           if(BATTLE_MODE && BATTLE_GOAL !== null && counter >= BATTLE_GOAL){ finishBattle(); return; }
         }
         stage = "up";
-      } else if(kneeAngle < DOWN_ANGLE_THRESHOLD){ // tief unten
-        stage = "down";
-        feedbackEl.textContent = "Geh tief!";
+        hipYAtUp = hip.y; // Hüftposition in Ausgangsstellung merken
+
+      } else if(kneeAngle < DOWN_ANGLE_THRESHOLD){
+        // Knie 90° – prüfe ob Hüfte wirklich abgesunken ist (kein Rückenvorfall)
+        const hipDrop = hipYAtUp !== null ? hip.y - hipYAtUp : 0;
+        if(hipDrop > bodyH * HIP_DROP_RATIO){
+          stage = "down";
+          feedbackEl.textContent = "Gut – jetzt aufstehen!";
+        } else {
+          feedbackEl.textContent = "Hüfte senken – keine Rückenbeuge!";
+        }
+
+      } else {
+        // Zwischen gestreckt und 90°
+        if(stage !== "down"){
+          feedbackEl.textContent = "Weiter runter – Knie mind. 90°!";
+        }
       }
 
       countEl.textContent = counter;
       stageEl.textContent = stage.toUpperCase();
+      debugLog.textContent = `Winkel: ${Math.round(kneeAngle)}° | Hüfte: ${hipYAtUp !== null ? Math.round(hip.y - hipYAtUp)+'px' : '–'}`;
     }
 
     async function loop(){
@@ -398,7 +422,7 @@
     }
 
     document.getElementById("reset-button").addEventListener("click", () => {
-      counter = 0; stage = "up";
+      counter = 0; stage = "up"; hipYAtUp = null;
       countEl.textContent = 0; stageEl.textContent = "-";
       feedbackEl.textContent = "Zurückgesetzt!";
     });

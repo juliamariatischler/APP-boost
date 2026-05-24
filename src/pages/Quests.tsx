@@ -52,8 +52,7 @@ const RewardDisplay = ({ reward }: { reward: string }) => {
 const QuestAvatar = ({ quest }: { quest: QuestCard }) => (
   <div className={`relative flex items-center justify-center overflow-hidden px-2 py-2 ${quest.containerClass ?? "h-36"} ${quest.bgClass ?? "bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.58)_34%,transparent_66%),linear-gradient(180deg,#f8fafc_0%,#eef5e9_100%)]"}`}>
     <div className="absolute inset-x-0 bottom-0 h-14 bg-[linear-gradient(to_top,rgba(34,197,94,0.42)_0%,rgba(74,222,128,0.18)_55%,transparent_100%)]" />
-    <div className="absolute bottom-3 h-7 w-[72%] rounded-full bg-black/18 blur-xl" />
-    <div className="absolute bottom-5 h-3 w-[56%] rounded-full bg-black/14 blur-md" />
+    <div className="absolute bottom-2 h-3 w-[72%] rounded-full shadow-[0_0_18px_6px_rgba(0,0,0,0.14)]" />
     {quest.groundClass && <div className={quest.groundClass} />}
     <img
       src={quest.image}
@@ -63,7 +62,7 @@ const QuestAvatar = ({ quest }: { quest: QuestCard }) => (
         "relative z-10 max-h-[118%] w-auto max-w-[108%] object-contain object-center drop-shadow-[0_22px_20px_rgba(15,23,42,0.32)] saturate-[1.08] contrast-[1.04]"
       }
     />
-    <div className={`pointer-events-none absolute inset-x-6 top-4 h-10 rounded-full bg-white/35 blur-xl ${quest.shadowClass ?? ""}`} />
+    <div className={`pointer-events-none absolute inset-x-6 top-4 h-10 rounded-full bg-white/35 ${quest.shadowClass ?? ""}`} />
   </div>
 );
 

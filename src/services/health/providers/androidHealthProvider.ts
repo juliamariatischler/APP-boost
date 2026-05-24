@@ -25,7 +25,8 @@ export class AndroidHealthProvider implements HealthProvider {
     if (!this.isSupported()) return false;
 
     try {
-      return await callCordovaHealth<boolean>('isAvailable');
+      await callCordovaHealth('isAvailable');
+      return true;
     } catch (error) {
       console.error('Android health availability check failed:', error);
       return false;

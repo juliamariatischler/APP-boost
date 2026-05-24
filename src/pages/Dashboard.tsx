@@ -553,7 +553,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pb-nav-safe">
       <div className="relative mx-auto max-w-screen-xl px-4 pt-[calc(0.25rem+0.4cm)]">
         <div className="mb-5 flex items-start gap-3">
-          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
+          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]" style={{ transform: 'translateZ(0)' }}>
             <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
             {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
               <img
@@ -594,7 +594,7 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="relative z-10 flex flex-col justify-between px-4 pt-3 pb-4">
+            <div className="relative z-10 flex flex-col px-4 pt-3 pb-4">
               <div>
                 <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/90 backdrop-blur">
                   {activeVoltMood.label}
@@ -603,7 +603,7 @@ const Dashboard = () => {
                   {activeVoltMood.title}
                 </h2>
               </div>
-              <div className="flex justify-center">
+              <div className="absolute bottom-[-2rem] left-0 right-0 flex justify-center">
                 <div className="relative flex h-[6rem] w-[6rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_9px_rgba(255,255,255,0.12),0_0_28px_rgba(34,211,238,0.34)]">
                   <div
                     className="absolute inset-0 rounded-full"

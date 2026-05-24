@@ -138,7 +138,7 @@
     <h1 class="title">Liegestütz-Zähler</h1>
     <p class="subtitle">Geh in die Liegestütz-Position vor die Kamera.</p>
     <div class="info-box">
-      <p>Erkannt wird ein Liegestütz, wenn Schulter, Hüfte und Handgelenke gut sichtbar sind. Stelle das Handy ca. 1 m entfernt seitlich auf, damit du gut im Bild bist. Belohnung: 1 Liegestütz = 1 Blitz.</p>
+      <p>Stelle das Handy ca. 1 m entfernt <strong>seitlich</strong> auf. Pflicht: <strong>Schulter und Ellbogen</strong> müssen sichtbar sein – der Rest des Körpers muss nicht komplett im Bild sein. Frauen-Liegestütze (auf Knien) werden ebenfalls erkannt. Belohnung: 1 Liegestütz = 1 Blitz.</p>
     </div>
 
     <div class="card">
@@ -255,6 +255,9 @@
     const ARM_VISIBILITY = 0.3;
     const UP_ANGLE_THRESHOLD = 145;
     const DOWN_ANGLE_THRESHOLD = 110;
+    const SHOULDER_LIFT_RATIO = 0.06;  // wrist.y must exceed shoulder.y by ≥6% of height (Robben-Filter, wrist path only)
+    const UP_DROP_RATIO   = 0.65;      // (elbow.y − shoulder.y) / armLen > 0.65 → UP phase (arm pointing down)
+    const DOWN_DROP_RATIO = 0.45;      // (elbow.y − shoulder.y) / armLen < 0.45 → DOWN phase (shoulder dropped)
 
     function calculateAngle(a, b, c) {
       const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -482,63 +485,64 @@
 
       const ls = get('left_shoulder'), le = get('left_elbow'), lw = get('left_wrist');
       const rs = get('right_shoulder'), re = get('right_elbow'), rw = get('right_wrist');
-      const lh = get('left_hip'), rh = get('right_hip');
-      const nose = get('nose');
 
-      // --- FRONTAL VIEW: both shoulders visible ---
-      const bothShouldersVisible = (ls?.score > SHOULDER_VISIBILITY) && (rs?.score > SHOULDER_VISIBILITY);
-      
-      if (bothShouldersVisible) {
-        // Frontal: use vertical movement of nose/shoulders relative to hips
-        const leftArm = (le?.score > ARM_VISIBILITY && lw?.score > ARM_VISIBILITY) ? calculateAngle(ls, le, lw) : null;
-        const rightArm = (re?.score > ARM_VISIBILITY && rw?.score > ARM_VISIBILITY) ? calculateAngle(rs, re, rw) : null;
+      const leftScore  = ls?.score || 0;
+      const rightScore = rs?.score || 0;
 
-        // Average both arm angles if available
-        let angle = null;
-        if (leftArm !== null && rightArm !== null) angle = (leftArm + rightArm) / 2;
-        else if (leftArm !== null) angle = leftArm;
-        else if (rightArm !== null) angle = rightArm;
-
-        // Fallback: use shoulder-to-hip vertical ratio (body dips down)
-        if (angle === null && nose?.score > SHOULDER_VISIBILITY && (lh?.score > SHOULDER_VISIBILITY || rh?.score > SHOULDER_VISIBILITY)) {
-          const hipY = (lh?.score > SHOULDER_VISIBILITY && rh?.score > SHOULDER_VISIBILITY) ? (lh.y + rh.y) / 2 : (lh?.score > SHOULDER_VISIBILITY ? lh.y : rh.y);
-          const shoulderY = (ls.y + rs.y) / 2;
-          const ratio = (hipY - shoulderY) / Math.max(hipY, 1);
-          // When down, shoulders are closer to hip level
-          angle = ratio < 0.08 ? 70 : 170;
-        }
-
-        if (angle !== null) {
-          evaluateAngle(angle);
-        } else {
-          feedbackEl.textContent = 'Halte deine Arme sichtbar!';
+      // Block only truly frontal view (both shoulders visible AND very close in X)
+      const bothVisible = leftScore > SHOULDER_VISIBILITY && rightScore > SHOULDER_VISIBILITY;
+      if (bothVisible) {
+        const xDiff = Math.abs((ls?.x || 0) - (rs?.x || 0));
+        if (xDiff < canvas.width * 0.12) {
+          feedbackEl.textContent = 'Bitte dreh dich seitlich zur Kamera!';
           feedbackEl.style.color = '#b45309';
+          return;
         }
+      }
+
+      // Pick the more visible side
+      let shoulder, elbow, wrist;
+      if (leftScore >= rightScore) {
+        shoulder = ls; elbow = le; wrist = lw;
+      } else {
+        shoulder = rs; elbow = re; wrist = rw;
+      }
+
+      // Schulter ist Pflicht
+      if (!shoulder || shoulder.score < SHOULDER_VISIBILITY) {
+        feedbackEl.textContent = 'Schulter nicht erkannt – richte die Kamera auf Schulter und Ellbogen.';
+        feedbackEl.style.color = '#b45309';
         return;
       }
 
-      // --- SIDE VIEW: pick the more visible side ---
-      let shoulder, elbow, wrist, hip;
-      if ((ls?.score || 0) > (rs?.score || 0)) {
-        shoulder = ls; elbow = le; wrist = lw; hip = lh;
-      } else {
-        shoulder = rs; elbow = re; wrist = rw; hip = rh;
+      // Ellbogen ist Pflicht
+      if (!elbow || elbow.score < ARM_VISIBILITY) {
+        feedbackEl.textContent = 'Ellbogen nicht erkannt – richte die Kamera auf Schulter und Ellbogen.';
+        feedbackEl.style.color = '#b45309';
+        return;
       }
 
-      if (shoulder?.score > ARM_VISIBILITY && elbow?.score > ARM_VISIBILITY && wrist?.score > ARM_VISIBILITY) {
-        const angle = calculateAngle(shoulder, elbow, wrist);
-        evaluateAngle(angle);
-      } else {
-        feedbackEl.textContent = 'Schulter, Ellbogen und Handgelenk müssen sichtbar sein.';
-        feedbackEl.style.color = '#b45309';
+      // Primär: Winkel Schulter–Ellbogen–Handgelenk (präziser), wenn Handgelenk sichtbar
+      if (wrist && wrist.score > ARM_VISIBILITY) {
+        evaluateAngle(calculateAngle(shoulder, elbow, wrist), shoulder, wrist);
+        return;
       }
+
+      // Fallback: nur Schulter + Ellbogen → vertikale Drop-Ratio
+      evaluateByElbowDrop(shoulder, elbow);
     }
 
-    // Shared logic for counting reps based on elbow angle
-    // Works for regular & knee push-ups (same arm movement)
-    function evaluateAngle(angle) {
+    // Primäre Methode: Ellbogenwinkel (Schulter–Ellbogen–Handgelenk)
+    function evaluateAngle(angle, shoulder, wrist) {
       if (angle > UP_ANGLE_THRESHOLD) {
         if (stage === 'down') {
+          // Schulter muss deutlich über Handgelenk sein – verhindert Robben-Fehlzählungen
+          const liftOk = !shoulder || !wrist || wrist.y > shoulder.y + canvas.height * SHOULDER_LIFT_RATIO;
+          if (!liftOk) {
+            feedbackEl.textContent = 'Körper ganz hochdrücken!';
+            feedbackEl.style.color = '#b45309';
+            return;
+          }
           counter++;
           feedbackEl.textContent = 'Sehr gut! 💪';
           feedbackEl.style.color = '#059669';
@@ -546,6 +550,33 @@
         }
         stage = 'up';
       } else if (angle < DOWN_ANGLE_THRESHOLD) {
+        if (stage === 'up') {
+          feedbackEl.textContent = 'Weiter runter!';
+          feedbackEl.style.color = '#374151';
+        }
+        stage = 'down';
+      }
+      countEl.textContent = counter;
+      stageEl.textContent = stage;
+    }
+
+    // Fallback-Methode: nur Schulter + Ellbogen → Drop-Ratio des Oberarms
+    // UP:   Ellbogen hängt deutlich unter der Schulter (Arm gestreckt, Schulter angehoben)
+    // DOWN: Ellbogen auf Schulterhöhe (Schulter abgesunken, Arm gebeugt)
+    function evaluateByElbowDrop(shoulder, elbow) {
+      const armLen = Math.hypot(elbow.x - shoulder.x, elbow.y - shoulder.y);
+      if (armLen < 15) return;
+      const dropRatio = (elbow.y - shoulder.y) / armLen;
+
+      if (dropRatio > UP_DROP_RATIO) {
+        if (stage === 'down') {
+          counter++;
+          feedbackEl.textContent = 'Sehr gut! 💪';
+          feedbackEl.style.color = '#059669';
+          if (BATTLE_MODE && BATTLE_GOAL !== null && counter >= BATTLE_GOAL) { finishBattle(); return; }
+        }
+        stage = 'up';
+      } else if (dropRatio < DOWN_DROP_RATIO) {
         if (stage === 'up') {
           feedbackEl.textContent = 'Weiter runter!';
           feedbackEl.style.color = '#374151';

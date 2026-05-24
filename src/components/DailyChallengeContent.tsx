@@ -541,9 +541,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
           <div className="flex-1">
             <h3 className="text-xl font-black leading-tight text-foreground">Challenge 2: Übungen</h3>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
-            <p className="text-xs font-medium text-muted-foreground/80">
-              1 Wiederholung bzw. 1 Sekunde Plank = {BOOST_POINT_RULES.repOrSecond} Blitz.
-            </p>
+
           </div>
           {allExercisesComplete && <Zap className="h-6 w-6 text-yellow-500 fill-yellow-500" />}
         </div>

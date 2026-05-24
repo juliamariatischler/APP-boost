@@ -36,7 +36,7 @@ export const TeacherBottomNav = ({ active, onTabChange }: TeacherBottomNavProps)
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card/95 shadow-lg backdrop-blur"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card shadow-lg"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-6 px-1">

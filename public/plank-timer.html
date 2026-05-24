@@ -236,7 +236,7 @@
     <h1 class="title">Plank-Timer</h1>
     <p class="subtitle">Stell die Kamera seitlich auf und zeig dich im Profil.</p>
     <div class="info-box">
-      <p>Erkannt wird dein Plank, wenn Schulter sichtbar, Hüfte sichtbar und dein Torso möglichst horizontal ist. Halte dabei ca. 1,2 m Abstand zur Kamera. Belohnung: 1 Sekunde = 1 Blitz.</p>
+      <p>Erkannt wird dein Plank, wenn Schulter sichtbar, Hüfte sichtbar und dein Torso möglichst horizontal ist. Halte dabei ca. 1,2 m Abstand zur Kamera.</p>
     </div>
 
     <div class="card">
@@ -624,6 +624,12 @@
       }
     }
 
+    function isSideView(shoulder, hip){
+      // In side view the shoulder and hip are spread apart horizontally;
+      // in front/back view they appear stacked (small x-separation).
+      return Math.abs(shoulder.x - hip.x) > canvas.width * 0.12;
+    }
+
     function processPlank(pose){
       const k=pose.keypoints;
       const shoulder=pickSide(k,'shoulder');
@@ -633,6 +639,19 @@
       if(!(shoulder?.score>POSE_SCORE && hip?.score>POSE_SCORE)){
         missingPoseFrames++;
         feedbackEl.textContent="Rücken und Hüfte müssen sichtbar sein.";
+        if(missingPoseFrames >= 4){
+          stageEl.textContent="-";
+          stableHoldFrames = 0;
+          stableBreakFrames = 0;
+          stopTimer();
+          isPlanking=false;
+        }
+        return;
+      }
+
+      if(!isSideView(shoulder, hip)){
+        missingPoseFrames++;
+        feedbackEl.textContent="Bitte seitlich zur Kamera stellen.";
         if(missingPoseFrames >= 4){
           stageEl.textContent="-";
           stableHoldFrames = 0;

@@ -9,6 +9,7 @@ import { CodeAuthProvider } from "@/contexts/CodeAuthContext";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import AppOnboarding from "@/components/AppOnboarding";
+import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -99,6 +100,8 @@ const App = () => (
           <RecoveryRedirect>
             <NativeChrome />
             <AppOnboarding />
+            {/* 14-Tage-Feedback-Pop-up: erscheint einmalig nach 14 Tagen Nutzung */}
+            <FeedbackPromptModal />
             <Suspense fallback={<RouteFallback />}>
               <Routes>
                 {/* Code-based login routes */}

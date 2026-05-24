@@ -182,7 +182,7 @@ const ClassQuest = () => {
                 </p>
               </div>
 
-              <div className="relative z-10 mx-4 mt-4 flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-yellow-200/80 bg-white/92 px-4 py-2.5 text-left shadow-[0_12px_26px_rgba(22,198,83,0.16),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur">
+              <div className="relative z-10 mx-4 mt-4 flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-yellow-200/80 bg-white px-4 py-2.5 text-left shadow-[0_12px_26px_rgba(22,198,83,0.16),inset_0_1px_0_rgba(255,255,255,0.95)]">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-300 text-yellow-950 shadow-[0_5px_12px_rgba(250,204,21,0.35)]">
                   <Zap className="h-5 w-5 fill-current" />
                 </span>
