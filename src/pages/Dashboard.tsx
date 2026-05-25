@@ -578,7 +578,7 @@ const Dashboard = () => {
         </div>
 
         <div className="mb-4 overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_28%_78%,rgba(50,255,236,0.45)_0%,transparent_32%),linear-gradient(135deg,#075cff_0%,#078cff_48%,#16c7e9_100%)] text-white shadow-[0_18px_34px_rgba(0,83,255,0.22),0_10px_22px_rgba(0,0,0,0.08)]">
-          <div className="relative grid h-[25vh] min-h-[10rem] max-h-[14.5rem] grid-cols-[minmax(0,1fr)_45%] overflow-hidden">
+          <div className="relative grid h-[25vh] min-h-[16rem] max-h-[16rem] grid-cols-[minmax(0,1fr)_45%] overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_22%,rgba(255,255,255,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_52%_20%,rgba(255,255,255,0.5)_0_2px,transparent_3px),radial-gradient(circle_at_33%_38%,rgba(255,255,255,0.24)_0_1px,transparent_2px)]" />
             <div className="relative flex flex-col items-center justify-center overflow-hidden px-1 py-4">
               <div className="absolute left-3 top-9 hidden h-22 w-6 rounded-full border border-cyan-200/50 bg-cyan-200/10 shadow-[0_0_18px_rgba(103,232,249,0.5)] sm:block">
@@ -594,7 +594,7 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="relative z-10 flex flex-col px-4 pt-3 pb-4">
+            <div className="relative z-10 flex flex-col justify-between px-4 pt-3 pb-4">
               <div>
                 <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/90 backdrop-blur">
                   {activeVoltMood.label}
@@ -603,7 +603,7 @@ const Dashboard = () => {
                   {activeVoltMood.title}
                 </h2>
               </div>
-              <div className="absolute bottom-[-2rem] left-0 right-0 flex justify-center">
+              <div className="flex justify-center">
                 <div className="relative flex h-[6rem] w-[6rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_9px_rgba(255,255,255,0.12),0_0_28px_rgba(34,211,238,0.34)]">
                   <div
                     className="absolute inset-0 rounded-full"

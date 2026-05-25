@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, LogOut, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -14,8 +14,7 @@ import { TeacherBottomNav } from "@/components/TeacherBottomNav";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAppRole } from "@/lib/roles";
-import { logoutEverywhereOnDevice } from "@/lib/logout";
-import { DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
+import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
 import { formatDisplayName } from "@/lib/formatName";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon } from "@/components/ExerciseIcons";
 import {
@@ -124,7 +123,7 @@ function getRankBadge(rank: number) {
 export default function TeacherHome() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { session: codeSession, loading: codeLoading, signOut } = useCodeAuth();
+  const { session: codeSession, loading: codeLoading } = useCodeAuth();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [teacherName, setTeacherName] = useState("Lehrkraft");
   const [classes, setClasses] = useState<TeacherClass[]>([]);
@@ -137,6 +136,7 @@ export default function TeacherHome() {
   const [teacherId, setTeacherId] = useState<string>("");
   const [teacherProgress, setTeacherProgress] = useState<TeacherProgress>({ ...EMPTY_PROGRESS });
   const [teacherTodayDbData, setTeacherTodayDbData] = useState({ push_ups: 0, squats: 0, planks: 0, sit_ups: 0, jumping_jacks: 0 });
+  const [teacherPoints, setTeacherPoints] = useState<number | null>(null);
 
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -245,18 +245,21 @@ export default function TeacherHome() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, students]);
 
-  // Load ranking data
+  // Load ranking data + teacher's own points
   useEffect(() => {
-    if (activeTab !== "wertung" || students.length === 0) return;
+    if (activeTab !== "wertung") return;
+    if (authMode === "supabase" && teacherId) void loadTeacherPoints();
+    if (students.length === 0) return;
     void loadRanking();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, students]);
+  }, [activeTab, students, authMode, teacherId]);
 
   // Load teacher's own daily progress
   useEffect(() => {
     if (activeTab !== "mitmachen" || !teacherId || !authMode) return;
     if (authMode === "supabase") {
       void loadTeacherTodayDbData();
+      void loadTeacherPoints();
     } else {
       const todayStr = format(new Date(), "yyyy-MM-dd");
       setTeacherProgress(loadTeacherDailyProgress(teacherId, todayStr));
@@ -283,22 +286,71 @@ export default function TeacherHome() {
       const weekEndStr = format(weekEnd, "yyyy-MM-dd");
       const todayStr = format(today, "yyyy-MM-dd");
       const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
-      const studentIds = Array.from(new Set(students.flatMap(getStudentProgressIds)));
 
-      const { data: rows, error } = await supabase
-        .from("daily_results")
-        .select("user_id, date, jumping_jacks, push_ups, squats, planks, sit_ups, steps, steps_tracking_active")
-        .in("user_id", studentIds)
-        .gte("date", weekStartStr)
-        .lte("date", weekEndStr);
+      console.log("[Übersicht] authMode:", authMode);
+      console.log("[Übersicht] selectedClassId:", selectedClassId);
+      console.log("[Übersicht] weekStart:", weekStartStr, "→ weekEnd:", weekEndStr, "today:", todayStr);
+      console.log("[Übersicht] numberOfStudentsFound:", students.length);
 
-      if (error) {
-        setStudentStats([]);
-        setDayStats([]);
-        return;
+      let allRows: DailyRow[] = [];
+
+      if (authMode === "code" && codeSession && selectedClassId) {
+        console.log("[Übersicht] Lade via RPC get_class_student_daily_results (code-auth)");
+        const { data: rpcData, error: rpcError } = await (supabase.rpc as any)(
+          "get_class_student_daily_results",
+          {
+            p_device_id: codeSession.device_id,
+            p_session_token: codeSession.session_token,
+            p_class_id: selectedClassId,
+            p_date_start: weekStartStr,
+            p_date_end: weekEndStr,
+          }
+        );
+        console.log("[Übersicht] RPC rpcError:", rpcError);
+        console.log("[Übersicht] RPC rpcData:", rpcData);
+        if (rpcError) {
+          console.error("[Übersicht] RPC Fehler:", rpcError);
+          toast.error(`Übersicht-Fehler: ${rpcError.message}`);
+        } else if (Array.isArray(rpcData)) {
+          allRows = rpcData as DailyRow[];
+          console.log("[Übersicht] numberOfActivitiesFound (RPC):", allRows.length);
+        } else if (rpcData && typeof rpcData === "object" && (rpcData as any).error) {
+          console.error("[Übersicht] RPC returned error object:", (rpcData as any).error);
+          toast.error(`Übersicht: ${(rpcData as any).error}`);
+        } else {
+          console.warn("[Übersicht] Unerwartetes RPC-Ergebnis:", rpcData);
+        }
+      } else if (selectedClassId) {
+        console.log("[Übersicht] Lade via RPC get_class_daily_results_auth (supabase-auth)");
+        const { data: rpcData, error: rpcError } = await (supabase.rpc as any)(
+          "get_class_daily_results_auth",
+          {
+            p_class_id: selectedClassId,
+            p_date_start: weekStartStr,
+            p_date_end: weekEndStr,
+          }
+        );
+        console.log("[Übersicht] RPC error:", rpcError);
+        console.log("[Übersicht] RPC data:", rpcData);
+        if (rpcError) {
+          console.error("[Übersicht] RPC Fehler:", rpcError);
+          toast.error(`Übersicht konnte nicht geladen werden: ${rpcError.message}`);
+          setStudentStats([]);
+          setDayStats([]);
+          return;
+        } else if (Array.isArray(rpcData)) {
+          allRows = rpcData as DailyRow[];
+          console.log("[Übersicht] numberOfActivitiesFound (RPC auth):", allRows.length);
+        } else if (rpcData && typeof rpcData === "object" && (rpcData as any).error) {
+          console.error("[Übersicht] RPC returned error object:", (rpcData as any).error);
+          toast.error(`Übersicht: ${(rpcData as any).error}`);
+          setStudentStats([]);
+          setDayStats([]);
+          return;
+        } else {
+          console.warn("[Übersicht] Unerwartetes RPC-Ergebnis:", rpcData);
+        }
       }
-
-      const allRows = (rows ?? []) as DailyRow[];
 
       // Inject synthetic data for the demo student: 100% on past days, ~83% today
       const demoStudent = students.find((s) => s.display_name === DEMO_STUDENT_DISPLAY_NAME);
@@ -324,14 +376,27 @@ export default function TeacherHome() {
         }
       }
 
+      console.log("[Übersicht] Gesamt allRows:", allRows.length);
+      console.log("[Übersicht] STREAK_THRESHOLD:", STREAK_THRESHOLD, "(Schüler brauchen >", STREAK_THRESHOLD, "% für 'aktiven Tag')");
+
       const stats: StudentStat[] = students.map((s) => {
         const progressIds = new Set(getStudentProgressIds(s));
         const sRows = allRows.filter((r) => progressIds.has(r.user_id));
         const todayRow = sRows.find((r) => r.date === todayStr);
         const todayPercent = todayRow ? getDayProgress(todayRow) : 0;
         const weekActiveDays = sRows.filter((r) => getDayProgress(r) > STREAK_THRESHOLD).length;
+        if (sRows.length > 0) {
+          console.log(`[Übersicht] ${s.display_name}: ${sRows.length} Tage gefunden, heute=${todayPercent}%, aktiveTage=${weekActiveDays}`);
+        } else {
+          console.warn(`[Übersicht] ${s.display_name}: KEINE Daten gefunden! progressIds=`, Array.from(progressIds));
+        }
         return { studentId: s.student_id, name: s.display_name, todayPercent, weekActiveDays };
       });
+
+      const totalBlitzeCalculated = students.reduce((sum, s) => sum + Number(s.points || 0), 0);
+      console.log("[Übersicht] totalBlitzeCalculated (aus Schülerprofilen):", totalBlitzeCalculated);
+      console.log("[Übersicht] Stats berechnet:", stats.length, "Schüler");
+
       stats.sort((a, b) => b.todayPercent - a.todayPercent || b.weekActiveDays - a.weekActiveDays);
       setStudentStats(stats);
 
@@ -357,12 +422,14 @@ export default function TeacherHome() {
   const loadTeacherTodayDbData = async () => {
     if (!teacherId) return;
     const today = format(new Date(), "yyyy-MM-dd");
-    const { data } = await supabase
+    console.log("[Teacher] loadTeacherTodayDbData — userId:", teacherId, "date:", today);
+    const { data, error } = await supabase
       .from("daily_results")
       .select("push_ups, squats, planks, sit_ups, jumping_jacks")
       .eq("user_id", teacherId)
       .eq("date", today)
       .maybeSingle();
+    console.log("[Teacher] daily_results from DB:", data, "error:", error);
     setTeacherTodayDbData({
       push_ups: data?.push_ups || 0,
       squats: data?.squats || 0,
@@ -372,10 +439,137 @@ export default function TeacherHome() {
     });
   };
 
+  const loadTeacherPoints = async () => {
+    if (!teacherId) return;
+    console.log("[Teacher] loadTeacherPoints — userId:", teacherId);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("points")
+      .eq("id", teacherId)
+      .maybeSingle();
+    console.log("[Teacher] profile.points from DB:", data?.points, "error:", error);
+    setTeacherPoints(data?.points ?? 0);
+  };
+
+  // Process localStorage exercise results written by camera counters and save them to the DB.
+  // Called on mount whenever authMode + teacherId are resolved, so results are captured even
+  // when the counter redirected through /dashboard (which re-routes teachers to /teacher-home).
+  useEffect(() => {
+    if (authMode !== "supabase" || !teacherId) return;
+
+    const processResults = async () => {
+      type ExerciseField = keyof typeof DAILY_EXERCISE_GOALS;
+      const EXERCISE_KEYS: { storageKey: string; dbField: ExerciseField; max: number }[] = [
+        { storageKey: "pushups_result",      dbField: "push_ups",      max: 200 },
+        { storageKey: "squats_result",       dbField: "squats",        max: 300 },
+        { storageKey: "planks_result",       dbField: "planks",        max: 600 },
+        { storageKey: "situps_result",       dbField: "sit_ups",       max: 300 },
+        { storageKey: "jumpingjacks_result", dbField: "jumping_jacks", max: 500 },
+      ];
+
+      const incoming: Partial<Record<ExerciseField, number>> = {};
+      let hasIncoming = false;
+
+      for (const { storageKey, dbField, max } of EXERCISE_KEYS) {
+        const raw = localStorage.getItem(storageKey);
+        if (raw !== null) {
+          const value = parseInt(raw, 10);
+          if (!isNaN(value) && value > 0 && value <= max) {
+            incoming[dbField] = value;
+            hasIncoming = true;
+          }
+          localStorage.removeItem(storageKey);
+        }
+      }
+      // Always clean up the return-path marker set before counter navigation
+      localStorage.removeItem("boost_return_path");
+
+      // Always load teacher's points so the Wertung and mitmachen tabs show up-to-date data
+      void loadTeacherPoints();
+
+      if (!hasIncoming) return;
+
+      console.log("[Teacher] Processing exercise results — userId:", teacherId, "incoming:", incoming);
+
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { data: existing } = await supabase
+        .from("daily_results")
+        .select("push_ups, squats, planks, sit_ups, jumping_jacks")
+        .eq("user_id", teacherId)
+        .eq("date", today)
+        .maybeSingle();
+
+      const prev: Record<ExerciseField, number> = {
+        push_ups:      existing?.push_ups      ?? 0,
+        squats:        existing?.squats        ?? 0,
+        planks:        existing?.planks        ?? 0,
+        sit_ups:       existing?.sit_ups       ?? 0,
+        jumping_jacks: existing?.jumping_jacks ?? 0,
+      };
+
+      const updated: Record<ExerciseField, number> = {
+        push_ups:      prev.push_ups      + (incoming.push_ups      ?? 0),
+        squats:        prev.squats        + (incoming.squats        ?? 0),
+        planks:        prev.planks        + (incoming.planks        ?? 0),
+        sit_ups:       prev.sit_ups       + (incoming.sit_ups       ?? 0),
+        jumping_jacks: prev.jumping_jacks + (incoming.jumping_jacks ?? 0),
+      };
+
+      console.log("[Teacher] Saving daily_results:", { user_id: teacherId, date: today, ...updated });
+
+      const { error: saveError } = await supabase
+        .from("daily_results")
+        .upsert({ user_id: teacherId, date: today, ...updated }, { onConflict: "user_id,date" });
+
+      if (saveError) {
+        console.error("[Teacher] Save error:", saveError);
+        toast.error("Fehler beim Speichern der Übungen");
+        return;
+      }
+
+      // Award per-exercise completion points
+      const totalExercises = Object.keys(DAILY_EXERCISE_GOALS).length;
+      const prevDone = countCompletedDailyExercises(prev);
+      const newDone  = countCompletedDailyExercises(updated);
+      const completionDelta = Math.max(0, newDone - prevDone);
+
+      if (completionDelta > 0) {
+        const pointsToAdd = completionDelta * BOOST_POINT_RULES.exerciseCompleted;
+        console.log("[Teacher] Awarding exercise points:", pointsToAdd);
+        const { error: pointsError } = await supabase.rpc("increment_points", { points_to_add: pointsToAdd });
+        if (pointsError) {
+          console.error("[Teacher] increment_points error:", pointsError);
+          toast.error("Ergebnis gespeichert, Blitze konnten nicht gutgeschrieben werden.");
+        } else {
+          toast.success(`+${pointsToAdd} ⚡ gutgeschrieben!`);
+        }
+      }
+
+      // Award daily-completion bonus when all exercises are newly done (teachers have no step requirement)
+      if (prevDone < totalExercises && newDone === totalExercises) {
+        console.log("[Teacher] All exercises done, awarding daily bonus:", BOOST_POINT_RULES.dailyGoalCompleted);
+        const { error: bonusError } = await supabase.rpc("increment_points", { points_to_add: BOOST_POINT_RULES.dailyGoalCompleted });
+        if (!bonusError) {
+          toast.success(`+${BOOST_POINT_RULES.dailyGoalCompleted} ⚡ Alle Übungen geschafft!`);
+        } else {
+          console.error("[Teacher] Daily bonus error:", bonusError);
+        }
+      }
+
+      void loadTeacherTodayDbData();
+      void loadTeacherPoints();
+      setActiveTab("mitmachen");
+    };
+
+    void processResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authMode, teacherId]);
+
   const loadRanking = async () => {
     setRankingLoading(true);
     try {
       const studentIds = Array.from(new Set(students.flatMap(getStudentProgressIds)));
+      console.log("[Wertung] studentIds für Ranking:", studentIds);
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, points")
@@ -383,10 +577,11 @@ export default function TeacherHome() {
         .order("points", { ascending: false });
 
       if (error || !data) {
-        // Fallback: use student names with 0 points
+        console.warn("[Wertung] profiles-Abfrage fehlgeschlagen, nutze Fallback (students.points):", error);
         setStudentRanks(students.map((s) => ({ id: s.student_id, name: s.display_name, points: Number(s.points || 0) })));
         return;
       }
+      console.log("[Wertung] profiles geladen:", data.length, "Einträge");
 
       // Merge with students list for display names (profiles might have different names)
       const rankMap = new Map(data.map((p: { id: string; username: string; points: number }) => [p.id, p]));
@@ -457,16 +652,6 @@ export default function TeacherHome() {
     : feedbackRating === 5
       ? "Mega App"
       : `${feedbackRating} von 5`;
-
-  const handleLogout = async () => {
-    if (authMode === "code") {
-      await signOut();
-      navigate("/login", { replace: true });
-      return;
-    }
-    await logoutEverywhereOnDevice();
-    navigate("/auth", { replace: true });
-  };
 
   const renderMitmachenTab = () => {
     const todayLabel = format(new Date(), "EEEE, d. MMMM", { locale: de });
@@ -541,6 +726,13 @@ export default function TeacherHome() {
                 </div>
               </div>
             </div>
+            <div className="mt-3 flex items-center gap-2 border-t border-white/20 pt-3">
+              <Zap className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+              <span className="text-xl font-black">
+                {teacherPoints === null ? "…" : teacherPoints}
+              </span>
+              <span className="text-sm font-semibold text-white/70">Blitze gesamt</span>
+            </div>
           </Card>
 
           <div className="grid grid-cols-2 gap-2">
@@ -556,7 +748,10 @@ export default function TeacherHome() {
                 >
                   <button
                     type="button"
-                    onClick={() => { window.location.href = task.counterPath; }}
+                    onClick={() => {
+                      localStorage.setItem("boost_return_path", "/teacher-home");
+                      window.location.href = task.counterPath;
+                    }}
                     className="flex w-full flex-col items-start gap-2 p-3 text-left"
                   >
                     <div className="flex w-full items-start gap-2">
@@ -1018,19 +1213,27 @@ export default function TeacherHome() {
                   </Badge>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab("mitmachen")}
-                className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary active:scale-95"
-              >
-                Aktiv werden
-                <Zap className="h-3 w-3 fill-current" />
-              </button>
+              <div className="flex items-center gap-2">
+                {teacherPoints !== null && teacherPoints > 0 ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-black text-primary">{teacherPoints}</span>
+                    <Zap className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("mitmachen")}
+                  className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary active:scale-95"
+                >
+                  Aktiv
+                  <Zap className="h-3 w-3 fill-current" />
+                </button>
+              </div>
             </div>
           </div>
 
           <p className="mt-3 border-t border-border pt-3 text-[11px] text-center text-muted-foreground">
-            Als Lehrer:in kannst du mit deiner Klasse mittrainieren — nutze die Zähler auf dem Schüler-Dashboard.
+            Als Lehrer:in kannst du mit deiner Klasse mittrainieren — nutze den „Aktiv"-Tab.
           </p>
         </Card>
       </div>
@@ -1045,9 +1248,6 @@ export default function TeacherHome() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Lehrer Home</p>
             <h1 className="text-2xl font-black leading-tight text-foreground">{teacherName}</h1>
           </div>
-          <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Abmelden">
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </header>
 

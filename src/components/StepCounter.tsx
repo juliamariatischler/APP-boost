@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,6 +28,11 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const [refreshing, setRefreshing] = useState(false);
   const isHealthSupported = HealthService.isHealthPlatformSupported();
   const healthSourceLabel = HealthService.getHealthSourceLabel();
+  const isActiveRef = useRef(false);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
 
   useEffect(() => {
     loadTodaySteps();
@@ -44,9 +49,24 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     return () => clearInterval(interval);
   }, [isActive, userId]);
 
+  // Re-sync when app comes back to foreground
+  useEffect(() => {
+    if (!isHealthSupported) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isActiveRef.current) {
+        // Small delay so iOS HealthKit is ready after app resume
+        setTimeout(() => fetchAndUpdateSteps(), 1000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isHealthSupported]);
+
   const loadTodaySteps = async () => {
     const today = new Date().toISOString().split('T')[0];
-    
+
     const { data, error } = await supabase
       .from("daily_results")
       .select("steps, steps_tracking_active")
@@ -55,13 +75,73 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       .maybeSingle();
 
     if (!error && data) {
-      setSteps(data.steps || 0);
-      setIsActive(data.steps_tracking_active || false);
-      const earned = calculateEarnedFlashes(data.steps || 0);
+      const currentSteps = data.steps || 0;
+      const trackingActive = data.steps_tracking_active || false;
+      const earned = calculateEarnedFlashes(currentSteps);
+      setSteps(currentSteps);
+      setIsActive(trackingActive);
       setEarnedFlashes(earned);
-      setLastAwardedFlashes(earned); // Don't re-award on page load
+      setLastAwardedFlashes(earned);
+      setLoading(false);
+
+      // Auto-sync from HealthKit if tracking was already active today
+      if (trackingActive && isHealthSupported) {
+        await syncHealthSteps(earned);
+      }
+      return;
     }
+
+    // No record for today — check if user ever activated tracking before
+    if (!error && isHealthSupported) {
+      const { data: prevData } = await supabase
+        .from("daily_results")
+        .select("date")
+        .eq("user_id", userId)
+        .eq("steps_tracking_active", true)
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (prevData) {
+        // User had tracking before — auto-activate for today
+        setIsActive(true);
+        setLoading(false);
+        await syncHealthSteps(0);
+        return;
+      }
+    }
+
     setLoading(false);
+  };
+
+  const syncHealthSteps = async (baseFlashes: number) => {
+    setRefreshing(true);
+    try {
+      const realSteps = await HealthService.getTodaySteps();
+      if (realSteps === 0) {
+        setRefreshing(false);
+        return;
+      }
+
+      setSteps(realSteps);
+      await saveSteps(realSteps);
+
+      const newFlashes = calculateEarnedFlashes(realSteps);
+      setEarnedFlashes(newFlashes);
+
+      if (newFlashes > baseFlashes) {
+        const pointsToAdd = newFlashes - baseFlashes;
+        setLastAwardedFlashes(newFlashes);
+        await (supabase.rpc as any)('increment_points', { points_to_add: pointsToAdd });
+        toast.success(`🎉 ${pointsToAdd} Flash${pointsToAdd > 1 ? 'es' : ''} verdient!`, {
+          description: `Du hast ${realSteps.toLocaleString()} Schritte erreicht!`
+        });
+        onPointsEarned?.(pointsToAdd);
+      }
+    } catch (error) {
+      console.error("Auto health sync failed:", error);
+    }
+    setRefreshing(false);
   };
 
   const calculateEarnedFlashes = (currentSteps: number): number => {

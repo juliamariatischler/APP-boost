@@ -111,7 +111,7 @@ const Auth = () => {
   const DEMO_TEACHER = {
     email: "demo-lehrkraft@boost-challenge.de",
     password: "demo123456",
-    username: "DemoLehrkraft",
+    username: "Coach",
   };
 
   const normalizeActivationCode = (value: string) => value.replace(/\s+/g, "").trim().toUpperCase();
@@ -549,6 +549,8 @@ const Auth = () => {
         throw profileUpdateError;
       }
 
+      await supabase.auth.updateUser({ data: { username: params.username } });
+
       return { user: signInResult.data.user, created: false };
     }
 
@@ -985,6 +987,22 @@ const Auth = () => {
             >
               <ChevronRight className="w-4 h-4 rotate-180" /> Zurück zum Login
             </button>
+
+            {signupData.accountType === "teacher" && (
+              <button
+                type="button"
+                onClick={handleDemoTeacherLogin}
+                disabled={demoStudentLoading || demoTeacherLoading}
+                className="w-full flex items-center gap-3 rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-3 mb-4 transition active:scale-[0.98] disabled:opacity-60"
+              >
+                <span className="text-2xl flex-shrink-0">📚</span>
+                <div className="flex-1 text-left">
+                  <div className="text-sm font-black text-blue-700">Demo Lehrkraft ausprobieren</div>
+                  <div className="text-xs text-blue-400">Ohne Registrierung testen</div>
+                </div>
+                {demoTeacherLoading ? <Loader2 className="w-4 h-4 animate-spin text-blue-400" /> : <ChevronRight className="w-4 h-4 text-blue-400" />}
+              </button>
+            )}
 
             <div className="flex items-center gap-2 mb-4">
               <div className="flex-1 h-px bg-gray-200" />

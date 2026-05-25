@@ -101,6 +101,8 @@ function createCelebration(count, label, storageKey, redirectUrl) {
   setTimeout(() => {
     clearInterval(boltInterval);
     localStorage.setItem(storageKey, count);
-    window.location.href = redirectUrl || '/challenge/daily';
+    const storedReturnPath = localStorage.getItem('boost_return_path');
+    localStorage.removeItem('boost_return_path');
+    window.location.href = storedReturnPath || redirectUrl || '/challenge/daily';
   }, 3500);
 }

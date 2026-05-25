@@ -487,6 +487,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_class_student_daily_results: {
+        Args: {
+          p_device_id: string
+          p_session_token: string
+          p_class_id: string
+          p_date_start: string
+          p_date_end: string
+        }
+        Returns: Json
+      }
       get_class_average_points: {
         Args: { p_class: string; p_school: string }
         Returns: number

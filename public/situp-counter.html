@@ -196,12 +196,12 @@
     let currentDeviceId = '';
     let counter = 0;
     let stage = "down"; // down = unten, up = oben
-    const KEYPOINT_CONFIDENCE = 0.22;
-    const MIN_VISIBLE_SCORE = 0.18;
+    const KEYPOINT_CONFIDENCE = 0.20;
+    const MIN_VISIBLE_SCORE = 0.15;
     const DOWN_ANGLE_THRESHOLD = 145;
-    const UP_ANGLE_THRESHOLD = 115;
-    const DOWN_SHOULDER_LIFT = 0.18;
-    const UP_SHOULDER_LIFT = 0.3;
+    const UP_ANGLE_THRESHOLD = 130;   // toleranter: Screenshot-Position (~110-125°) reicht
+    const DOWN_SHOULDER_LIFT = 0.10;  // relativ zu Schulter-Hüfte-Abstand
+    const UP_SHOULDER_LIFT = 0.28;    // relativ zu Schulter-Hüfte-Abstand
     const REQUIRED_STABLE_FRAMES = 2;
     const MAX_HISTORY = 5;
     let missingPoseFrames = 0;
@@ -392,6 +392,7 @@
       const rightShoulder = kps.find(k => k.name === "right_shoulder");
       const rightHip = kps.find(k => k.name === "right_hip");
       const rightKnee = kps.find(k => k.name === "right_knee");
+      const nose = kps.find(k => k.name === "nose");
 
       const leftScore = (leftShoulder?.score || 0) + (leftHip?.score || 0) + (leftKnee?.score || 0);
       const rightScore = (rightShoulder?.score || 0) + (rightHip?.score || 0) + (rightKnee?.score || 0);
@@ -401,10 +402,11 @@
         shoulder: useLeft ? leftShoulder : rightShoulder,
         hip: useLeft ? leftHip : rightHip,
         knee: useLeft ? leftKnee : rightKnee,
+        nose,
       };
     }
 
-    function evaluateStage(hipAngleValue, shoulderLiftValue){
+    function evaluateStage(hipAngleValue, shoulderLiftValue, noseAboveHip){
       let upVotes = 0;
       let downVotes = 0;
 
@@ -418,6 +420,12 @@
         if(shoulderLiftValue >= UP_SHOULDER_LIFT) upVotes++;
       }
 
+      // Nase als zusätzliches optionales Signal
+      if(noseAboveHip !== null){
+        if(noseAboveHip >= 1.8) upVotes++;
+        if(noseAboveHip <= 0.5) downVotes++;
+      }
+
       if(downVotes > upVotes && downVotes > 0){
         stableDownFrames++;
         stableUpFrames = 0;
@@ -425,6 +433,11 @@
         stableUpFrames++;
         stableDownFrames = 0;
       } else {
+        // Zwischen-Feedback wenn die Position fast erreicht ist
+        if(stage === "down" && shoulderLiftValue !== null && shoulderLiftValue > DOWN_SHOULDER_LIFT && shoulderLiftValue < UP_SHOULDER_LIFT){
+          feedbackEl.textContent = "Heb deinen Oberkörper etwas weiter Richtung Knie.";
+          feedbackEl.style.color = "#b45309";
+        }
         stableUpFrames = 0;
         stableDownFrames = 0;
       }
@@ -451,15 +464,22 @@
     }
 
     function processSitup(pose){
-      const { shoulder, hip, knee } = getBestSidePose(pose.keypoints);
+      const { shoulder, hip, knee, nose } = getBestSidePose(pose.keypoints);
       const shoulderVisible = (shoulder?.score || 0) > MIN_VISIBLE_SCORE;
       const hipVisible = (hip?.score || 0) > MIN_VISIBLE_SCORE;
       const kneeVisible = (knee?.score || 0) > MIN_VISIBLE_SCORE;
+      const noseVisible = (nose?.score || 0) > MIN_VISIBLE_SCORE;
 
       if(!(shoulderVisible && hipVisible)){
         missingPoseFrames++;
         if(missingPoseFrames >= 6){
-          feedbackEl.textContent = "Geh etwas weiter weg und leg dich mehr seitlich zur Kamera.";
+          if(!shoulderVisible && !hipVisible){
+            feedbackEl.textContent = "Bitte richte die Kamera so aus, dass Schulter, Hüfte und Knie sichtbar sind.";
+          } else if(!shoulderVisible){
+            feedbackEl.textContent = "Schulter nicht sichtbar – geh etwas weiter weg von der Kamera.";
+          } else {
+            feedbackEl.textContent = "Achte darauf, dass Schultern und Hüfte gut sichtbar sind.";
+          }
           feedbackEl.style.color = "#b45309";
           stageEl.textContent = stage.toUpperCase();
         }
@@ -468,14 +488,23 @@
 
       missingPoseFrames = 0;
 
+      // Schulter-Hüfte-Abstand als körpergrößen-unabhängige Normierung (immer verfügbar)
+      const shoulderHipDist = Math.max(distance(shoulder, hip), 1);
+
+      // Hüftwinkel (Schulter–Hüfte–Knie): nur wenn Knie sichtbar
       let hipAngleValue = null;
       if(kneeVisible){
         hipAngleValue = angle(shoulder, hip, knee);
       }
 
-      let shoulderLiftValue = null;
-      if(kneeVisible){
-        shoulderLiftValue = (hip.y - shoulder.y) / Math.max(distance(hip, knee), 1);
+      // Schulter-Lift: Schulter über Hüfte – funktioniert OHNE Knie
+      // Positiv = Schulter über Hüfte (Sit-up-Position)
+      const shoulderLiftValue = (hip.y - shoulder.y) / shoulderHipDist;
+
+      // Nase als optionaler Zusatz-Indikator
+      let noseAboveHip = null;
+      if(noseVisible){
+        noseAboveHip = (hip.y - nose.y) / shoulderHipDist;
       }
 
       pushHistory(hipAngleHistory, hipAngleValue);
@@ -484,10 +513,12 @@
       const smoothedHipAngle = average(hipAngleHistory);
       const smoothedShoulderLift = average(shoulderLiftHistory);
 
-      evaluateStage(smoothedHipAngle, smoothedShoulderLift);
+      evaluateStage(smoothedHipAngle, smoothedShoulderLift, noseAboveHip);
+
       const angleText = smoothedHipAngle === null ? "--" : Math.round(smoothedHipAngle);
       const liftText = smoothedShoulderLift === null ? "--" : smoothedShoulderLift.toFixed(2);
-      debugLog.textContent = `Winkel: ${angleText} | Oberkörper: ${liftText}`;
+      const kneeText = kneeVisible ? "✓" : "–";
+      debugLog.textContent = `Winkel: ${angleText} | Lift: ${liftText} | Knie: ${kneeText}`;
       countEl.textContent = counter;
     }
 

@@ -24,7 +24,7 @@ allprojects {
     }
     configurations.all {
         resolutionStrategy {
-            force 'androidx.health.connect:connect-client:1.1.0-rc01'
+            force 'androidx.health.connect:connect-client:1.1.0-alpha11'
         }
     }
 }

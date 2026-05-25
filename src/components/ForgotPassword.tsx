@@ -24,11 +24,14 @@ const ForgotPassword = ({ onBack }: ForgotPasswordProps) => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { error } = await supabase.functions.invoke("send-reset-email", {
+        body: {
+          email: email.trim(),
+          redirect_to: `${window.location.origin}/reset-password`,
+        },
       });
       if (error) {
-        toast.error("Fehler: " + error.message);
+        toast.error("Fehler beim Senden der E-Mail.");
       } else {
         setSent(true);
         toast.success("E-Mail zum Zurücksetzen gesendet!");

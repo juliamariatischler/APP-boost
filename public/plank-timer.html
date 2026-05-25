@@ -325,11 +325,14 @@
     let currentFacingMode='user';
     let currentDeviceId='';
     const POSE_SCORE = 0.35;
-    const BACK_ANGLE_THRESHOLD = 132;
-    const TORSO_TILT_MAX = 38;
+    const BACK_ANGLE_THRESHOLD = 158;  // was 132 — stricter: requires near-straight body line
+    const TORSO_TILT_MAX = 30;         // was 38 — slightly stricter for torso-only check
+    const HIP_SAG_MAX_RATIO = 0.07;    // max 7% of frame height below shoulder-knee line
+    const HOLLOW_BACK_GRACE = 5;       // frames before timer pauses on hollow back (~0.3s)
     let stableHoldFrames = 0;
     let stableBreakFrames = 0;
     let missingPoseFrames = 0;
+    let hollowBackFrames = 0;
 
     async function resolveApiBase(){
       const stored = localStorage.getItem('boost_api_base') || '';
@@ -630,6 +633,20 @@
       return Math.abs(shoulder.x - hip.x) > canvas.width * 0.12;
     }
 
+    // Returns true when the hip sags significantly below the shoulder-to-knee line (hollow back).
+    // Only reliable when the knee keypoint is visible — otherwise returns false to avoid
+    // false positives that depend on camera angle.
+    function detectHollowBack(shoulder, hip, knee){
+      if(!knee || knee.score <= POSE_SCORE) return false;
+      const dx = knee.x - shoulder.x;
+      if(Math.abs(dx) < 2) return false;
+      const t = (hip.x - shoulder.x) / dx;
+      // Only check when hip x sits between shoulder and knee (t roughly 0.1–0.9)
+      if(t < 0.1 || t > 0.9) return false;
+      const expectedY = shoulder.y + t * (knee.y - shoulder.y);
+      return (hip.y - expectedY) > canvas.height * HIP_SAG_MAX_RATIO;
+    }
+
     function processPlank(pose){
       const k=pose.keypoints;
       const shoulder=pickSide(k,'shoulder');
@@ -663,20 +680,40 @@
       }
       missingPoseFrames = 0;
 
+      // Hollow-back check takes priority — catches hips sagging below the body line.
+      const hollowBack = detectHollowBack(shoulder, hip, knee);
+      if(hollowBack){
+        hollowBackFrames++;
+        stableHoldFrames = 0;
+        if(hollowBackFrames >= HOLLOW_BACK_GRACE && isPlanking){
+          // Pause the timer; time value is kept so it resumes when form is fixed.
+          stopTimer();
+          isPlanking = false;
+          stableBreakFrames = 0;
+        }
+        stageEl.textContent = isPlanking ? "HALTEN" : "KORRIGIEREN";
+        feedbackEl.textContent = "Bauch anspannen und Hüfte etwas höher bringen!";
+        debugLog.textContent = `Hohlkreuz erkannt! (${hollowBackFrames}F)`;
+        return;
+      }
+      hollowBackFrames = 0;
+
       if(knee?.score>POSE_SCORE){
         const back=angle(shoulder,hip,knee);
-        updatePlankState(back > BACK_ANGLE_THRESHOLD, "Halten!", "Leicht bewegen ist okay – Hüfte nur etwas stabiler halten.");
+        updatePlankState(
+          back > BACK_ANGLE_THRESHOLD,
+          "Super – Körper gerade halten!",
+          "Achte darauf, dass Rücken und Hüfte eine gerade Linie bilden."
+        );
         debugLog.textContent = `Rückenwinkel: ${Math.round(back)}°`;
         return;
       }
 
       const torsoTilt = angleToHorizontal(shoulder, hip);
-      const backLooksStraight = torsoTilt <= TORSO_TILT_MAX;
-
       updatePlankState(
-        backLooksStraight,
+        torsoTilt <= TORSO_TILT_MAX,
         "Rücken gerade halten!",
-        "Leicht bewegen ist okay – Rücken nur etwas gerader halten!",
+        "Achte darauf, dass Rücken und Hüfte eine gerade Linie bilden."
       );
       debugLog.textContent = `Torso: ${torsoTilt.toFixed(1)}°`;
     }
@@ -698,6 +735,7 @@
       stableHoldFrames = 0;
       stableBreakFrames = 0;
       missingPoseFrames = 0;
+      hollowBackFrames = 0;
       timerEl.textContent='0';stageEl.textContent='-';
       feedbackEl.textContent='Zurückgesetzt!';
     });
