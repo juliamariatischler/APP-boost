@@ -208,6 +208,8 @@ const Profil = () => {
       syncedAt: format(new Date(now), "HH:mm"),
       active: true,
     });
+
+    return steps;
   };
 
   const weeklyItemUnlocked = weeklyBlitze >= WEEKLY_AVATAR_ITEM_THRESHOLD;
@@ -231,7 +233,7 @@ const Profil = () => {
 
   const handleConnectHealthData = async () => {
     if (!HealthService.isHealthPlatformSupported()) {
-      toast.info("Health-Sync ist nur auf dem iPhone verfügbar.");
+      toast.info("Health-Sync ist nur auf iPhone oder Android verfügbar.");
       return;
     }
 
@@ -242,13 +244,21 @@ const Profil = () => {
     if (connected) {
       setHealthAvailable(true);
       if (userId) {
-        await syncTodayHealthSteps(userId);
+        const syncedSteps = await syncTodayHealthSteps(userId);
+        if (syncedSteps === 0 && HealthService.isNativeAndroid()) {
+          const description = await HealthService.getNoStepDataHelp();
+          toast.info("Noch keine Schritte gefunden.", {
+            description,
+          });
+        }
       }
       toast.success(`${HealthService.getHealthSourceLabel()} verbunden.`);
       return;
     }
 
-    toast.error(`${HealthService.getHealthSourceLabel()} konnte nicht verbunden werden.`);
+    toast.error(`${HealthService.getHealthSourceLabel()} konnte nicht verbunden werden.`, {
+      description: HealthService.getHealthPermissionHelp(),
+    });
   };
 
   const handleLogout = async () => {
@@ -565,7 +575,7 @@ const Profil = () => {
               <h3 className="font-bold text-foreground">Health-Daten</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              Verbinde {HealthService.getHealthSourceLabel()}, damit echte Schritte automatisch in BOOST landen.
+              {HealthService.getHealthSetupDescription()}
             </p>
             <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-muted/60 px-4 py-3">
               <span className="text-sm text-foreground">Status</span>
@@ -598,12 +608,12 @@ const Profil = () => {
               </div>
             </div>
             <Button className="mt-4 w-full rounded-2xl" onClick={handleConnectHealthData} disabled={connectingHealth}>
-              {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
+              {connectingHealth ? "Verbinde..." : HealthService.getHealthConnectionLabel()}
             </Button>
 
             {!checkingHealth && !HealthService.isHealthPlatformSupported() && (
               <p className="mt-2 text-xs text-center text-muted-foreground">
-                Health-Sync ist aktuell nur auf dem iPhone verfügbar.
+                Health-Sync ist aktuell nur auf iPhone oder Android verfügbar.
               </p>
             )}
           </Card>

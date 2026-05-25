@@ -11,17 +11,20 @@
 
 DO $$
 DECLARE
-  v_sid  uuid := 'fb732085-b32e-4d73-83d3-0c43d1fb4d08';
+  v_raw  uuid := 'fb732085-b32e-4d73-83d3-0c43d1fb4d08';
   v_uid  uuid;
   v_date date;
 BEGIN
-  -- user_id ermitteln: auth_user_id falls vorhanden, sonst student.id
+  -- Erst in students suchen (als students.id), dann als auth_user_id,
+  -- sonst direkt als user_id verwenden (kann bereits auth.users.id sein)
   SELECT COALESCE(auth_user_id, id) INTO v_uid
   FROM public.students
-  WHERE id = v_sid;
+  WHERE id = v_raw OR auth_user_id = v_raw
+  LIMIT 1;
 
+  -- Nicht in students gefunden → ID direkt als user_id nutzen
   IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'Schüler % nicht gefunden', v_sid;
+    v_uid := v_raw;
   END IF;
 
   RAISE NOTICE 'Demo-Schüler user_id: %', v_uid;
@@ -73,10 +76,12 @@ SELECT
        AND sit_ups >= 25 AND jumping_jacks >= 40
        THEN 20 ELSE 0 END AS blitze_tag
 FROM public.daily_results
-WHERE user_id = (
-  SELECT COALESCE(auth_user_id, id)
-  FROM public.students
-  WHERE id = 'fb732085-b32e-4d73-83d3-0c43d1fb4d08'
+WHERE user_id = COALESCE(
+  (SELECT COALESCE(auth_user_id, id) FROM public.students
+   WHERE id = 'fb732085-b32e-4d73-83d3-0c43d1fb4d08'
+      OR auth_user_id = 'fb732085-b32e-4d73-83d3-0c43d1fb4d08'
+   LIMIT 1),
+  'fb732085-b32e-4d73-83d3-0c43d1fb4d08'
 )
 AND date BETWEEN '2026-05-19' AND '2026-05-25'
 ORDER BY date;

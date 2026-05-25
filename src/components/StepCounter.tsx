@@ -201,6 +201,12 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     setRefreshing(true);
     try {
       const realSteps = await HealthService.getTodaySteps();
+      if (realSteps === 0 && HealthService.isNativeAndroid()) {
+        const description = await HealthService.getNoStepDataHelp();
+        toast.info("Noch keine Schritte gefunden.", {
+          description,
+        });
+      }
       setSteps(realSteps);
       await saveSteps(realSteps);
       await checkAndAwardRewards(realSteps);
@@ -214,7 +220,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const activateTracking = async () => {
     if (!isHealthSupported) {
       toast.error("Schrittzähler nur in der mobilen App verfügbar", {
-        description: "Bitte nutze ein iPhone (Apple Health) oder Android (Health Connect)."
+        description: HealthService.getHealthSetupDescription()
       });
       return;
     }
@@ -224,7 +230,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
     
     if (!authorized) {
       toast.error("Zugriff auf Gesundheitsdaten verweigert", {
-        description: "Bitte erlaube den Zugriff in den Einstellungen."
+        description: HealthService.getHealthPermissionHelp()
       });
       return;
     }

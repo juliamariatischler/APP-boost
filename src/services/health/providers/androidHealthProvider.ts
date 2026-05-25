@@ -1,6 +1,7 @@
 import { callCordovaHealth } from '../cordovaHealth';
+import { getAndroidSensorStepsToday } from '../nativeStepCounter';
 import { getHealthPlatformContext } from '../platform';
-import type { HealthProvider } from '../types';
+import type { HealthProvider, StepDiagnostics } from '../types';
 
 const normalizeSteps = (result: unknown): number => {
   const items = Array.isArray(result) ? result : [result];
@@ -10,6 +11,15 @@ const normalizeSteps = (result: unknown): number => {
       return sum + (Number(item?.value) || 0);
     }, 0)
   );
+};
+
+const extractSources = (result: unknown): string[] => {
+  const items = Array.isArray(result) ? result : [result];
+  const sources = items
+    .map((item: any) => String(item?.sourceBundleId || '').trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(sources));
 };
 
 export class AndroidHealthProvider implements HealthProvider {
@@ -37,43 +47,104 @@ export class AndroidHealthProvider implements HealthProvider {
     if (!this.isSupported()) return false;
 
     try {
-      await callCordovaHealth('requestAuthorization', { read: ['steps'], write: [] });
-      return true;
+      await callCordovaHealth('isAvailable');
+      const authorized = await callCordovaHealth<boolean>('requestAuthorization', { read: ['steps'], write: [] });
+      return authorized === true;
     } catch (error) {
       console.error('Android health authorization failed:', error);
+
+      if (typeof error === 'string' && error.toLowerCase().includes('not installed')) {
+        await this.openHealthConnectStore();
+      }
+
       return false;
+    }
+  }
+
+  async openHealthConnectStore(): Promise<void> {
+    try {
+      await callCordovaHealth('getHealthConnectFromStore');
+    } catch (error) {
+      console.error('Opening Health Connect store page failed:', error);
+    }
+  }
+
+  async openHealthSettings(): Promise<void> {
+    try {
+      await callCordovaHealth('openHealthSettings');
+    } catch (error) {
+      console.error('Opening Health settings failed:', error);
     }
   }
 
   async getTodaySteps(): Promise<number> {
     if (!this.isSupported()) return 0;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const now = new Date();
-
     try {
-      const aggregated = await callCordovaHealth('queryAggregated', {
-        startDate: today,
-        endDate: now,
-        dataType: 'steps',
-      });
-      console.log('Android Health Connect aggregated steps result:', aggregated);
-      const aggregatedSteps = normalizeSteps(aggregated);
-      if (aggregatedSteps > 0) return aggregatedSteps;
+      const healthConnectSteps = await this.queryStepsForRange(this.getTodayRange());
+      if (healthConnectSteps > 0) return healthConnectSteps;
 
-      const result = await callCordovaHealth('query', {
-        startDate: today,
-        endDate: now,
-        dataType: 'steps',
-        limit: 1000
-      });
+      const sensorSteps = await getAndroidSensorStepsToday();
+      if (sensorSteps !== null) {
+        console.log('Android device step counter fallback result:', sensorSteps);
+        return sensorSteps;
+      }
 
-      console.log('Android Health Connect raw steps result:', result);
-      return normalizeSteps(result);
+      return 0;
     } catch (error) {
       console.error('Android step query failed:', error);
       return 0;
     }
+  }
+
+  async getStepDiagnostics(): Promise<StepDiagnostics> {
+    const todayRange = this.getTodayRange();
+    const recentEnd = new Date(todayRange.endDate);
+    const recentStart = new Date(todayRange.startDate);
+    recentStart.setDate(recentStart.getDate() - 6);
+
+    const todaySteps = await this.queryStepsForRange(todayRange);
+    const recentRaw = await callCordovaHealth('query', {
+      startDate: recentStart,
+      endDate: recentEnd,
+      dataType: 'steps',
+      limit: 5000,
+    });
+
+    return {
+      todaySteps,
+      recentSteps: normalizeSteps(recentRaw),
+      recentSources: extractSources(recentRaw),
+    };
+  }
+
+  private getTodayRange() {
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }
+
+  private async queryStepsForRange(range: { startDate: Date; endDate: Date }): Promise<number> {
+    const aggregated = await callCordovaHealth('queryAggregated', {
+      startDate: range.startDate,
+      endDate: range.endDate,
+      dataType: 'steps',
+    });
+    console.log('Android Health Connect aggregated steps result:', aggregated);
+    const aggregatedSteps = normalizeSteps(aggregated);
+    if (aggregatedSteps > 0) return aggregatedSteps;
+
+    const result = await callCordovaHealth('query', {
+      startDate: range.startDate,
+      endDate: range.endDate,
+      dataType: 'steps',
+      limit: 1000,
+    });
+
+    console.log('Android Health Connect raw steps result:', result);
+    return normalizeSteps(result);
   }
 }

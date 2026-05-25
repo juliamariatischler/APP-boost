@@ -35,8 +35,8 @@ export class IOSHealthProvider implements HealthProvider {
     if (!this.isSupported()) return false;
 
     try {
-      await callCordovaHealth('requestAuthorization', { read: ['steps'], write: [] });
-      return true;
+      const authorized = await callCordovaHealth<boolean>('requestAuthorization', { read: ['steps'], write: [] });
+      return authorized !== false;
     } catch (error) {
       console.error('iOS HealthKit authorization failed:', error);
       return false;

@@ -1,4 +1,10 @@
-type CordovaHealthMethod = "isAvailable" | "requestAuthorization" | "query" | "queryAggregated";
+type CordovaHealthMethod =
+  | "isAvailable"
+  | "requestAuthorization"
+  | "query"
+  | "queryAggregated"
+  | "getHealthConnectFromStore"
+  | "openHealthSettings";
 
 const getCordovaHealthPlugin = () => {
   if (typeof window === "undefined") return null;

@@ -58,6 +58,14 @@ const Settings = () => {
       return;
     }
 
+    if (HealthService.isNativeAndroid() && !healthAvailable) {
+      await HealthService.openHealthConnectStore();
+      toast.info("Health Connect ist nicht installiert.", {
+        description: HealthService.getHealthPermissionHelp(),
+      });
+      return;
+    }
+
     setConnectingHealth(true);
     const connected = await HealthService.connectHealthData();
     setConnectingHealth(false);
@@ -68,8 +76,12 @@ const Settings = () => {
       return;
     }
 
-    toast.error(`${healthSourceLabel} konnte nicht verbunden werden.`, {
-      description: "Bitte prüfe die Health-Berechtigungen auf deinem Gerät."
+    toast.error(`Berechtigung nicht erteilt`, {
+      description: HealthService.getHealthPermissionHelp(),
+      action: {
+        label: "Einstellungen",
+        onClick: () => HealthService.openHealthSettings(),
+      },
     });
   };
 
@@ -117,7 +129,7 @@ const Settings = () => {
           </div>
 
           <p className="text-sm text-muted-foreground mb-4">
-            Verbinde Apple Health (iOS) oder Health Connect (Android), um echte Schrittzahlen zu synchronisieren.
+            {HealthService.getHealthSetupDescription()}
           </p>
 
           <div className="flex items-center justify-between gap-2 mb-4">
@@ -158,7 +170,7 @@ const Settings = () => {
             disabled={connectingHealth || !isHealthSupported}
             className="w-full"
           >
-            {connectingHealth ? "Verbinde..." : "Health-Daten verbinden"}
+            {connectingHealth ? "Verbinde..." : HealthService.getHealthConnectionLabel()}
           </Button>
           {!checkingHealth && isHealthSupported && !healthAvailable && (
             <p className="mt-2 text-xs text-muted-foreground text-center">
