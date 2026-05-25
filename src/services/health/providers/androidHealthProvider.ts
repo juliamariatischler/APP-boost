@@ -84,6 +84,12 @@ export class AndroidHealthProvider implements HealthProvider {
       const healthConnectSteps = await this.queryStepsForRange(this.getTodayRange());
       if (healthConnectSteps > 0) return healthConnectSteps;
 
+      const recentHealthConnectSteps = await this.queryStepsForRange(this.getLast24HoursRange());
+      if (recentHealthConnectSteps > 0) {
+        console.log('Android Health Connect last 24 hours fallback result:', recentHealthConnectSteps);
+        return recentHealthConnectSteps;
+      }
+
       const sensorSteps = await getAndroidSensorStepsToday();
       if (sensorSteps !== null) {
         console.log('Android device step counter fallback result:', sensorSteps);
@@ -123,6 +129,13 @@ export class AndroidHealthProvider implements HealthProvider {
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate);
     endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }
+
+  private getLast24HoursRange() {
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
 
     return { startDate, endDate };
   }

@@ -2,7 +2,6 @@ package at.boostschule;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -13,14 +12,14 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 
-import androidx.core.content.ContextCompat;
-
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 @CapacitorPlugin(
     name = "DeviceStepCounter",
@@ -30,20 +29,28 @@ import com.getcapacitor.annotation.Permission;
 )
 public class DeviceStepCounterPlugin extends Plugin {
     private static final String TAG = "DeviceStepCounter";
-    private Double lastCounterValue = null;
 
     @PluginMethod
     public void getCurrentCounter(PluginCall call) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasActivityRecognitionPermission()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                && getPermissionState("activity") != PermissionState.GRANTED) {
+            requestPermissionForAlias("activity", call, "handlePermissionResult");
+            return;
+        }
+        readCurrentCounter(call);
+    }
+
+    @PermissionCallback
+    private void handlePermissionResult(PluginCall call) {
+        if (getPermissionState("activity") == PermissionState.GRANTED) {
+            readCurrentCounter(call);
+        } else {
             JSObject ret = new JSObject();
             ret.put("supported", true);
             ret.put("permissionGranted", false);
             ret.put("value", 0);
             call.resolve(ret);
-            return;
         }
-
-        readCurrentCounter(call);
     }
 
     private void readCurrentCounter(PluginCall call) {
@@ -59,22 +66,18 @@ public class DeviceStepCounterPlugin extends Plugin {
             return;
         }
 
-        if (lastCounterValue != null) {
-            resolveCounter(call, lastCounterValue);
-            return;
-        }
-
         Handler handler = new Handler(Looper.getMainLooper());
         final boolean[] resolved = { false };
-        SensorEventListener listener = new SensorEventListener() {
+        final double[] latestValue = { 0 };
 
+        SensorEventListener listener = new SensorEventListener() {
             @Override
             public void onSensorChanged(SensorEvent event) {
+                latestValue[0] = event.values[0];
                 if (resolved[0]) return;
                 resolved[0] = true;
                 sensorManager.unregisterListener(this);
-                lastCounterValue = (double) event.values[0];
-                resolveCounter(call, lastCounterValue);
+                resolveCounter(call, latestValue[0]);
             }
 
             @Override
@@ -95,14 +98,18 @@ public class DeviceStepCounterPlugin extends Plugin {
             if (resolved[0]) return;
             resolved[0] = true;
             sensorManager.unregisterListener(listener);
-            JSObject ret = new JSObject();
-            ret.put("supported", true);
-            ret.put("permissionGranted", true);
-            ret.put("timedOut", true);
-            ret.put("value", lastCounterValue == null ? 0 : Math.floor(lastCounterValue));
-            ret.put("bootTime", System.currentTimeMillis() - SystemClock.elapsedRealtime());
-            call.resolve(ret);
-        }, 3000);
+            if (latestValue[0] > 0) {
+                resolveCounter(call, latestValue[0]);
+            } else {
+                JSObject ret = new JSObject();
+                ret.put("supported", true);
+                ret.put("permissionGranted", true);
+                ret.put("timedOut", true);
+                ret.put("value", 0);
+                ret.put("bootTime", System.currentTimeMillis() - SystemClock.elapsedRealtime());
+                call.resolve(ret);
+            }
+        }, 5000);
     }
 
     private void resolveCounter(PluginCall call, double value) {
@@ -113,12 +120,5 @@ public class DeviceStepCounterPlugin extends Plugin {
         ret.put("value", Math.floor(value));
         ret.put("bootTime", System.currentTimeMillis() - SystemClock.elapsedRealtime());
         call.resolve(ret);
-    }
-
-    private boolean hasActivityRecognitionPermission() {
-        return ContextCompat.checkSelfPermission(
-            getContext(),
-            Manifest.permission.ACTIVITY_RECOGNITION
-        ) == PackageManager.PERMISSION_GRANTED;
     }
 }

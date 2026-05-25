@@ -19,13 +19,18 @@ export const getAndroidSensorStepsToday = async (): Promise<number | null> => {
 
   const result = await DeviceStepCounter.getCurrentCounter();
   console.log('Android device step counter raw result:', result);
+
   if (!result.supported || !result.permissionGranted) {
+    return null;
+  }
+
+  if (result.timedOut && !result.value) {
     return null;
   }
 
   const counter = Math.floor(Number(result.value) || 0);
   if (counter <= 0) {
-    return 0;
+    return null;
   }
 
   const today = new Date();
@@ -38,11 +43,13 @@ export const getAndroidSensorStepsToday = async (): Promise<number | null> => {
   }
 
   const baselineKey = getBaselineKey(todayKey);
-  const existingBaseline = Number(window.localStorage.getItem(baselineKey));
-  const baseline = Number.isFinite(existingBaseline) && existingBaseline > 0 && existingBaseline <= counter
-    ? existingBaseline
-    : counter;
+  const stored = window.localStorage.getItem(baselineKey);
+  const existingBaseline = stored !== null ? Number(stored) : null;
 
-  window.localStorage.setItem(baselineKey, String(baseline));
-  return Math.max(0, counter - baseline);
+  if (existingBaseline !== null && Number.isFinite(existingBaseline) && existingBaseline > 0 && existingBaseline <= counter) {
+    return Math.max(0, counter - existingBaseline);
+  }
+
+  window.localStorage.setItem(baselineKey, String(counter));
+  return null;
 };
