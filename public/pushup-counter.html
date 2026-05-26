@@ -136,7 +136,7 @@
       <div style="font-size:.9rem;margin-top:2px;">Ziel: <span id="battle-goal-text">–</span> Liegestütze &nbsp;|&nbsp; Zeit: <span id="battle-timer-text">–</span></div>
     </div>
     <h1 class="title">Liegestütz-Zähler</h1>
-    <p class="subtitle">Geh in die Liegestütz-Position vor die Kamera.</p>
+    <p class="subtitle">Stell die Kamera seitlich auf und geh in die Liegestütz-Position.</p>
     <div class="info-box">
       <p>Stelle das Handy ca. 1 m entfernt <strong>seitlich</strong> auf. Pflicht: <strong>Schulter und Ellbogen</strong> müssen sichtbar sein – der Rest des Körpers muss nicht komplett im Bild sein. Frauen-Liegestütze (auf Knien) werden ebenfalls erkannt. Belohnung: 1 Liegestütz = 1 Blitz.</p>
     </div>
@@ -489,11 +489,11 @@
       const leftScore  = ls?.score || 0;
       const rightScore = rs?.score || 0;
 
-      // Block only truly frontal view (both shoulders visible AND very close in X)
+      // Block frontal view (both shoulders visible AND far apart in X = facing camera)
       const bothVisible = leftScore > SHOULDER_VISIBILITY && rightScore > SHOULDER_VISIBILITY;
       if (bothVisible) {
         const xDiff = Math.abs((ls?.x || 0) - (rs?.x || 0));
-        if (xDiff < canvas.width * 0.12) {
+        if (xDiff > canvas.width * 0.20) {
           feedbackEl.textContent = 'Bitte dreh dich seitlich zur Kamera!';
           feedbackEl.style.color = '#b45309';
           return;

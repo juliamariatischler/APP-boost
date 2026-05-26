@@ -577,7 +577,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="mb-4 overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_28%_78%,rgba(50,255,236,0.45)_0%,transparent_32%),linear-gradient(135deg,#075cff_0%,#078cff_48%,#16c7e9_100%)] text-white shadow-[0_18px_34px_rgba(0,83,255,0.22),0_10px_22px_rgba(0,0,0,0.08)]">
+        <div className="mb-4 overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_28%_78%,rgba(50,255,236,0.45)_0%,transparent_32%),linear-gradient(135deg,#075cff_0%,#078cff_48%,#16c7e9_100%)] text-white shadow-[0_18px_34px_rgba(0,83,255,0.22),0_10px_22px_rgba(0,0,0,0.08)]" style={{ transform: 'translateZ(0)' }}>
           <div className="relative grid h-[25vh] min-h-[16rem] max-h-[16rem] grid-cols-[minmax(0,1fr)_45%] overflow-hidden">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_22%,rgba(255,255,255,0.32)_0_1px,transparent_2px),radial-gradient(circle_at_52%_20%,rgba(255,255,255,0.5)_0_2px,transparent_3px),radial-gradient(circle_at_33%_38%,rgba(255,255,255,0.24)_0_1px,transparent_2px)]" />
             <div className="relative flex flex-col items-center justify-center overflow-hidden px-1 py-4">
@@ -594,7 +594,7 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="relative z-10 flex flex-col justify-between px-4 pt-3 pb-4">
+            <div className="relative z-10 flex flex-col justify-between px-4 pt-3 pb-6">
               <div>
                 <p className="mb-1.5 inline-flex rounded-full bg-white/16 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/90 backdrop-blur">
                   {activeVoltMood.label}
@@ -604,15 +604,15 @@ const Dashboard = () => {
                 </h2>
               </div>
               <div className="flex justify-center">
-                <div className="relative flex h-[6rem] w-[6rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_9px_rgba(255,255,255,0.12),0_0_28px_rgba(34,211,238,0.34)]">
+                <div className="relative flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-cyan-200/24 shadow-[inset_0_0_0_9px_rgba(255,255,255,0.12),0_0_28px_rgba(34,211,238,0.34)]">
                   <div
                     className="absolute inset-0 rounded-full"
                     style={{
                       background: `conic-gradient(rgb(103 232 249) 0% ${dailyProgressPercent}%, rgba(255,255,255,0.18) ${dailyProgressPercent}% 100%)`,
                     }}
                   />
-                  <div className="relative flex h-[4.35rem] w-[4.35rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
-                    <p className="text-[1.55rem] font-black leading-none">{dailyProgressPercent}%</p>
+                  <div className="relative flex h-[4rem] w-[4rem] flex-col items-center justify-center rounded-full bg-blue-600/75 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+                    <p className="text-[1.45rem] font-black leading-none">{dailyProgressPercent}%</p>
                     <p className="mt-1 text-[11px] font-bold text-white/88">Ziel</p>
                   </div>
                 </div>

@@ -28,11 +28,12 @@ type Exercise = {
   goal: number;
   dbKey: string;
   icon: React.ReactNode;
+  hint?: string;
 };
 
 const exercises: Exercise[] = [
   { name: "Push-ups", goal: DAILY_EXERCISE_GOALS.push_ups, dbKey: "push_ups", icon: <PushUpIcon className="h-6 w-6" /> },
-  { name: "Squats", goal: DAILY_EXERCISE_GOALS.squats, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" /> },
+  { name: "Squats", goal: DAILY_EXERCISE_GOALS.squats, dbKey: "squats", icon: <SquatIcon className="h-6 w-6" />, hint: "Seitlich zur Kamera stellen" },
   { name: "Planks", goal: DAILY_EXERCISE_GOALS.planks, dbKey: "planks", icon: <PlankIcon className="h-6 w-6" /> },
   { name: "Sit-ups", goal: DAILY_EXERCISE_GOALS.sit_ups, dbKey: "sit_ups", icon: <SitUpIcon className="h-6 w-6" /> },
   { name: "Jumping Jacks", goal: DAILY_EXERCISE_GOALS.jumping_jacks, dbKey: "jumping_jacks", icon: <JumpingJacksIcon className="h-6 w-6" /> },
@@ -577,6 +578,9 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
                   <div className="text-xs font-semibold text-muted-foreground">
                     {current} / {exercise.goal} {exercise.name === "Planks" ? "Sek." : ""}
                   </div>
+                  {exercise.hint && (
+                    <div className="text-xs text-muted-foreground/60 mt-0.5">{exercise.hint}</div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-medium ${isComplete ? 'text-primary' : 'text-muted-foreground'}`}>
