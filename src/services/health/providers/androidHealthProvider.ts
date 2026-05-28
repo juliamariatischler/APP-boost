@@ -1,5 +1,4 @@
 import { callCordovaHealth } from '../cordovaHealth';
-import { getAndroidHealthConnectSteps, getAndroidSensorStepsToday } from '../nativeStepCounter';
 import { getHealthPlatformContext } from '../platform';
 import type { HealthProvider, StepDiagnostics } from '../types';
 
@@ -81,31 +80,13 @@ export class AndroidHealthProvider implements HealthProvider {
     if (!this.isSupported()) return 0;
 
     try {
-      // 1. Direct HC SDK query via Capacitor plugin (most reliable, bypasses Cordova bridge)
       const todayRange = this.getTodayRange();
-      const directHcSteps = await getAndroidHealthConnectSteps(todayRange.startDate.getTime(), todayRange.endDate.getTime());
-      if (directHcSteps !== null && directHcSteps > 0) {
-        console.log('Android Health Connect direct steps result:', directHcSteps);
-        return directHcSteps;
-      }
 
-      // 2. Cordova bridge HC query (today)
+      // Only use today's Health Connect data for the displayed daily step count.
+      // Do not fall back to "last 24 hours" because that can include yesterday's steps.
+      // Do not fall back to the device sensor because Samsung Health and the Android sensor can count differently.
       const healthConnectSteps = await this.queryStepsForRange(todayRange);
       if (healthConnectSteps > 0) return healthConnectSteps;
-
-      // 3. Cordova bridge HC query (last 24h)
-      const recentHealthConnectSteps = await this.queryStepsForRange(this.getLast24HoursRange());
-      if (recentHealthConnectSteps > 0) {
-        console.log('Android Health Connect last 24 hours fallback result:', recentHealthConnectSteps);
-        return recentHealthConnectSteps;
-      }
-
-      // 4. Device sensor step counter
-      const sensorSteps = await getAndroidSensorStepsToday();
-      if (sensorSteps !== null) {
-        console.log('Android device step counter fallback result:', sensorSteps);
-        return sensorSteps;
-      }
 
       return 0;
     } catch (error) {
@@ -140,13 +121,6 @@ export class AndroidHealthProvider implements HealthProvider {
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate);
     endDate.setHours(23, 59, 59, 999);
-
-    return { startDate, endDate };
-  }
-
-  private getLast24HoursRange() {
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
 
     return { startDate, endDate };
   }
