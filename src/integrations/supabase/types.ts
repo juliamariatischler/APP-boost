@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      teacher_class_assignments: {
+        Row: {
+          id: string
+          teacher_id: string
+          school_id: string
+          class_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          teacher_id: string
+          school_id: string
+          class_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          teacher_id?: string
+          school_id?: string
+          class_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           category: string
@@ -264,6 +288,7 @@ export type Database = {
       profiles: {
         Row: {
           class: string
+          class_id: string | null
           created_at: string
           current_streak: number
           feedback_prompt_shown: boolean
@@ -277,11 +302,13 @@ export type Database = {
           points: number
           rescue_days_used: number
           school: string
+          school_id: string | null
           updated_at: string
           username: string
         }
         Insert: {
           class: string
+          class_id?: string | null
           created_at?: string
           current_streak?: number
           feedback_prompt_shown?: boolean
@@ -295,11 +322,13 @@ export type Database = {
           points?: number
           rescue_days_used?: number
           school: string
+          school_id?: string | null
           updated_at?: string
           username: string
         }
         Update: {
           class?: string
+          class_id?: string | null
           created_at?: string
           current_streak?: number
           feedback_prompt_shown?: boolean
@@ -313,6 +342,7 @@ export type Database = {
           points?: number
           rescue_days_used?: number
           school?: string
+          school_id?: string | null
           updated_at?: string
           username?: string
         }
@@ -487,6 +517,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_schools_list: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; name: string }[]
+      }
+      get_classes_for_school: {
+        Args: { p_school_id: string }
+        Returns: { id: string; name: string }[]
+      }
+      add_class_to_school: {
+        Args: { p_school_id: string; p_class_name: string }
+        Returns: { id: string; name: string }[]
+      }
+      get_teacher_class_assignments_auth: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; school_id: string; school_name: string; class_id: string; class_name: string }[]
+      }
+      save_teacher_class_assignment_auth: {
+        Args: { p_school_id: string; p_class_id: string }
+        Returns: undefined
+      }
+      remove_teacher_class_assignment_auth: {
+        Args: { p_class_id: string }
+        Returns: undefined
+      }
+      get_pending_students_for_teacher_auth: {
+        Args: Record<PropertyKey, never>
+        Returns: { assignment_id: string; student_id: string; username: string; school_name: string; class_name: string; created_at: string }[]
+      }
+      update_student_approval_auth: {
+        Args: { p_student_id: string; p_status: string }
+        Returns: undefined
+      }
       get_class_student_daily_results: {
         Args: {
           p_device_id: string

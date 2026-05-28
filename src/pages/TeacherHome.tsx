@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, Loader2, Medal, MessageSquare, Plus, QrCode, Send, Star, Trash2, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -138,6 +138,19 @@ export default function TeacherHome() {
   const [teacherTodayDbData, setTeacherTodayDbData] = useState({ push_ups: 0, squats: 0, planks: 0, sit_ups: 0, jumping_jacks: 0 });
   const [teacherPoints, setTeacherPoints] = useState<number | null>(null);
 
+  // Teacher class assignment state (supabase auth only)
+  type TeacherClassAssignment = { id: string; school_id: string; school_name: string; class_id: string; class_name: string };
+  type PendingStudent = { assignment_id: string; student_id: string; username: string; school_name: string; class_name: string; created_at: string };
+  const [teacherClassAssignments, setTeacherClassAssignments] = useState<TeacherClassAssignment[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<PendingStudent[]>([]);
+  const [pendingStudentsLoading, setPendingStudentsLoading] = useState(false);
+  const [availableSchools, setAvailableSchools] = useState<{ id: string; name: string }[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<{ id: string; name: string }[]>([]);
+  const [assignSchoolId, setAssignSchoolId] = useState("");
+  const [assignClassId, setAssignClassId] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignClassesLoading, setAssignClassesLoading] = useState(false);
+
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -237,6 +250,57 @@ export default function TeacherHome() {
     if (!authMode || !selectedClassId) return;
     void loadStudents(authMode, selectedClassId);
   }, [authMode, selectedClassId, loadStudents]);
+
+  // Load teacher class assignments + pending students (supabase auth only)
+  useEffect(() => {
+    if (authMode !== "supabase") return;
+
+    const loadAssignments = async () => {
+      try {
+        const { data } = await (supabase.rpc as any)("get_teacher_class_assignments_auth");
+        if (Array.isArray(data)) setTeacherClassAssignments(data as TeacherClassAssignment[]);
+      } catch { /* ignore */ }
+    };
+
+    const loadPending = async () => {
+      setPendingStudentsLoading(true);
+      try {
+        const { data } = await (supabase.rpc as any)("get_pending_students_for_teacher_auth");
+        if (Array.isArray(data)) setPendingStudents(data as PendingStudent[]);
+      } catch { /* ignore */ } finally {
+        setPendingStudentsLoading(false);
+      }
+    };
+
+    const loadSchools = async () => {
+      try {
+        const { data } = await (supabase.rpc as any)("get_schools_list");
+        if (Array.isArray(data)) setAvailableSchools(data as { id: string; name: string }[]);
+      } catch { /* ignore */ }
+    };
+
+    void loadAssignments();
+    void loadPending();
+    void loadSchools();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authMode]);
+
+  // Load classes for teacher assignment panel when school changes
+  useEffect(() => {
+    if (!assignSchoolId) { setAvailableClasses([]); setAssignClassId(""); return; }
+    setAssignClassesLoading(true);
+    setAvailableClasses([]);
+    setAssignClassId("");
+    const load = async () => {
+      try {
+        const { data } = await (supabase.rpc as any)("get_classes_for_school", { p_school_id: assignSchoolId });
+        if (Array.isArray(data)) setAvailableClasses(data as { id: string; name: string }[]);
+      } catch { /* ignore */ } finally {
+        setAssignClassesLoading(false);
+      }
+    };
+    void load();
+  }, [assignSchoolId]);
 
   // Load weekly overview data
   useEffect(() => {
@@ -653,6 +717,65 @@ export default function TeacherHome() {
       ? "Mega App"
       : `${feedbackRating} von 5`;
 
+  const handleApproveStudent = async (studentId: string, status: "accepted" | "rejected") => {
+    try {
+      const { error } = await (supabase.rpc as any)("update_student_approval_auth", {
+        p_student_id: studentId,
+        p_status: status,
+      });
+      if (error) { toast.error("Fehler: " + error.message); return; }
+      setPendingStudents((prev) => prev.filter((s) => s.student_id !== studentId));
+      toast.success(status === "accepted" ? "Schüler:in angenommen." : "Schüler:in abgelehnt.");
+    } catch (err: any) {
+      toast.error("Fehler: " + (err?.message ?? "Unbekannt"));
+    }
+  };
+
+  const handleSaveClassAssignment = async () => {
+    if (!assignSchoolId || !assignClassId) {
+      toast.error("Bitte Schule und Klasse auswählen.");
+      return;
+    }
+    setAssignLoading(true);
+    try {
+      const { error } = await (supabase.rpc as any)("save_teacher_class_assignment_auth", {
+        p_school_id: assignSchoolId,
+        p_class_id: assignClassId,
+      });
+      if (error) { toast.error("Fehler: " + error.message); return; }
+      const school = availableSchools.find((s) => s.id === assignSchoolId);
+      const cls = availableClasses.find((c) => c.id === assignClassId);
+      if (school && cls) {
+        setTeacherClassAssignments((prev) => {
+          const exists = prev.some((a) => a.class_id === assignClassId);
+          if (exists) return prev;
+          return [...prev, { id: crypto.randomUUID(), school_id: assignSchoolId, school_name: school.name, class_id: assignClassId, class_name: cls.name }];
+        });
+      }
+      setAssignSchoolId("");
+      setAssignClassId("");
+      toast.success("Klasse übernommen.");
+      // Reload pending students in case some already exist
+      const { data } = await (supabase.rpc as any)("get_pending_students_for_teacher_auth");
+      if (Array.isArray(data)) setPendingStudents(data as PendingStudent[]);
+    } catch (err: any) {
+      toast.error("Fehler: " + (err?.message ?? "Unbekannt"));
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleRemoveClassAssignment = async (classId: string) => {
+    try {
+      const { error } = await (supabase.rpc as any)("remove_teacher_class_assignment_auth", { p_class_id: classId });
+      if (error) { toast.error("Fehler: " + error.message); return; }
+      setTeacherClassAssignments((prev) => prev.filter((a) => a.class_id !== classId));
+      toast.success("Klasse entfernt.");
+    } catch (err: any) {
+      toast.error("Fehler: " + (err?.message ?? "Unbekannt"));
+    }
+  };
+
   const renderMitmachenTab = () => {
     const todayLabel = format(new Date(), "EEEE, d. MMMM", { locale: de });
 
@@ -1018,6 +1141,136 @@ export default function TeacherHome() {
           </Card>
         )}
       </section>
+
+      {/* ── Meine Klassen (supabase auth only) ───────────────── */}
+      {authMode === "supabase" && (
+        <section className="mt-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-black text-foreground">Meine Klassen</h2>
+          </div>
+
+          {teacherClassAssignments.length > 0 ? (
+            <div className="space-y-2">
+              {teacherClassAssignments.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-3 rounded-[18px] border border-black/5 bg-white px-4 py-3 shadow-[0_8px_18px_rgba(0,0,0,0.05)]"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-primary/10 text-primary">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black text-foreground">Klasse {a.class_name}</p>
+                    <p className="truncate text-xs font-semibold text-muted-foreground">{a.school_name}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleRemoveClassAssignment(a.class_id)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-50 hover:text-red-500"
+                    aria-label="Klasse entfernen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Noch keine Klasse zugewiesen.</p>
+          )}
+
+          {/* Add class assignment */}
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.05)]">
+            <p className="mb-3 text-sm font-black text-foreground">Klasse übernehmen</p>
+            <div className="space-y-2">
+              <select
+                value={assignSchoolId}
+                onChange={(e) => setAssignSchoolId(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-primary"
+              >
+                <option value="">Schule auswählen…</option>
+                {availableSchools.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <select
+                value={assignClassId}
+                onChange={(e) => setAssignClassId(e.target.value)}
+                disabled={!assignSchoolId || assignClassesLoading}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-primary disabled:opacity-50"
+              >
+                <option value="">
+                  {assignClassesLoading ? "Klassen werden geladen…" : !assignSchoolId ? "Bitte zuerst Schule wählen" : availableClasses.length > 0 ? "Klasse auswählen…" : "Keine Klassen vorhanden"}
+                </option>
+                {availableClasses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void handleSaveClassAssignment()}
+                disabled={assignLoading || !assignSchoolId || !assignClassId}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-black text-white disabled:opacity-50"
+              >
+                {assignLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Klasse übernehmen
+              </button>
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* ── Schüler:innen freigeben (supabase auth only) ──────── */}
+      {authMode === "supabase" && (pendingStudents.length > 0 || pendingStudentsLoading) && (
+        <section className="mt-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-black text-foreground">Schüler:innen freigeben</h2>
+            {pendingStudents.length > 0 && (
+              <Badge variant="destructive" className="text-xs">{pendingStudents.length}</Badge>
+            )}
+          </div>
+
+          {pendingStudentsLoading ? (
+            <div className="h-16 animate-pulse rounded-[20px] bg-muted" />
+          ) : (
+            <div className="space-y-2">
+              {pendingStudents.map((s) => (
+                <Card
+                  key={s.assignment_id}
+                  className="rounded-[20px] border-amber-100 bg-amber-50/60 p-4 shadow-[0_8px_18px_rgba(0,0,0,0.04)]"
+                >
+                  <div className="mb-3 flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-amber-500/15 text-amber-600">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-foreground">{s.username}</p>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {s.school_name} · Klasse {s.class_name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleApproveStudent(s.student_id, "accepted")}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-sm font-black text-white"
+                    >
+                      <Check className="h-4 w-4" /> Annehmen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleApproveStudent(s.student_id, "rejected")}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 py-2 text-sm font-black text-red-600"
+                    >
+                      Ablehnen
+                    </button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </>
   );
 

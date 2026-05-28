@@ -73,6 +73,7 @@ const Auth = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const activatingRef = useRef(false);
+  const schoolRequestInFlightRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
@@ -83,6 +84,14 @@ const Auth = () => {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [schoolsLoading, setSchoolsLoading] = useState(true);
   const [registeredSchools, setRegisteredSchools] = useState<string[]>([]);
+  const [schoolsWithIds, setSchoolsWithIds] = useState<{ id: string; name: string }[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState("");
+  const [classesForSchool, setClassesForSchool] = useState<{ id: string; name: string }[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [showNewClassInput, setShowNewClassInput] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [newClassLoading, setNewClassLoading] = useState(false);
   const [showSchoolRequest, setShowSchoolRequest] = useState(false);
   const [schoolRequestLoading, setSchoolRequestLoading] = useState(false);
   const [requestedSchool, setRequestedSchool] = useState("");
@@ -278,6 +287,50 @@ const Auth = () => {
     loadRegisteredSchools();
   }, []);
 
+  // Load schools with IDs for the ID-based dropdown
+  useEffect(() => {
+    const loadSchoolsWithIds = async () => {
+      try {
+        const { data, error } = await (supabase.rpc as any)("get_schools_list");
+        if (!error && Array.isArray(data)) {
+          setSchoolsWithIds(data as { id: string; name: string }[]);
+        }
+      } catch {
+        // silently fall back — schoolsWithIds stays empty, class dropdown unused
+      }
+    };
+    loadSchoolsWithIds();
+  }, []);
+
+  // Load classes when a school is selected
+  useEffect(() => {
+    if (!selectedSchoolId) {
+      setClassesForSchool([]);
+      setSelectedClassId("");
+      setShowNewClassInput(false);
+      return;
+    }
+    setClassesLoading(true);
+    setClassesForSchool([]);
+    setSelectedClassId("");
+    setShowNewClassInput(false);
+    const loadClasses = async () => {
+      try {
+        const { data, error } = await (supabase.rpc as any)("get_classes_for_school", {
+          p_school_id: selectedSchoolId,
+        });
+        if (!error && Array.isArray(data)) {
+          setClassesForSchool(data as { id: string; name: string }[]);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setClassesLoading(false);
+      }
+    };
+    loadClasses();
+  }, [selectedSchoolId]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const demo = params.get("demo");
@@ -441,6 +494,12 @@ const Auth = () => {
       // Validate input
       const validatedData = signupSchema.parse(signupData);
 
+      // Students must have a class when a school with ID was selected
+      if (validatedData.accountType === "student" && selectedSchoolId && !selectedClassId) {
+        toast.error("Bitte wähle eine Klasse aus oder füge deine Klasse hinzu.");
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
@@ -451,6 +510,8 @@ const Auth = () => {
             class: validatedData.class,
             age: validatedData.accountType === "student" ? Number(validatedData.age) : null,
             account_type: validatedData.accountType,
+            ...(selectedSchoolId ? { school_id: selectedSchoolId } : {}),
+            ...(selectedClassId  ? { class_id:  selectedClassId  } : {}),
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -755,37 +816,93 @@ const Auth = () => {
   };
 
   const handleSchoolRequest = async () => {
+    // Guard: prevent multiple simultaneous submissions (e.g. rapid double-tap on Android)
+    if (schoolRequestInFlightRef.current) return;
+
     const schoolName = requestedSchool.trim();
     if (schoolName.length < 2) {
       toast.error("Bitte gib einen gültigen Schulnamen ein.");
       return;
     }
 
+    schoolRequestInFlightRef.current = true;
     setSchoolRequestLoading(true);
 
-    const { error } = await (supabase.rpc as any)("submit_school_registration_request", {
-      p_requested_school: schoolName,
-      p_requester_email: signupData.email?.trim() || null,
-      p_requester_name: signupData.username?.trim() || null,
-      p_request_note: `Anfrage aus Registrierung (${signupData.accountType})`,
-    });
+    try {
+      const { error } = await (supabase.rpc as any)("submit_school_registration_request", {
+        p_requested_school: schoolName,
+        p_requester_email: signupData.email?.trim() || null,
+        p_requester_name: signupData.username?.trim() || null,
+        p_request_note: `Anfrage aus Registrierung (${signupData.accountType})`,
+      });
 
-    setSchoolRequestLoading(false);
+      if (error && !isMissingInfraError(error)) {
+        // Real API error — show it and do not update local state
+        toast.error(`Schule konnte nicht gespeichert werden: ${error.message}`);
+        return;
+      }
 
-    if (!registeredSchools.includes(schoolName)) {
-      setRegisteredSchools((prev) => [...prev, schoolName].sort((a, b) => a.localeCompare(b)));
+      // Update state only after the API call has resolved (or gracefully failed due to missing infra)
+      setRegisteredSchools((prev) =>
+        prev.includes(schoolName)
+          ? prev
+          : [...prev, schoolName].sort((a, b) => a.localeCompare(b))
+      );
+      setSignupData((prev) => ({ ...prev, school: schoolName }));
+      setRequestedSchool("");
+      setShowSchoolRequest(false);
+
+      toast.success(
+        error
+          ? "Schule übernommen. Die Anfrage wird manuell geprüft."
+          : "Schule hinzugefügt und ausgewählt."
+      );
+    } catch (err: any) {
+      toast.error(`Fehler beim Hinzufügen der Schule: ${err?.message ?? "Unbekannter Fehler"}`);
+    } finally {
+      // Always release the lock and clear loading, even on network errors
+      schoolRequestInFlightRef.current = false;
+      setSchoolRequestLoading(false);
     }
-    setSignupData((prev) => ({ ...prev, school: schoolName }));
-    setRequestedSchool("");
-    setShowSchoolRequest(false);
+  };
 
-    if (error) {
-      console.error("School request failed:", error);
-      toast.success("Schule übernommen. Die Anfrage an die Datenbank konnte gerade nicht gespeichert werden.");
-      return;
+  const handleAddClass = async () => {
+    const name = newClassName.trim();
+    if (!name) return;
+    setNewClassLoading(true);
+    try {
+      if (selectedSchoolId) {
+        // ID-based mode: persist to DB
+        const { data, error } = await (supabase.rpc as any)("add_class_to_school", {
+          p_school_id: selectedSchoolId,
+          p_class_name: name,
+        });
+        if (error) {
+          toast.error("Klasse konnte nicht angelegt werden: " + error.message);
+          return;
+        }
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length > 0) {
+          const added = rows[0] as { id: string; name: string };
+          setClassesForSchool((prev) => {
+            const exists = prev.some((c) => c.id === added.id);
+            return exists ? prev : [...prev, added].sort((a, b) => a.name.localeCompare(b.name));
+          });
+          setSelectedClassId(added.id);
+          setSignupData((prev) => ({ ...prev, class: added.name }));
+        }
+      } else {
+        // Fallback mode: set class name as free text
+        setSignupData((prev) => ({ ...prev, class: name }));
+      }
+      setNewClassName("");
+      setShowNewClassInput(false);
+      toast.success(`Klasse „${name}" ausgewählt.`);
+    } catch (err: any) {
+      toast.error("Fehler: " + (err?.message ?? "Unbekannt"));
+    } finally {
+      setNewClassLoading(false);
     }
-
-    toast.success("Schule hinzugefügt und ausgewählt.");
   };
 
   return (
@@ -1014,12 +1131,12 @@ const Auth = () => {
               <div className="flex gap-2">
                 <button type="button" className="flex-1 rounded-xl py-2.5 text-sm font-bold border-2 transition"
                   style={signupData.accountType === "student" ? { background: "#dcfce7", borderColor: "#22c55e", color: "#15803d" } : { background: "#f9fafb", borderColor: "#e5e7eb", color: "#6b7280" }}
-                  onClick={() => setSignupData({ ...signupData, accountType: "student" })}>
+                  onClick={() => { setSignupData({ ...signupData, accountType: "student", class: "" }); setSelectedClassId(""); }}>
                   🎒 Schüler:in
                 </button>
                 <button type="button" className="flex-1 rounded-xl py-2.5 text-sm font-bold border-2 transition"
                   style={signupData.accountType === "teacher" ? { background: "#dbeafe", borderColor: "#3b82f6", color: "#1d4ed8" } : { background: "#f9fafb", borderColor: "#e5e7eb", color: "#6b7280" }}
-                  onClick={() => setSignupData({ ...signupData, accountType: "teacher" })}>
+                  onClick={() => { setSignupData({ ...signupData, accountType: "teacher", class: "" }); setSelectedClassId(""); }}>
                   📚 Lehrkraft
                 </button>
               </div>
@@ -1050,14 +1167,37 @@ const Auth = () => {
                 </p>
               )}
 
-              <select required value={signupData.school}
-                onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
-                disabled={schoolsLoading}
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400"
-              >
-                <option value="">{schoolsLoading ? "Schulen werden geladen..." : registeredSchools.length > 0 ? "Schule auswählen" : "Noch keine Schule registriert"}</option>
-                {registeredSchools.map((school) => <option key={school} value={school}>{school}</option>)}
-              </select>
+              {/* School dropdown — ID-based when schools table is populated, fallback otherwise */}
+              {schoolsWithIds.length > 0 ? (
+                <select
+                  required
+                  value={selectedSchoolId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const found = schoolsWithIds.find((s) => s.id === id);
+                    setSelectedSchoolId(id);
+                    setSignupData((prev) => ({ ...prev, school: found?.name ?? "" }));
+                  }}
+                  disabled={schoolsLoading}
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400"
+                >
+                  <option value="">{schoolsLoading ? "Schulen werden geladen…" : "Schule auswählen"}</option>
+                  {schoolsWithIds.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  required
+                  value={signupData.school}
+                  onChange={(e) => setSignupData({ ...signupData, school: e.target.value })}
+                  disabled={schoolsLoading}
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400"
+                >
+                  <option value="">{schoolsLoading ? "Schulen werden geladen…" : registeredSchools.length > 0 ? "Schule auswählen" : "Noch keine Schule registriert"}</option>
+                  {registeredSchools.map((school) => <option key={school} value={school}>{school}</option>)}
+                </select>
+              )}
               <button type="button" className="text-sm font-semibold px-1" style={{ color: "#16a34a" }} onClick={() => setShowSchoolRequest((prev) => !prev)}>
                 Schule nicht dabei? Neu hinzufügen
               </button>
@@ -1071,11 +1211,89 @@ const Auth = () => {
                 </div>
               )}
 
-              <input type="text" required value={signupData.class}
-                onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
-                placeholder={signupData.accountType === "teacher" ? "Klasse/Fach (z.B. Sport)" : "Klasse (z.B. 5a)"}
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
-              />
+              {/* Class field */}
+              {signupData.accountType === "student" ? (
+                <div className="space-y-2">
+                  {/* Dropdown: shown when school has a DB-ID, disabled until school is selected */}
+                  {schoolsWithIds.length > 0 ? (
+                    <select
+                      required={!showNewClassInput}
+                      value={selectedClassId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        const found = classesForSchool.find((c) => c.id === id);
+                        setSelectedClassId(id);
+                        setSignupData((prev) => ({ ...prev, class: found?.name ?? "" }));
+                        setShowNewClassInput(false);
+                      }}
+                      disabled={!selectedSchoolId || classesLoading}
+                      className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {classesLoading
+                          ? "Klassen werden geladen…"
+                          : !selectedSchoolId
+                            ? "Bitte zuerst Schule auswählen"
+                            : classesForSchool.length > 0
+                              ? "Klasse auswählen"
+                              : "Noch keine Klasse vorhanden"}
+                      </option>
+                      {classesForSchool.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    /* Fallback: free-text class input (no school IDs available yet) */
+                    <input
+                      type="text"
+                      required={!showNewClassInput}
+                      value={signupData.class}
+                      onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
+                      placeholder="Klasse (z.B. 5a)"
+                      className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
+                    />
+                  )}
+
+                  {/* "Klasse nicht dabei?" — same pattern as the school field, always visible */}
+                  <button
+                    type="button"
+                    className="text-sm font-semibold px-1"
+                    style={{ color: "#16a34a" }}
+                    onClick={() => setShowNewClassInput((prev) => !prev)}
+                  >
+                    Klasse nicht dabei? Neu hinzufügen
+                  </button>
+                  {showNewClassInput && (
+                    <div className="space-y-2 rounded-2xl border border-gray-200 p-3 bg-gray-50">
+                      <Input
+                        value={newClassName}
+                        onChange={(e) => setNewClassName(e.target.value)}
+                        placeholder="Klassenname (z.B. 4a)"
+                        className="rounded-xl"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddClass}
+                        disabled={newClassLoading || !newClassName.trim()}
+                        className="w-full rounded-xl"
+                      >
+                        {newClassLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Klasse hinzufügen
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Teacher: plain text input */
+                <input
+                  type="text"
+                  required
+                  value={signupData.class}
+                  onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
+                  placeholder="Klasse/Fach (z.B. Sport)"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
+                />
+              )}
               {signupData.accountType === "student" && (
                 <input type="number" min={6} max={19} required value={signupData.age}
                   onChange={(e) => setSignupData({ ...signupData, age: e.target.value })}
@@ -1084,7 +1302,7 @@ const Auth = () => {
                 />
               )}
 
-              <button type="submit" disabled={loading}
+              <button type="submit" disabled={loading || schoolRequestLoading}
                 className="w-full flex items-center gap-3 rounded-2xl text-white transition active:scale-[0.98] disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", padding: "13px 18px" }}
               >

@@ -7,6 +7,13 @@ import { Zap, Play, CheckCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HealthService } from "@/services/healthService";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface StepCounterProps {
   userId: string;
@@ -26,7 +33,9 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const [lastAwardedFlashes, setLastAwardedFlashes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
   const isHealthSupported = HealthService.isHealthPlatformSupported();
+  const isAndroid = HealthService.isNativeAndroid();
   const healthSourceLabel = HealthService.getHealthSourceLabel();
   const isActiveRef = useRef(false);
 
@@ -109,6 +118,9 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         await syncHealthSteps(0);
         return;
       }
+
+      // First time — show setup dialog
+      setShowSetupDialog(true);
     }
 
     setLoading(false);
@@ -308,11 +320,62 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const stepsToNext = nextReward ? nextReward.steps - steps : 0;
 
   return (
+    <>
+      {/* First-time Health Connect setup dialog */}
+      <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+        <DialogContent className="max-w-sm mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WalkingIcon className="h-5 w-5 text-primary" />
+              Schrittzähler einrichten
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 text-sm text-left pt-1">
+                <p>
+                  BOOST zählt deine echten Schritte automatisch – du musst nur einmalig die Verbindung herstellen.
+                </p>
+                {isAndroid && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
+                    <p className="font-semibold mb-1">Android: Health Connect erforderlich</p>
+                    <p>Lade <strong>Health Connect</strong> kostenlos aus dem Play Store herunter, falls noch nicht installiert. Danach tippe auf „Verbinden" und erlaube den Zugriff auf Schritte.</p>
+                  </div>
+                )}
+                {!isAndroid && isHealthSupported && (
+                  <p>Tippe auf „Verbinden", um Apple Health zu verknüpfen und Schrittziele zu erreichen.</p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Belohnungen: 3.000 Schritte = 1 Blitz, 4.000 = 2 Blitze, 5.000 = 3 Blitze pro Tag.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowSetupDialog(false)}
+            >
+              Später
+            </Button>
+            <Button
+              className="flex-1 bg-primary hover:bg-primary/90"
+              onClick={() => {
+                setShowSetupDialog(false);
+                activateTracking();
+              }}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Verbinden
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     <Card className="p-4 bg-card shadow-card overflow-hidden">
       <div className="flex items-center gap-3 mb-4">
         <div className={`p-3 rounded-full transition-all ${
-          isActive 
-            ? "bg-primary/20 text-primary animate-pulse" 
+          isActive
+            ? "bg-primary/20 text-primary animate-pulse"
             : "bg-muted text-muted-foreground"
         }`}>
           <WalkingIcon className="h-8 w-8" />
@@ -320,18 +383,19 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         <div className="flex-1">
           <h3 className="font-bold text-foreground">Schrittzähler</h3>
           <p className="text-xs text-muted-foreground">
-            {isActive 
+            {isActive
               ? `Aktiv – synchronisiert mit ${healthSourceLabel}`
-              : "Tippe zum Starten"}
+              : isHealthSupported ? "Tippe „Verbinden" zum Starten" : "Nur in der mobilen App verfügbar"}
           </p>
         </div>
         {!isActive ? (
-          <Button 
-            onClick={activateTracking}
-            className="bg-primary hover:bg-primary/90"
+          <Button
+            onClick={isHealthSupported ? activateTracking : undefined}
+            className={isHealthSupported ? "bg-primary hover:bg-primary/90 shadow-md font-bold" : "bg-muted text-muted-foreground cursor-default"}
+            size="default"
           >
             <Play className="h-4 w-4 mr-2" />
-            Starten
+            Verbinden
           </Button>
         ) : (
           <div className="flex items-center gap-2">
@@ -406,6 +470,13 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         </div>
       )}
 
+      {/* Android sync delay hint */}
+      {isActive && isAndroid && (
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          Fitness-Apps übertragen Schritte verzögert an Health Connect. Falls die Zahl abweicht, kurz warten und dann Aktualisieren tippen.
+        </p>
+      )}
+
       {/* Reward Tiers */}
       <div className="mt-4 pt-4 border-t border-border">
         <p className="text-xs text-muted-foreground mb-2">Belohnungsstufen:</p>
@@ -439,5 +510,6 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
         </div>
       )}
     </Card>
+    </>
   );
 };

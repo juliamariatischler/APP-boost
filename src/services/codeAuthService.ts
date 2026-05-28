@@ -362,6 +362,7 @@ export interface ClassStudent {
   device_id?: string | null;
   activation_code_created_at?: string | null;
   activation_code_used_at?: string | null;
+  is_profile_student?: boolean;
 }
 
 export async function getClassStudents(
