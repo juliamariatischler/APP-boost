@@ -193,16 +193,16 @@ const ChallengeDetail = () => {
                     {nfcRoute?.name ?? "NFC-Route"}
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {nfcRoute?.description ?? "Laufe die Route und scanne alle NFC-Stationen."}
+                    {nfcRoute?.description ?? "Erkunde die Route und finde alle geheimen NFC-Chips!"}
                   </p>
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
                       <TreePine className="h-4 w-4 text-sky-500" />
-                      Rausgehen
+                      Raus ins Abenteuer!
                     </div>
                     <div className="flex items-center gap-2 rounded-2xl bg-[#f3f8ff] px-3 py-2 text-sm font-semibold text-foreground">
                       <Search className="h-4 w-4 text-sky-500" />
-                      Stationen finden
+                      Geheime Chips aufspüren
                     </div>
                     {/* Progress or start button */}
                     {nfcProgress && nfcProgress.total_count > 0 ? (
@@ -217,8 +217,8 @@ const ChallengeDetail = () => {
                           <Nfc className="h-4 w-4 text-sky-500" />
                         )}
                         {nfcProgress.is_complete
-                          ? "Route abgeschlossen ✓"
-                          : `${nfcProgress.scanned_count} von ${nfcProgress.total_count} Stationen gescannt`}
+                          ? "Alle Chips gefunden ✓"
+                          : `${nfcProgress.scanned_count} von ${nfcProgress.total_count} Chips gefunden`}
                       </div>
                     ) : null}
                     <button
@@ -228,7 +228,7 @@ const ChallengeDetail = () => {
                     >
                       <Nfc className="h-4 w-4 shrink-0" />
                       <span className="flex-1">
-                        {nfcProgress?.is_complete ? "Route ansehen" : "Route starten"}
+                        {nfcProgress?.is_complete ? "Abenteuer ansehen" : "Abenteuer starten"}
                       </span>
                     </button>
                   </div>

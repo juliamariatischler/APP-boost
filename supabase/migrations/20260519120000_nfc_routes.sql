@@ -320,17 +320,17 @@ GRANT EXECUTE ON FUNCTION public.get_nfc_route_progress(uuid, text, text) TO ano
 
 
 -- ============================================================
--- Seed: Beispiel-Route "Waldweg" (idempotent)
+-- Seed: Route "Abenteuer Schlossberg" (idempotent)
 -- ============================================================
 DO $$
 DECLARE
   v_route_id uuid;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.nfc_routes WHERE name = 'Wochenchallenge Waldweg') THEN
+  IF NOT EXISTS (SELECT 1 FROM public.nfc_routes WHERE name = 'Abenteuer Schlossberg') THEN
     INSERT INTO public.nfc_routes (name, description, points_reward, active, week_start)
     VALUES (
-      'Wochenchallenge Waldweg',
-      'Laufe den kompletten Waldweg und scanne alle 3 NFC-Stationen: Start, Mitte und Ziel!',
+      'Abenteuer Schlossberg',
+      'Erkunde den Schlossberg in Graz und finde alle 3 geheimen NFC-Chips! Kannst du alle aufspüren?',
       20,
       true,
       CURRENT_DATE
@@ -338,9 +338,9 @@ BEGIN
     RETURNING id INTO v_route_id;
 
     INSERT INTO public.nfc_stations (route_id, name, nfc_tag_id, station_order) VALUES
-      (v_route_id, 'Start', 'BOOST-WALDWEG-START', 1),
-      (v_route_id, 'Mitte', 'BOOST-WALDWEG-MITTE', 2),
-      (v_route_id, 'Ziel',  'BOOST-WALDWEG-ZIEL',  3);
+      (v_route_id, 'Eingang', 'BOOST-START', 1),
+      (v_route_id, 'Gipfel',  'BOOST-MITTE', 2),
+      (v_route_id, 'Ziel',    'BOOST-ZIEL',  3);
   END IF;
 END;
 $$;

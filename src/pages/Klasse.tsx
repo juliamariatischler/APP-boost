@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
-import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
+import { addWeeks, endOfWeek, format, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronRight, GraduationCap, Trophy, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -38,6 +38,15 @@ type ClassQuestProgressRow = {
 };
 
 const numberFormat = new Intl.NumberFormat("de-AT");
+
+const ANCHOR_WEEK = new Date(2026, 5, 1); // 2026-06-01 Monday
+const EXERCISE_NAMES = ["Kniebeugen", "Hampelmänner", "Liegestütze", "Planks", "Situps"] as const;
+
+function getExerciseIndex(weekStart: Date): number {
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const weeksDiff = Math.floor((weekStart.getTime() - ANCHOR_WEEK.getTime()) / msPerWeek);
+  return ((weeksDiff % 5) + 5) % 5;
+}
 
 const Klasse = () => {
   const navigate = useNavigate();
@@ -141,7 +150,7 @@ const Klasse = () => {
     const { data, error } = await (supabase.rpc as any)("get_code_class_quest_progress", {
       p_device_id: deviceId,
       p_session_token: sessionToken,
-      p_month_start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      p_week_start: format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"),
     });
     if (error || !data) return;
     const result = data as Record<string, unknown>;
@@ -152,7 +161,7 @@ const Klasse = () => {
 
   const loadClassRankings = async () => {
     const { data, error } = await (supabase.rpc as any)("get_class_rankings_with_quest_bonus", {
-      p_month_start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      p_week_start: format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"),
     });
 
     if (!error && data && data.length > 0) {
@@ -178,7 +187,7 @@ const Klasse = () => {
 
   const loadClassQuestProgress = async () => {
     const { data, error } = await (supabase.rpc as any)("get_class_quest_progress", {
-      p_month_start: format(startOfMonth(new Date()), "yyyy-MM-dd"),
+      p_week_start: format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd"),
     });
 
     if (!error && data && data.length > 0) {
@@ -198,21 +207,22 @@ const Klasse = () => {
   const questComplete = classQuestProgress >= classQuestGoal && classQuestGoal > 0;
   const highlightedClassPoints = studentPointsTotal + (questComplete ? classQuestBonusPoints : 0);
   const classTotalPoints = studentPointsTotal;
-  const currentMonth = startOfMonth(new Date());
-  const questSlots = Array.from({ length: 5 }, (_, index) => {
-    const slotStart = addMonths(currentMonth, index);
+  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const questSlots = Array.from({ length: 4 }, (_, index) => {
+    const slotStart = addWeeks(currentWeekStart, index);
+    const slotEnd   = endOfWeek(slotStart, { weekStartsOn: 1 });
     const isCurrent = index === 0;
-    const progress = isCurrent ? classQuestProgress : 0;
-    const goal = classQuestGoal;
+    const progress  = isCurrent ? classQuestProgress : 0;
+    const exName    = EXERCISE_NAMES[getExerciseIndex(slotStart)];
 
     return {
       id: `quest-${index}`,
-      label: isCurrent ? "Kniebeugen" : `Slot ${index + 1}`,
+      label: exName,
       startLabel: format(slotStart, "dd.MM.", { locale: de }),
-      endLabel: format(endOfMonth(slotStart), "dd.MM.", { locale: de }),
+      endLabel:   format(slotEnd,   "dd.MM.", { locale: de }),
       progress,
-      goal,
-      complete: progress >= goal,
+      goal: classQuestGoal,
+      complete: progress >= classQuestGoal,
     };
   });
   const currentStudent = studentRankings.find((student) => student.id === userId);
@@ -323,7 +333,7 @@ const Klasse = () => {
             <div className="relative mt-2">
               <div
                 className="grid w-full overflow-hidden rounded-[18px] border border-white/65 bg-white shadow-[0_12px_24px_rgba(2,44,120,0.18),inset_0_1px_0_rgba(255,255,255,0.72)]"
-                style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr)) minmax(0, 2.5fr)" }}
+                style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr)) minmax(0, 2.5fr)" }}
               >
                 {questSlots.map((slot, index) => (
                   <div
@@ -337,7 +347,7 @@ const Klasse = () => {
                     <div className="flex h-full flex-col justify-between">
                       <div>
                         <p className={`text-[9px] font-black uppercase leading-tight ${slot.complete ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
-                          {index === 0 ? "Nächste Quest" : slot.label}
+                          {slot.label}
                         </p>
                       </div>
                       <div>

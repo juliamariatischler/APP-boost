@@ -11,7 +11,7 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "7.4.3"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "7.6.5"),
         .package(name: "CapacitorSplashScreen", path: "../../../node_modules/@capacitor/splash-screen"),
         .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
         .package(name: "CapgoCapacitorNfc", path: "../../../node_modules/@capgo/capacitor-nfc"),
@@ -27,6 +27,12 @@ let package = Package(
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
                 .product(name: "CapgoCapacitorNfc", package: "CapgoCapacitorNfc"),
                 .product(name: "CordovaPluginHealth", package: "CordovaPluginHealth")
+            ],
+            cSettings: [
+                .unsafeFlags(["-Wno-deprecated-declarations"])
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xcc", "-Wno-deprecated-declarations"])
             ]
         )
     ]

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, startOfMonth } from "date-fns";
+import { endOfWeek, format, startOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { CalendarDays, Home, Trophy, UserPlus, Users, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -28,6 +28,22 @@ type ClassQuestProgressRow = {
 const numberFormat = new Intl.NumberFormat("de-AT");
 const CLASS_QUEST_REWARD_POINTS = 2000;
 
+// Exercise rotation anchored at 2026-06-01, cycling every 5 weeks.
+const ANCHOR_WEEK = new Date(2026, 5, 1); // 2026-06-01 Monday
+const EXERCISES = [
+  { name: "Kniebeugen",   desc: "Jede eingetragene Kniebeuge zählt automatisch dazu.",    url: "/squat-counter.html",         buttonText: "Kniebeugen eintragen" },
+  { name: "Hampelmänner", desc: "Jeder eingetragene Hampelmann zählt automatisch dazu.",  url: "/jumping-jacks-counter.html", buttonText: "Hampelmänner eintragen" },
+  { name: "Liegestütze",  desc: "Jede eingetragene Liegestütze zählt automatisch dazu.",  url: "/pushup-counter.html",        buttonText: "Liegestütze eintragen" },
+  { name: "Planks",       desc: "Jede eingetragene Plank-Sekunde zählt automatisch dazu.", url: "/plank-timer.html",           buttonText: "Planks machen" },
+  { name: "Situps",       desc: "Jeder eingetragene Situp zählt automatisch dazu.",        url: "/situp-counter.html",         buttonText: "Situps eintragen" },
+] as const;
+
+function getExerciseIndex(weekStart: Date): number {
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const weeksDiff = Math.floor((weekStart.getTime() - ANCHOR_WEEK.getTime()) / msPerWeek);
+  return ((weeksDiff % 5) + 5) % 5;
+}
+
 
 const getClassLabel = (className?: string | null) => {
   if (!className) return "Deine Klasse";
@@ -43,8 +59,14 @@ const ClassQuest = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [equippedItem, setEquippedItem] = useState<AvatarItemId>("none");
 
-  const monthStart = useMemo(() => format(startOfMonth(new Date()), "yyyy-MM-dd"), []);
-  const monthLabel = useMemo(() => format(startOfMonth(new Date()), "MMMM yyyy", { locale: de }), []);
+  const weekStartDate = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const weekEndDate   = useMemo(() => endOfWeek(new Date(), { weekStartsOn: 1 }), []);
+  const weekStart     = useMemo(() => format(weekStartDate, "yyyy-MM-dd"), [weekStartDate]);
+  const weekLabel     = useMemo(
+    () => `${format(weekStartDate, "dd.MM.")} – ${format(weekEndDate, "dd.MM.yyyy", { locale: de })}`,
+    [weekStartDate, weekEndDate]
+  );
+  const currentExercise = useMemo(() => EXERCISES[getExerciseIndex(weekStartDate)], [weekStartDate]);
 
   useEffect(() => {
     const loadClassQuest = async () => {
@@ -61,7 +83,7 @@ const ClassQuest = () => {
           const { data: codeData, error: codeError } = await (supabase.rpc as any)("get_code_class_quest_progress", {
             p_device_id: codeSession.device_id,
             p_session_token: codeSession.session_token,
-            p_month_start: monthStart,
+            p_week_start: weekStart,
           });
           if (!codeError && codeData && !codeData.error) {
             const result = codeData as Record<string, unknown>;
@@ -78,7 +100,7 @@ const ClassQuest = () => {
       setEquippedItem(loadEquippedAvatarItem(session.user.id));
 
       const { data, error } = await (supabase.rpc as any)("get_class_quest_progress", {
-        p_month_start: monthStart,
+        p_week_start: weekStart,
       });
 
       if (error) {
@@ -95,7 +117,7 @@ const ClassQuest = () => {
       const goal = Number(nextRows[0]?.goal || 1000);
       if (classTotal >= goal) {
         const { data: awardData, error: awardError } = await (supabase.rpc as any)("award_class_quest_bonus_if_complete", {
-          p_month_start: monthStart,
+          p_week_start: weekStart,
         });
         if (!awardError && awardData?.awarded) {
           toast.success(`Klassenquest geschafft! +${numberFormat.format(CLASS_QUEST_REWARD_POINTS)} Blitze fürs Klassenranking.`);
@@ -106,7 +128,7 @@ const ClassQuest = () => {
     };
 
     void loadClassQuest();
-  }, [monthStart, navigate, codeSession, codeAuthLoading]);
+  }, [weekStart, navigate, codeSession, codeAuthLoading]);
 
   const goal = rows[0]?.goal ?? 1000;
   const classTotal = rows[0]?.class_total ?? 0;
@@ -170,15 +192,15 @@ const ClassQuest = () => {
               <div className="relative z-10 max-w-[54%] px-6 pt-6">
                 <div className="inline-flex items-center gap-1.5 text-primary">
                   <CalendarDays className="h-4 w-4" />
-                  <span className="text-sm font-bold capitalize">{monthLabel}</span>
+                  <span className="text-sm font-bold">{weekLabel}</span>
                 </div>
                 <h1 className="mt-3 font-black leading-[0.92] tracking-tight text-foreground">
                   <span className="block text-[2.2rem]">{numberFormat.format(goal)}</span>
-                  <span className="block text-[1.8rem]">Kniebeugen</span>
+                  <span className="block text-[1.8rem]">{currentExercise.name}</span>
                 </h1>
                 <p className="mt-3 text-sm font-medium leading-relaxed text-foreground/70">
                   Gemeinsam als Klasse sammeln.{" "}
-                  Jede eingetragene Kniebeuge zählt automatisch dazu.
+                  {currentExercise.desc}
                 </p>
               </div>
 
@@ -267,7 +289,7 @@ const ClassQuest = () => {
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-black tracking-tight text-foreground">Wer hilft mit?</h2>
-                <p className="mt-0.5 text-sm font-medium text-muted-foreground">Die Kniebeugen dieses Monats werden addiert.</p>
+                <p className="mt-0.5 text-sm font-medium text-muted-foreground">Die {currentExercise.name} dieser Woche werden addiert.</p>
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <UserPlus className="h-5 w-5" />
@@ -328,10 +350,10 @@ const ClassQuest = () => {
 
             <Button
               type="button"
-              onClick={() => { window.location.href = "/squat-counter.html"; }}
+              onClick={() => { window.location.href = currentExercise.url; }}
               className="mt-6 h-14 w-full rounded-[22px] text-base font-black shadow-[0_16px_30px_rgba(34,197,94,0.22)]"
             >
-              Kniebeugen eintragen
+              {currentExercise.buttonText}
             </Button>
 
             <div className="h-6" />
