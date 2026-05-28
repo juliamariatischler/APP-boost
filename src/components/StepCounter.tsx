@@ -26,6 +26,15 @@ const STEP_REWARDS = [
   { steps: 5000, flashes: 3 },
 ];
 
+const getLocalDateKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   const [steps, setSteps] = useState(0);
   const [isActive, setIsActive] = useState(false);
@@ -64,7 +73,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isActiveRef.current) {
-        // Small delay so iOS HealthKit is ready after app resume
+        // Small delay so iOS HealthKit / Android Health Connect is ready after app resume
         setTimeout(() => fetchAndUpdateSteps(), 1000);
       }
     };
@@ -74,7 +83,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   }, [isHealthSupported]);
 
   const loadTodaySteps = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateKey();
 
     const { data, error } = await supabase
       .from("daily_results")
@@ -93,7 +102,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       setLastAwardedFlashes(earned);
       setLoading(false);
 
-      // Auto-sync from HealthKit if tracking was already active today
+      // Auto-sync from the native health provider if tracking was already active today
       if (trackingActive && isHealthSupported) {
         await syncHealthSteps(earned);
       }
@@ -167,7 +176,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
   };
 
   const saveSteps = async (newSteps: number) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateKey();
     
     const { data: existing } = await supabase
       .from("daily_results")
@@ -247,7 +256,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateKey();
     
     const { data: existing } = await supabase
       .from("daily_results")
@@ -473,7 +482,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       {/* Android sync delay hint */}
       {isActive && isAndroid && (
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          Fitness-Apps übertragen Schritte verzögert an Health Connect. Falls die Zahl abweicht, kurz warten und dann Aktualisieren tippen.
+          BOOST liest ausschließlich die heutigen Health-Connect-Schritte. Falls Samsung Health abweicht, prüfe bitte in Samsung Health und Health Connect die Freigabe für Schritte und tippe danach auf Aktualisieren.
         </p>
       )}
 
