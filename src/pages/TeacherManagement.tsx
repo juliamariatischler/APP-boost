@@ -161,6 +161,11 @@ export default function TeacherManagement() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignClassesLoading, setAssignClassesLoading] = useState(false);
 
+  // "Neue Klasse anlegen" state (supabase auth only)
+  const [createClassName, setCreateClassName] = useState("");
+  const [createClassLoading, setCreateClassLoading] = useState(false);
+  const [teacherOwnSchool, setTeacherOwnSchool] = useState<{ id: string; name: string } | null>(null);
+
   const selectedClass = useMemo(
     () => classes.find((item) => item.class_id === selectedClassId),
     [classes, selectedClassId],
@@ -259,6 +264,32 @@ export default function TeacherManagement() {
     void load();
   }, [authMode]);
 
+  // Load teacher's own school for "Neue Klasse anlegen" (supabase auth only)
+  useEffect(() => {
+    if (authMode !== "supabase") return;
+    const load = async () => {
+      try {
+        const { data } = await (supabase.rpc as any)("get_teacher_own_school_auth");
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length > 0) {
+          const row = rows[0] as { school_id: string; school_name: string };
+          setTeacherOwnSchool({ id: row.school_id, name: row.school_name });
+        }
+      } catch { /* ignore */ }
+    };
+    void load();
+  }, [authMode]);
+
+  // Fallback: derive own school from already-loaded classes when RPC returned nothing
+  useEffect(() => {
+    if (authMode !== "supabase") return;
+    if (teacherOwnSchool) return;
+    const first = classes.find((c) => c.school_id && c.school_name);
+    if (first) {
+      setTeacherOwnSchool({ id: first.school_id!, name: first.school_name });
+    }
+  }, [classes, authMode, teacherOwnSchool]);
+
   // Load classes when school selection changes
   useEffect(() => {
     if (!assignSchoolId) { setAvailableClasses([]); setAssignClassId(""); return; }
@@ -267,7 +298,7 @@ export default function TeacherManagement() {
     setAssignClassId("");
     const load = async () => {
       try {
-        const { data } = await (supabase.rpc as any)("get_classes_for_school", { p_school_id: assignSchoolId });
+        const { data } = await (supabase.rpc as any)("get_claimable_classes_for_school", { p_school_id: assignSchoolId });
         if (Array.isArray(data)) setAvailableClasses(data as ClassOption[]);
       } catch { /* ignore */ } finally {
         setAssignClassesLoading(false);
@@ -296,6 +327,31 @@ export default function TeacherManagement() {
       toast.error(err?.message ?? "Fehler beim Übernehmen der Klasse");
     } finally {
       setAssignLoading(false);
+    }
+  };
+
+  const handleCreateNewClass = async () => {
+    const name = createClassName.trim();
+    if (!name || !teacherOwnSchool) {
+      toast.error("Bitte Klassenname eingeben.");
+      return;
+    }
+    setCreateClassLoading(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("create_class_and_assign_auth", {
+        p_school_id:  teacherOwnSchool.id,
+        p_class_name: name,
+      });
+      if (error) { toast.error(error.message); return; }
+      const rows = Array.isArray(data) ? data : [];
+      if (rows.length === 0) { toast.error("Klasse konnte nicht angelegt werden."); return; }
+      toast.success(`Klasse „${name}" angelegt.`);
+      setCreateClassName("");
+      await loadClasses("supabase");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Fehler beim Anlegen der Klasse");
+    } finally {
+      setCreateClassLoading(false);
     }
   };
 
@@ -658,6 +714,45 @@ export default function TeacherManagement() {
                   ? <Loader2 className="h-4 w-4 animate-spin" />
                   : <Check className="h-4 w-4" />}
                 Klasse übernehmen
+              </Button>
+            </div>
+          )}
+
+          {/* Neue Klasse anlegen (supabase auth only) */}
+          {authMode === "supabase" && (
+            <div className="space-y-2 border-t border-border pt-3">
+              <h3 className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
+                Neue Klasse anlegen
+              </h3>
+              {teacherOwnSchool ? (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">
+                  <span className="font-semibold text-foreground truncate">{teacherOwnSchool.name}</span>
+                  <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground">fix</span>
+                </div>
+              ) : (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Kein Schuleintrag gefunden. Bitte übernimm zuerst eine Klasse.
+                </p>
+              )}
+              <Input
+                value={createClassName}
+                onChange={(e) => setCreateClassName(e.target.value)}
+                placeholder="Klassenname, z. B. 4a"
+                disabled={createClassLoading || !teacherOwnSchool}
+                className="h-9 text-sm"
+                onKeyDown={(e) => { if (e.key === "Enter") void handleCreateNewClass(); }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="w-full"
+                disabled={createClassLoading || !createClassName.trim() || !teacherOwnSchool}
+                onClick={() => void handleCreateNewClass()}
+              >
+                {createClassLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Plus className="h-4 w-4" />}
+                Klasse anlegen
               </Button>
             </div>
           )}
