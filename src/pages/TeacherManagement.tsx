@@ -44,8 +44,6 @@ import {
 
 type AuthMode = "supabase" | "code";
 
-type SchoolOption = { id: string; name: string };
-type ClassOption  = { id: string; name: string };
 
 type ExportTicket = {
   studentId: string;
@@ -153,14 +151,6 @@ export default function TeacherManagement() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedExportStudentIds, setSelectedExportStudentIds] = useState<string[]>([]);
 
-  // "Klasse übernehmen" state (supabase auth only)
-  const [availableSchools, setAvailableSchools] = useState<SchoolOption[]>([]);
-  const [availableClasses, setAvailableClasses] = useState<ClassOption[]>([]);
-  const [assignSchoolId, setAssignSchoolId] = useState("");
-  const [assignClassId, setAssignClassId] = useState("");
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [assignClassesLoading, setAssignClassesLoading] = useState(false);
-
   // "Neue Klasse anlegen" state (supabase auth only)
   const [createClassName, setCreateClassName] = useState("");
   const [createClassLoading, setCreateClassLoading] = useState(false);
@@ -252,18 +242,6 @@ export default function TeacherManagement() {
     void loadStudents(authMode, selectedClassId);
   }, [authMode, loadStudents, selectedClassId]);
 
-  // Load schools for "Klasse übernehmen" dropdown (supabase only)
-  useEffect(() => {
-    if (authMode !== "supabase") return;
-    const load = async () => {
-      try {
-        const { data } = await (supabase.rpc as any)("get_schools_list");
-        if (Array.isArray(data)) setAvailableSchools(data as SchoolOption[]);
-      } catch { /* ignore */ }
-    };
-    void load();
-  }, [authMode]);
-
   // Load teacher's own school for "Neue Klasse anlegen" (supabase auth only)
   useEffect(() => {
     if (authMode !== "supabase") return;
@@ -289,46 +267,6 @@ export default function TeacherManagement() {
       setTeacherOwnSchool({ id: first.school_id!, name: first.school_name });
     }
   }, [classes, authMode, teacherOwnSchool]);
-
-  // Load classes when school selection changes
-  useEffect(() => {
-    if (!assignSchoolId) { setAvailableClasses([]); setAssignClassId(""); return; }
-    setAssignClassesLoading(true);
-    setAvailableClasses([]);
-    setAssignClassId("");
-    const load = async () => {
-      try {
-        const { data } = await (supabase.rpc as any)("get_claimable_classes_for_school", { p_school_id: assignSchoolId });
-        if (Array.isArray(data)) setAvailableClasses(data as ClassOption[]);
-      } catch { /* ignore */ } finally {
-        setAssignClassesLoading(false);
-      }
-    };
-    void load();
-  }, [assignSchoolId]);
-
-  const handleSaveClassAssignment = async () => {
-    if (!assignSchoolId || !assignClassId) {
-      toast.error("Bitte Schule und Klasse auswählen.");
-      return;
-    }
-    setAssignLoading(true);
-    try {
-      const { error } = await (supabase.rpc as any)("save_teacher_class_assignment_auth", {
-        p_school_id: assignSchoolId,
-        p_class_id:  assignClassId,
-      });
-      if (error) { toast.error(error.message); return; }
-      toast.success("Klasse übernommen.");
-      setAssignSchoolId("");
-      setAssignClassId("");
-      await loadClasses("supabase");
-    } catch (err: any) {
-      toast.error(err?.message ?? "Fehler beim Übernehmen der Klasse");
-    } finally {
-      setAssignLoading(false);
-    }
-  };
 
   const handleCreateNewClass = async () => {
     const name = createClassName.trim();
@@ -664,58 +602,8 @@ export default function TeacherManagement() {
 
           {!loading && classes.length === 0 && (
             <Card className="rounded-lg p-4 text-sm text-muted-foreground">
-              Noch keine Klasse verfügbar. Übernimm unten eine Klasse.
+              Noch keine Klasse verfügbar.
             </Card>
-          )}
-
-          {/* Klasse übernehmen (supabase auth only) */}
-          {authMode === "supabase" && (
-            <div className="space-y-2 pt-2">
-              <h3 className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
-                Klasse übernehmen
-              </h3>
-              <select
-                value={assignSchoolId}
-                onChange={(e) => setAssignSchoolId(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              >
-                <option value="">Schule auswählen…</option>
-                {availableSchools.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <select
-                value={assignClassId}
-                onChange={(e) => setAssignClassId(e.target.value)}
-                disabled={!assignSchoolId || assignClassesLoading}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50"
-              >
-                <option value="">
-                  {assignClassesLoading
-                    ? "Klassen werden geladen…"
-                    : !assignSchoolId
-                      ? "Bitte zuerst Schule wählen"
-                      : availableClasses.length > 0
-                        ? "Klasse auswählen…"
-                        : "Keine Klassen verfügbar"}
-                </option>
-                {availableClasses.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                size="sm"
-                className="w-full"
-                disabled={assignLoading || !assignSchoolId || !assignClassId}
-                onClick={() => void handleSaveClassAssignment()}
-              >
-                {assignLoading
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Check className="h-4 w-4" />}
-                Klasse übernehmen
-              </Button>
-            </div>
           )}
 
           {/* Neue Klasse anlegen (supabase auth only) */}
