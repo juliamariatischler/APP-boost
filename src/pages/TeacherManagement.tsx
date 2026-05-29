@@ -465,7 +465,7 @@ export default function TeacherManagement() {
     exportableStudents.length > 0 && selectedExportStudentIds.length === exportableStudents.length;
 
   return (
-    <div className="min-h-screen bg-background pb-nav-safe">
+    <div className="min-h-screen bg-[#f8fbf8] pb-nav-safe">
       <style>{`
         .teacher-print-export {
           display: none;
@@ -559,13 +559,13 @@ export default function TeacherManagement() {
       `}</style>
 
       <div className="teacher-management-screen">
-      <header className="border-b border-border bg-background/95 px-4 py-4">
+      <header className="border-b border-border/40 bg-white px-4 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Verwaltung</p>
             <h1 className="text-2xl font-black leading-tight text-foreground">{teacherName}</h1>
           </div>
-          <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Abmelden">
+          <Button variant="outline" size="icon" className="rounded-xl border-black/5 shadow-sm" onClick={handleLogout} aria-label="Abmelden">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
@@ -574,7 +574,10 @@ export default function TeacherManagement() {
       <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Klassen</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+              Klassen
+            </h2>
             {loading && <span className="text-xs text-muted-foreground">Lädt...</span>}
           </div>
 
@@ -583,42 +586,43 @@ export default function TeacherManagement() {
               key={cls.class_id}
               type="button"
               onClick={() => setSelectedClassId(cls.class_id)}
-              className={`flex w-full items-center gap-3 rounded-lg border px-3 py-3 text-left transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-[20px] border px-4 py-3.5 text-left transition-all ${
                 cls.class_id === selectedClassId
-                  ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border bg-card hover:bg-muted"
+                  ? "border-primary/30 bg-primary/10 shadow-[0_6px_16px_rgba(34,197,94,0.15)]"
+                  : "border-black/5 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)] hover:border-primary/20 hover:bg-primary/5"
               }`}
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-primary/12 text-primary">
                 <Users className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">Klasse {cls.class_name}</p>
-                <p className="truncate text-xs text-muted-foreground">{cls.school_name}</p>
+                <p className="truncate font-black text-foreground">Klasse {cls.class_name}</p>
+                <p className="truncate text-xs font-semibold text-muted-foreground">{cls.school_name}</p>
               </div>
-              <Badge variant="secondary">{cls.student_count}</Badge>
+              <Badge variant="secondary" className="rounded-full">{cls.student_count}</Badge>
             </button>
           ))}
 
           {!loading && classes.length === 0 && (
-            <Card className="rounded-lg p-4 text-sm text-muted-foreground">
+            <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
               Noch keine Klasse verfügbar.
             </Card>
           )}
 
           {/* Neue Klasse anlegen (supabase auth only) */}
           {authMode === "supabase" && (
-            <div className="space-y-2 border-t border-border pt-3">
-              <h3 className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="space-y-3 rounded-[20px] border border-dashed border-primary/30 bg-primary/5 p-4">
+              <h3 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-primary">
+                <Plus className="h-3.5 w-3.5" />
                 Neue Klasse anlegen
               </h3>
               {teacherOwnSchool ? (
-                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between rounded-2xl border border-black/5 bg-white px-3 py-2.5 text-sm shadow-sm">
                   <span className="font-semibold text-foreground truncate">{teacherOwnSchool.name}</span>
                   <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground">fix</span>
                 </div>
               ) : (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
                   Kein Schuleintrag gefunden. Bitte übernimm zuerst eine Klasse.
                 </p>
               )}
@@ -627,13 +631,13 @@ export default function TeacherManagement() {
                 onChange={(e) => setCreateClassName(e.target.value)}
                 placeholder="Klassenname, z. B. 4a"
                 disabled={createClassLoading || !teacherOwnSchool}
-                className="h-9 text-sm"
+                className="h-10 rounded-2xl text-sm"
                 onKeyDown={(e) => { if (e.key === "Enter") void handleCreateNewClass(); }}
               />
               <Button
                 type="button"
                 size="sm"
-                className="w-full"
+                className="w-full rounded-2xl"
                 disabled={createClassLoading || !createClassName.trim() || !teacherOwnSchool}
                 onClick={() => void handleCreateNewClass()}
               >
@@ -649,27 +653,34 @@ export default function TeacherManagement() {
         <section className="space-y-5">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-muted-foreground">{selectedClass?.school_name || "Klasse"}</p>
+              <div className="flex items-center gap-2">
+                {selectedClass && (
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/12">
+                    <span className="text-[10px] font-black text-primary">{selectedClass.class_name.substring(0, 2).toUpperCase()}</span>
+                  </div>
+                )}
+                <p className="text-sm font-semibold text-muted-foreground">{selectedClass?.school_name || "Klasse"}</p>
+              </div>
               <h2 className="text-2xl font-black text-foreground">
                 {selectedClass ? `Klasse ${selectedClass.class_name} verwalten` : "Klasse auswählen"}
               </h2>
             </div>
-            <Button type="button" variant="outline" onClick={openExportDialog} disabled={exporting || !selectedClassId}>
+            <Button type="button" variant="outline" className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40" onClick={openExportDialog} disabled={exporting || !selectedClassId}>
               <Printer className="h-4 w-4" />
               Exportansicht
             </Button>
           </div>
 
-          <Card className="rounded-lg p-4">
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
             <form onSubmit={handleAddStudent} className="flex flex-col gap-3 sm:flex-row">
               <Input
                 value={newStudentName}
                 onChange={(event) => setNewStudentName(event.target.value)}
                 placeholder="Vorname Schüler:in"
                 disabled={!selectedClassId}
-                className="h-11"
+                className="h-11 rounded-2xl"
               />
-              <Button type="submit" disabled={!selectedClassId || !newStudentName.trim()} className="h-11">
+              <Button type="submit" disabled={!selectedClassId || !newStudentName.trim()} className="h-11 rounded-2xl">
                 <Plus className="h-4 w-4" />
                 Hinzufügen
               </Button>
@@ -677,19 +688,22 @@ export default function TeacherManagement() {
           </Card>
 
           {activationCode && activationQrDataUrl && (
-            <Card className="rounded-lg p-4">
+            <Card className="overflow-hidden rounded-[20px] border-primary/15 bg-white p-5 shadow-[0_12px_28px_rgba(34,197,94,0.10)]">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/12">
+                  <QrCode className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Aktivierung</p>
+                <span className="ml-1 text-sm font-black text-foreground">— {formatDisplayName(activationStudentName)}</span>
+              </div>
               <div className="grid gap-4 md:grid-cols-[15rem_minmax(0,1fr)]">
-                <div className="flex items-center justify-center rounded-lg border border-border bg-white p-3">
+                <div className="flex items-center justify-center rounded-[18px] border border-black/5 bg-white p-4 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
                   <img src={activationQrDataUrl} alt="QR-Code zur Schüleraktivierung" className="h-52 w-52" />
                 </div>
                 <div className="min-w-0 space-y-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Aktivierung</p>
-                    <h3 className="text-xl font-black text-foreground">{formatDisplayName(activationStudentName)}</h3>
-                  </div>
                   <div className="space-y-2">
                     <p className="text-sm font-bold text-muted-foreground">Manueller Code</p>
-                    <p className="break-all rounded-lg bg-muted px-3 py-2 font-mono text-lg font-black tracking-[0.12em] text-foreground">
+                    <p className="break-all rounded-2xl bg-muted px-4 py-3 font-mono text-lg font-black tracking-[0.12em] text-foreground">
                       {activationCode}
                     </p>
                   </div>
@@ -703,10 +717,19 @@ export default function TeacherManagement() {
           )}
 
           <div className="space-y-3">
-            <h3 className="text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">Schüler:innen</h3>
-            {studentsLoading && <p className="text-sm text-muted-foreground">Lade Schüler:innen...</p>}
+            <h3 className="flex items-center gap-1.5 text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="inline-block h-2 w-2 rounded-full bg-sky-500" />
+              Schüler:innen
+            </h3>
+            {studentsLoading && (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-20 animate-pulse rounded-[20px] bg-muted" />
+                ))}
+              </div>
+            )}
             {!studentsLoading && students.length === 0 && (
-              <Card className="rounded-lg p-4 text-sm text-muted-foreground">
+              <Card className="rounded-[20px] border-black/5 bg-white p-6 text-center text-sm text-muted-foreground">
                 Für diese Klasse sind noch keine Schüler:innen angelegt.
               </Card>
             )}
@@ -719,17 +742,22 @@ export default function TeacherManagement() {
 
               if (isProfileStudent) {
                 return (
-                  <Card key={student.student_id} className="rounded-lg p-4 border-primary/20 bg-primary/5">
+                  <Card key={student.student_id} className="rounded-[20px] border-primary/20 bg-primary/5 p-4 shadow-[0_6px_16px_rgba(34,197,94,0.09)]">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="truncate text-lg font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
-                          <Badge variant="default">aktiv</Badge>
-                          <Badge variant="outline" className="border-primary/30 text-primary text-[10px]">eigene Anmeldung</Badge>
+                      <div className="min-w-0 flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-black text-primary">
+                          {formatDisplayName(student.display_name).substring(0, 1).toUpperCase()}
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Schüler:in hat sich selbst registriert und nutzt eine eigene App-Anmeldung.
-                        </p>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="truncate text-base font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
+                            <Badge variant="default" className="rounded-full">aktiv</Badge>
+                            <Badge variant="outline" className="rounded-full border-primary/30 text-[10px] text-primary">eigene Anmeldung</Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Schüler:in hat sich selbst registriert und nutzt eine eigene App-Anmeldung.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -737,34 +765,51 @@ export default function TeacherManagement() {
               }
 
               return (
-                <Card key={student.student_id} className="rounded-lg p-4">
+                <Card key={student.student_id} className={`rounded-[20px] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.05)] ${
+                  student.active === false
+                    ? "border-red-100 bg-red-50/40"
+                    : isActivated
+                      ? "border-primary/15 bg-white"
+                      : "border-black/5 bg-white"
+                }`}>
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="truncate text-lg font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
-                        <Badge variant={student.active === false ? "destructive" : isActivated ? "default" : "secondary"}>
-                          {student.active === false ? "deaktiviert" : isActivated ? "aktiviert" : "offen"}
-                        </Badge>
-                        {codeAvailable && <Badge variant="outline">QR bereit</Badge>}
+                    <div className="min-w-0 flex items-start gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                        student.active === false
+                          ? "bg-red-100 text-red-600"
+                          : isActivated
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted text-muted-foreground"
+                      }`}>
+                        {formatDisplayName(student.display_name).substring(0, 1).toUpperCase()}
                       </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {isActivated
-                          ? "Ein Gerät ist verbunden."
-                          : codeAvailable
-                            ? "QR-Code ist vorbereitet."
-                            : "Noch kein offener QR-Code."}
-                      </p>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="truncate text-base font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
+                          <Badge variant={student.active === false ? "destructive" : isActivated ? "default" : "secondary"} className="rounded-full">
+                            {student.active === false ? "deaktiviert" : isActivated ? "aktiviert" : "offen"}
+                          </Badge>
+                          {codeAvailable && <Badge variant="outline" className="rounded-full border-primary/30 text-primary">QR bereit</Badge>}
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {isActivated
+                            ? "Ein Gerät ist verbunden."
+                            : codeAvailable
+                              ? "QR-Code ist vorbereitet."
+                              : "Noch kein offener QR-Code."}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleGenerate(student)} disabled={isBusy}>
+                      <Button type="button" variant="outline" size="sm" className="rounded-xl border-black/10" onClick={() => handleGenerate(student)} disabled={isBusy}>
                         {codeAvailable ? <RefreshCcw className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
                         {codeAvailable ? "Neu generieren" : "QR generieren"}
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleResetDevice(student)} disabled={isBusy}>
+                      <Button type="button" variant="outline" size="sm" className="rounded-xl border-black/10" onClick={() => handleResetDevice(student)} disabled={isBusy}>
                         <RotateCcw className="h-4 w-4" />
                         Gerät resetten
                       </Button>
-                      <Button type="button" variant="destructive" size="sm" onClick={() => handleDeactivate(student)} disabled={isBusy}>
+                      <Button type="button" variant="destructive" size="sm" className="rounded-xl" onClick={() => handleDeactivate(student)} disabled={isBusy}>
                         <ShieldOff className="h-4 w-4" />
                         Deaktivieren
                       </Button>
@@ -781,7 +826,7 @@ export default function TeacherManagement() {
       </div>
 
       <Dialog open={exportDialogOpen} onOpenChange={(open) => !exporting && setExportDialogOpen(open)}>
-        <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-xl">
+        <DialogContent className="max-h-[85vh] overflow-hidden rounded-[24px] sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>QR-Codes als PDF erstellen</DialogTitle>
             <DialogDescription>
@@ -790,14 +835,14 @@ export default function TeacherManagement() {
           </DialogHeader>
 
           <div className="space-y-3 overflow-hidden">
-            <label className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
+            <label className="flex items-center gap-3 rounded-[18px] border border-black/5 bg-primary/5 px-4 py-3 shadow-sm">
               <Checkbox
                 checked={allExportStudentsSelected}
                 onCheckedChange={(checked) => setAllExportStudents(checked === true)}
                 disabled={exporting}
               />
-              <span className="font-bold text-foreground">Alle auswählbaren Schüler:innen</span>
-              <Badge variant="secondary" className="ml-auto">
+              <span className="font-black text-foreground">Alle auswählbaren Schüler:innen</span>
+              <Badge variant="secondary" className="ml-auto rounded-full">
                 {exportableStudents.length}
               </Badge>
             </label>
@@ -806,7 +851,7 @@ export default function TeacherManagement() {
               {exportableStudents.map((student) => (
                 <label
                   key={student.student_id}
-                  className="flex items-center gap-3 rounded-lg border border-border px-3 py-3"
+                  className="flex items-center gap-3 rounded-[18px] border border-black/5 bg-white px-4 py-3 shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
                 >
                   <Checkbox
                     checked={selectedExportStudentIds.includes(student.student_id)}
@@ -814,17 +859,17 @@ export default function TeacherManagement() {
                     disabled={exporting}
                   />
                   <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{formatDisplayName(student.display_name)}</span>
-                  <Badge variant="outline">offen</Badge>
+                  <Badge variant="outline" className="rounded-full border-amber-200 bg-amber-50 text-amber-600">offen</Badge>
                 </label>
               ))}
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setExportDialogOpen(false)} disabled={exporting}>
+            <Button type="button" variant="outline" className="rounded-2xl" onClick={() => setExportDialogOpen(false)} disabled={exporting}>
               Abbrechen
             </Button>
-            <Button type="button" onClick={handleExportClass} disabled={exporting || selectedExportStudentIds.length === 0}>
+            <Button type="button" className="rounded-2xl" onClick={handleExportClass} disabled={exporting || selectedExportStudentIds.length === 0}>
               <Printer className="h-4 w-4" />
               {exporting ? "PDF wird vorbereitet..." : `PDF erstellen (${selectedExportStudentIds.length})`}
             </Button>

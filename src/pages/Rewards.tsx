@@ -20,6 +20,8 @@ type RewardItem = {
   threshold: number;
   category: string;
   icon: string | null;
+  image_url: string | null;
+  sponsor_logo_url: string | null;
 };
 
 type ClassMilestone = {
@@ -32,11 +34,11 @@ type ClassMilestone = {
 };
 
 const fallbackRewards: RewardItem[] = [
-  { id: "fallback-bipa-50", title: "BIPA Gutschein 5 EUR", partner: "BIPA", threshold: 50, category: "gutscheine", icon: "🎀" },
-  { id: "fallback-dm-75", title: "dm Gutschein 5 EUR", partner: "dm", threshold: 75, category: "gutscheine", icon: "🧴" },
-  { id: "fallback-intersport-100", title: "Sport-Trinkflasche", partner: "Intersport", threshold: 100, category: "sport", icon: "🍶" },
-  { id: "fallback-spar-200", title: "SPAR Gutschein 10 EUR", partner: "SPAR", threshold: 200, category: "gutscheine", icon: "🛒" },
-  { id: "fallback-intersport-400", title: "Sport-Rucksack", partner: "Intersport", threshold: 400, category: "sport", icon: "🎒" },
+  { id: "fallback-bipa-50", title: "BIPA Gutschein 5 EUR", partner: "BIPA", threshold: 50, category: "gutscheine", icon: "🎀", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-dm-75", title: "dm Gutschein 5 EUR", partner: "dm", threshold: 75, category: "gutscheine", icon: "🧴", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-intersport-100", title: "Sport-Trinkflasche", partner: "Intersport", threshold: 100, category: "sport", icon: "🍶", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-spar-200", title: "SPAR Gutschein 10 EUR", partner: "SPAR", threshold: 200, category: "gutscheine", icon: "🛒", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-intersport-400", title: "Sport-Rucksack", partner: "Intersport", threshold: 400, category: "sport", icon: "🎒", image_url: null, sponsor_logo_url: null },
 ];
 
 const fallbackMilestones: ClassMilestone[] = [
@@ -93,7 +95,7 @@ const Rewards = () => {
           await Promise.all([
             (supabase as any)
               .from("reward_items")
-              .select("id, title, partner, threshold, category, icon")
+              .select("id, title, partner, threshold, category, icon, image_url, sponsor_logo_url")
               .eq("is_active", true)
               .order("threshold", { ascending: true }),
             (supabase as any)
@@ -211,15 +213,23 @@ const Rewards = () => {
       <TopHeader />
 
       <div className="relative max-w-screen-xl mx-auto px-4 -mt-4">
-        <div className="absolute inset-x-4 top-0 bottom-0 z-30 flex items-start justify-center pt-20 rounded-[28px] bg-zinc-950/72 backdrop-grayscale">
+        {/* Coming soon overlay */}
+        <div className="absolute inset-x-4 top-0 bottom-0 z-30 flex items-start justify-center pt-24 rounded-[28px] bg-zinc-200/80 dark:bg-zinc-800/80 backdrop-blur-sm">
           <div className="rotate-[-7deg] text-center">
-            <p className="text-[3.8rem] font-black leading-none tracking-tight text-white/95 drop-shadow-[0_12px_28px_rgba(0,0,0,0.45)] sm:text-[5.5rem]">
+            <p className="text-[3.8rem] font-black leading-none tracking-tight text-zinc-500 dark:text-zinc-400 drop-shadow-sm sm:text-[5.5rem]">
               Coming
             </p>
-            <p className="mt-2 text-[3.8rem] font-black leading-none tracking-tight text-white/95 drop-shadow-[0_12px_28px_rgba(0,0,0,0.45)] sm:text-[5.5rem]">
+            <p className="mt-2 text-[3.8rem] font-black leading-none tracking-tight text-zinc-500 dark:text-zinc-400 drop-shadow-sm sm:text-[5.5rem]">
               soon
             </p>
+            <p className="mt-3 text-xl font-bold text-zinc-400 dark:text-zinc-500 tracking-widest">08.06</p>
           </div>
+        </div>
+
+        {/* Title */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-black text-foreground">Belohnungen</h1>
+          <p className="text-sm text-muted-foreground">Löse deine Punkte gegen tolle Belohnungen ein.</p>
         </div>
 
         {/* Current Status */}
@@ -283,25 +293,36 @@ const Rewards = () => {
               {filteredRewards.map((reward) => {
                 const isUnlocked = myFlashes >= reward.threshold;
                 const flashesNeeded = reward.threshold - myFlashes;
-                
+
                 return (
-                  <Card 
+                  <Card
                     key={reward.id}
-                    className={`p-4 ${isUnlocked ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900" : "bg-card"}`}
+                    className="p-4 bg-card"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="text-3xl">{reward.icon || "🎁"}</div>
-                      <div className="flex-1">
+                      {/* Product image or emoji fallback */}
+                      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
+                        {reward.image_url ? (
+                          <img src={reward.image_url} alt={reward.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl">{reward.icon || "🎁"}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-foreground">{reward.title}</span>
+                          <span className="font-bold text-foreground leading-tight">{reward.title}</span>
                           {isUnlocked ? (
-                            <CheckCircle className="h-4 w-4 text-primary" />
+                            <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
                           ) : (
-                            <Lock className="h-4 w-4 text-muted-foreground" />
+                            <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground mb-2">
-                          Partner: {reward.partner || "BOOST"}
+                        {/* Sponsor row */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className="text-xs text-muted-foreground">Sponsor: {reward.partner || "BOOST"}</span>
+                          {reward.sponsor_logo_url && (
+                            <img src={reward.sponsor_logo_url} alt={reward.partner || ""} className="h-3.5 object-contain opacity-70" />
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1 text-sm">
@@ -310,13 +331,13 @@ const Rewards = () => {
                             <Zap className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                           </div>
                           {!isUnlocked && (
-                            <span className="text-xs text-orange-500">
-                              (noch {flashesNeeded} ⚡)
+                            <span className="text-xs text-muted-foreground">
+                              (noch {flashesNeeded} <Zap className="inline h-3 w-3" />)
                             </span>
                           )}
                         </div>
                       </div>
-                      <div>
+                      <div className="flex-shrink-0">
                         {isUnlocked ? (
                           <Button
                             size="sm"
@@ -327,12 +348,12 @@ const Rewards = () => {
                             {redeemingId === reward.id ? "..." : "Anfordern"}
                           </Button>
                         ) : (
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => navigate("/dashboard")}
                           >
-                            Mehr ⚡
+                            Mehr <Zap className="h-3 w-3 ml-1" />
                           </Button>
                         )}
                       </div>

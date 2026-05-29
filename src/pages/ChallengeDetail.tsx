@@ -15,6 +15,7 @@ import { DailyChallengeContent } from "@/components/DailyChallengeContent";
 import { TopHeader } from "@/components/TopHeader";
 import { BottomNav } from "@/components/BottomNav";
 import {
+  Calendar,
   CheckCircle2,
   MapPin,
   Nfc,
@@ -138,9 +139,10 @@ const ChallengeDetail = () => {
 
   const isTryIt = id === "tryit";
   const isWeekly = id === "weekly";
+  const tryItComingSoon = isTryIt && new Date() < new Date('2026-06-03');
 
   return (
-    <div className={`min-h-screen pb-nav-safe ${isTryIt ? "bg-[#FFFDF4]" : "bg-background"}`}>
+    <div className={`min-h-screen pb-nav-safe ${isTryIt ? (tryItComingSoon ? "bg-[#f0f0f0]" : "bg-[#FFFDF4]") : "bg-background"}`}>
       {!isTryIt && <TopHeader hideNav />}
 
       <div className={`max-w-screen-xl mx-auto px-4 pb-8 ${isTryIt ? "pt-[0.4cm]" : ""}`}>
@@ -283,8 +285,8 @@ const ChallengeDetail = () => {
             </Card>
           </div>
         ) : isTryIt ? (
-          <>
-            <div className="relative overflow-hidden rounded-[32px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.09),inset_0_1px_0_rgba(255,255,255,0.9)]">
+          <div className="relative">
+            <div className={`relative overflow-hidden rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.09),inset_0_1px_0_rgba(255,255,255,0.9)] ${tryItComingSoon ? "bg-[#f5f5f5]" : "bg-white"}`}>
               <div className="pointer-events-none absolute right-[22%] top-7 text-xl text-yellow-400 drop-shadow-[0_0_6px_rgba(253,224,71,0.5)]">✦</div>
               <div className="pointer-events-none absolute right-[10%] top-4 text-sm text-yellow-300">✦</div>
               <div className="pointer-events-none absolute right-[16%] bottom-14 text-xs text-yellow-400/70">✦</div>
@@ -312,9 +314,47 @@ const ChallengeDetail = () => {
                   </span>
                 </div>
               </div>
+              {tryItComingSoon && (
+                <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                  <div className="absolute -right-10 top-10 w-44 rotate-[38deg] bg-[#a0a0a0] py-1.5 text-center text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(0,0,0,0.18)]">
+                    COMING SOON
+                  </div>
+                </div>
+              )}
             </div>
-            <TrialSessionsList />
-          </>
+            {tryItComingSoon ? (
+              <div className="mt-4 flex flex-col gap-3">
+                {/* Date announcement card */}
+                <div className="rounded-[24px] bg-white border border-black/5 p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f0f0f0]">
+                      <Calendar className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/50">Ab 03. Juni 2026</p>
+                      <h3 className="mt-0.5 text-lg font-black text-foreground/70">Termine & Angebote</h3>
+                      <p className="mt-0.5 text-sm text-muted-foreground/60">Hier findest du bald alle Sporttermine und Angebote in Graz.</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Greyed-out placeholder rows */}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-[20px] bg-white/60 border border-black/4 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 shrink-0 rounded-xl bg-[#e8e8e8]" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-28 rounded-full bg-[#e0e0e0]" />
+                        <div className="h-2.5 w-20 rounded-full bg-[#e8e8e8]" />
+                      </div>
+                      <div className="h-3 w-14 rounded-full bg-[#e8e8e8]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <TrialSessionsList />
+            )}
+          </div>
         ) : (
           <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-0 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
             <div className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.72)_0%,transparent_34%),linear-gradient(135deg,#8ee6ff_0%,#7ce582_48%,#fff3a3_100%)]">

@@ -38,7 +38,12 @@ const avatarItemDefinitions = [
 export type AvatarItemKey = (typeof avatarItemDefinitions)[number]["id"];
 export type AvatarItemId = "none" | AvatarItemKey;
 
-export const WEEKLY_AVATAR_ITEM_THRESHOLD = 40;
+/** Total accumulated points required per owned-item slot. */
+export const AVATAR_ITEM_POINTS_THRESHOLD = 40;
+
+/** How many item slots a user has unlocked based on their total points. */
+export const computeMaxItemSlots = (totalPoints: number): number =>
+  Math.floor(totalPoints / AVATAR_ITEM_POINTS_THRESHOLD);
 export const AVATAR_BASE_ASSET = getAsset("Blitz BASIS.png");
 
 export const AVATAR_ITEMS = Object.fromEntries(

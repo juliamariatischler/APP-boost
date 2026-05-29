@@ -17,6 +17,7 @@ import {
   Ticket,
   Users,
   X,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -475,10 +476,16 @@ const FriendQuest = () => {
                 <p className="text-3xl font-bold">{cameraResult.opponentResult ?? '–'}</p>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-2 text-lg">
-              <Zap className="h-6 w-6 text-yellow-500" />
-              <span className="font-bold">+{BOOST_POINT_RULES.friendQuestCompleted} Blitze</span>
-            </div>
+            {cameraResult.myResult >= 50 ? (
+              <div className="flex items-center justify-center gap-2 text-lg">
+                <Zap className="h-6 w-6 text-yellow-500" />
+                <span className="font-bold">+{BOOST_POINT_RULES.friendQuestCompleted} Blitze</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Mindestens 50 Wiederholungen nötig für Punkte.
+              </p>
+            )}
             <Button className="w-full" size="lg" onClick={() => { setCameraResult(null); void loadMine(); }}>
               Zurück
             </Button>

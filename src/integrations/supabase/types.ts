@@ -291,6 +291,7 @@ export type Database = {
           class_id: string | null
           created_at: string
           current_streak: number
+          equipped_avatar_item: string | null
           feedback_prompt_shown: boolean
           feedback_prompt_shown_at: string | null
           feedback_submitted: boolean
@@ -299,6 +300,7 @@ export type Database = {
           last_rescue_reset: string
           level: number
           longest_streak: number
+          owned_avatar_items: string[]
           points: number
           rescue_days_used: number
           school: string
@@ -311,6 +313,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           current_streak?: number
+          equipped_avatar_item?: string | null
           feedback_prompt_shown?: boolean
           feedback_prompt_shown_at?: string | null
           feedback_submitted?: boolean
@@ -319,6 +322,7 @@ export type Database = {
           last_rescue_reset?: string
           level?: number
           longest_streak?: number
+          owned_avatar_items?: string[]
           points?: number
           rescue_days_used?: number
           school: string
@@ -331,6 +335,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           current_streak?: number
+          equipped_avatar_item?: string | null
           feedback_prompt_shown?: boolean
           feedback_prompt_shown_at?: string | null
           feedback_submitted?: boolean
@@ -339,6 +344,7 @@ export type Database = {
           last_rescue_reset?: string
           level?: number
           longest_streak?: number
+          owned_avatar_items?: string[]
           points?: number
           rescue_days_used?: number
           school?: string

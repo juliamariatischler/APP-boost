@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, Loader2, Medal, MessageSquare, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, Loader2, LogOut, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TeacherBottomNav } from "@/components/TeacherBottomNav";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
@@ -149,6 +150,13 @@ export default function TeacherHome() {
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [sendingFeedback, setSendingFeedback] = useState(false);
 
+  // "Neue Klasse anlegen" state (supabase auth only)
+  const [createClassOpen, setCreateClassOpen] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [createClassSchoolId, setCreateClassSchoolId] = useState("");
+  const [createClassLoading, setCreateClassLoading] = useState(false);
+  const [teacherOwnSchool, setTeacherOwnSchool] = useState<{ id: string; name: string } | null>(null);
+
   // Overview tab state
   const [students, setStudents] = useState<ClassStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -261,18 +269,62 @@ export default function TeacherHome() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authMode]);
 
-  // Load weekly overview data
+  // Load the teacher's own school (supabase auth only)
+  useEffect(() => {
+    if (authMode !== "supabase") return;
+    const load = async () => {
+      try {
+        const { data } = await (supabase.rpc as any)("get_teacher_own_school_auth");
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length > 0) {
+          const row = rows[0] as { school_id: string; school_name: string };
+          setTeacherOwnSchool({ id: row.school_id, name: row.school_name });
+          setCreateClassSchoolId(row.school_id);
+        }
+      } catch { /* ignore */ }
+    };
+    void load();
+  }, [authMode]);
+
+  // Fallback: derive own school from already-loaded classes when RPC returned nothing
+  useEffect(() => {
+    if (authMode !== "supabase") return;
+    if (teacherOwnSchool) return;
+    const first = classes.find((c) => c.school_id && c.school_name);
+    if (first) {
+      setTeacherOwnSchool({ id: first.school_id!, name: first.school_name });
+      setCreateClassSchoolId(first.school_id!);
+    }
+  }, [classes, authMode, teacherOwnSchool]);
+
+  // Load weekly overview data.
+  // Pre-populate studentStats immediately from the students list so every
+  // student (including those with 0 results) is visible right away.
+  // The async loadOverview() then fills in the actual daily-results data.
   useEffect(() => {
     if (activeTab !== "uebersicht" || students.length === 0) return;
+    setStudentStats(students.map((s) => ({
+      studentId: s.student_id,
+      name: s.display_name,
+      todayPercent: 0,
+      weekActiveDays: 0,
+    })));
     void loadOverview();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, students]);
 
-  // Load ranking data + teacher's own points
+  // Load ranking data + teacher's own points.
+  // Pre-populate studentRanks immediately so students with 0 points are shown
+  // before the async enrichment from profiles completes.
   useEffect(() => {
     if (activeTab !== "wertung") return;
     if (authMode === "supabase" && teacherId) void loadTeacherPoints();
     if (students.length === 0) return;
+    setStudentRanks(
+      [...students]
+        .map((s) => ({ id: s.student_id, name: s.display_name, points: Number(s.points || 0) }))
+        .sort((a, b) => b.points - a.points),
+    );
     void loadRanking();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, students, authMode, teacherId]);
@@ -591,29 +643,36 @@ export default function TeacherHome() {
   const loadRanking = async () => {
     setRankingLoading(true);
     try {
+      // Build a map of profile data for live points (activated students who have a
+      // Supabase auth account and therefore a profiles row).
       const studentIds = Array.from(new Set(students.flatMap(getStudentProgressIds)));
       console.log("[Wertung] studentIds für Ranking:", studentIds);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, username, points")
-        .in("id", studentIds)
-        .order("points", { ascending: false });
 
-      if (error || !data) {
-        console.warn("[Wertung] profiles-Abfrage fehlgeschlagen, nutze Fallback (students.points):", error);
-        setStudentRanks(students.map((s) => ({ id: s.student_id, name: s.display_name, points: Number(s.points || 0) })));
-        return;
+      let rankMap = new Map<string, { id: string; username: string; points: number }>();
+
+      if (studentIds.length > 0) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, username, points")
+          .in("id", studentIds)
+          .order("points", { ascending: false });
+
+        if (error) {
+          console.warn("[Wertung] profiles-Abfrage fehlgeschlagen:", error);
+        } else if (data && data.length > 0) {
+          rankMap = new Map(data.map((p: { id: string; username: string; points: number }) => [p.id, p]));
+          console.log("[Wertung] profiles geladen:", data.length, "Einträge");
+        }
       }
-      console.log("[Wertung] profiles geladen:", data.length, "Einträge");
 
-      // Merge with students list for display names (profiles might have different names)
-      const rankMap = new Map(data.map((p: { id: string; username: string; points: number }) => [p.id, p]));
+      // Map over ALL students. Students without a profiles row (e.g. not yet activated)
+      // use the points value already returned by teacher_get_students_auth (0 by default).
       const ranks: StudentRank[] = students
         .map((s) => {
-          const profile = rankMap.get(getPrimaryProgressId(s)) || rankMap.get(s.student_id);
+          const profile = rankMap.get(getPrimaryProgressId(s)) ?? rankMap.get(s.student_id);
           return {
             id: s.student_id,
-            name: profile?.username || s.display_name,
+            name: profile?.username ?? s.display_name,
             points: Number(profile?.points ?? s.points ?? 0),
           };
         })
@@ -667,6 +726,32 @@ export default function TeacherHome() {
       toast.error("Feedback konnte nicht gespeichert werden.");
     } finally {
       setSendingFeedback(false);
+    }
+  };
+
+  const handleCreateClass = async () => {
+    const name = newClassName.trim();
+    if (!name || !createClassSchoolId) {
+      toast.error("Bitte Schule auswählen und Klassenname eingeben.");
+      return;
+    }
+    setCreateClassLoading(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("create_class_and_assign_auth", {
+        p_school_id:  createClassSchoolId,
+        p_class_name: name,
+      });
+      if (error) { toast.error(error.message); return; }
+      const rows = Array.isArray(data) ? data : [];
+      if (rows.length === 0) { toast.error("Klasse konnte nicht angelegt werden."); return; }
+      toast.success(`Klasse „${name}" angelegt.`);
+      setNewClassName("");
+      setCreateClassOpen(false);
+      if (authMode) await loadClasses(authMode);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Fehler beim Anlegen der Klasse");
+    } finally {
+      setCreateClassLoading(false);
     }
   };
 
@@ -927,9 +1012,10 @@ export default function TeacherHome() {
   // ── Render helpers ──────────────────────────────────────────
 
   const renderClassSelector = () => {
-    if (classes.length <= 1) return null;
+    if (classes.length === 0) return null;
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Klasse:</span>
         {classes.map((cls) => (
           <button
             key={cls.class_id}
@@ -972,26 +1058,67 @@ export default function TeacherHome() {
       </Card>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-          <Users className="mx-auto h-5 w-5 text-primary" />
-          <p className="mt-1 text-xl font-black">{loading ? "..." : classes.length}</p>
-          <p className="text-[11px] font-bold text-muted-foreground">Klassen</p>
-        </Card>
-        <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-          <ClipboardList className="mx-auto h-5 w-5 text-sky-500" />
-          <p className="mt-1 text-xl font-black">{loading ? "..." : totalStudents}</p>
-          <p className="text-[11px] font-bold text-muted-foreground">Schüler:innen</p>
-        </Card>
-        <Card className="rounded-[20px] border-black/5 bg-white p-3 text-center shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-          <QrCode className="mx-auto h-5 w-5 text-amber-500" />
-          <p className="mt-1 text-xl font-black">QR</p>
-          <p className="text-[11px] font-bold text-muted-foreground">Aktivierung</p>
-        </Card>
+        {/* Klassen */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("uebersicht")}
+          className="rounded-[20px] border border-black/5 bg-white p-3.5 shadow-[0_12px_26px_rgba(0,0,0,0.06)] text-left active:scale-[0.97] transition-transform"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12">
+            <Users className="h-[18px] w-[18px] text-primary" />
+          </div>
+          <p className="mt-2 text-xl font-black leading-none">{loading ? "…" : classes.length}</p>
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">Klassen</p>
+          <div className="mt-2 flex justify-end">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15">
+              <ArrowRight className="h-3 w-3 text-primary" />
+            </div>
+          </div>
+        </button>
+        {/* Schüler:innen */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("uebersicht")}
+          className="rounded-[20px] border border-black/5 bg-white p-3.5 shadow-[0_12px_26px_rgba(0,0,0,0.06)] text-left active:scale-[0.97] transition-transform"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/12">
+            <ClipboardList className="h-[18px] w-[18px] text-sky-600" />
+          </div>
+          <p className="mt-2 text-xl font-black leading-none">{loading ? "…" : totalStudents}</p>
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">Schüler:innen</p>
+          <div className="mt-2 flex justify-end">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/15">
+              <ArrowRight className="h-3 w-3 text-sky-600" />
+            </div>
+          </div>
+        </button>
+        {/* QR */}
+        <button
+          type="button"
+          onClick={() => navigate("/teacher-management")}
+          className="rounded-[20px] border border-black/5 bg-white p-3.5 shadow-[0_12px_26px_rgba(0,0,0,0.06)] text-left active:scale-[0.97] transition-transform"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400/15">
+            <QrCode className="h-[18px] w-[18px] text-amber-600" />
+          </div>
+          <p className="mt-2 text-xl font-black leading-none">QR</p>
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">Aktivierung</p>
+          <div className="mt-2 flex justify-end">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/18">
+              <ArrowRight className="h-3 w-3 text-amber-600" />
+            </div>
+          </div>
+        </button>
       </div>
 
       <section className="mt-5 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-black text-foreground">Schnellzugriff</h2>
+          <div className="flex items-center gap-1" aria-hidden="true">
+            <span className="h-0.5 w-4 rounded-full bg-primary" />
+            <span className="h-0.5 w-2.5 rounded-full bg-primary/50" />
+            <span className="h-0.5 w-1.5 rounded-full bg-primary/25" />
+          </div>
         </div>
 
         <button
@@ -1008,15 +1135,17 @@ export default function TeacherHome() {
               Schüler:innen hinzufügen, QR-Codes anzeigen, Geräte zurücksetzen.
             </p>
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12">
+            <ArrowRight className="h-4 w-4 text-primary" />
+          </div>
         </button>
 
         <button
           type="button"
           onClick={() => setFeedbackOpen(true)}
-          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-primary/20"
+          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-sky-200"
         >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/12 text-primary">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-sky-500/12 text-sky-600">
             <MessageSquare className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
@@ -1025,7 +1154,9 @@ export default function TeacherHome() {
               Idee, Problem oder Wunsch mitteilen.
             </p>
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500/12">
+            <ArrowRight className="h-4 w-4 text-sky-600" />
+          </div>
         </button>
 
         {classes.map((cls) => (
@@ -1033,9 +1164,9 @@ export default function TeacherHome() {
             key={cls.class_id}
             type="button"
             onClick={() => { setSelectedClassId(cls.class_id); setActiveTab("uebersicht"); }}
-            className="flex w-full items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.05)]"
+            className="flex w-full items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-3.5 text-left shadow-[0_10px_24px_rgba(0,0,0,0.05)] transition hover:border-primary/20"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/12 text-primary">
               <Users className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -1043,7 +1174,9 @@ export default function TeacherHome() {
               <p className="truncate text-xs font-semibold text-muted-foreground">{cls.school_name}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">{cls.student_count}</Badge>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/12 text-xs font-black text-primary">
+                {cls.student_count}
+              </div>
               <BarChart2 className="h-4 w-4 text-muted-foreground" />
             </div>
           </button>
@@ -1053,6 +1186,22 @@ export default function TeacherHome() {
           <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
             Noch keine Klasse verfügbar. Öffne die Verwaltung, um deine erste Klasse vorzubereiten.
           </Card>
+        )}
+
+        {authMode === "supabase" && (
+          <button
+            type="button"
+            onClick={() => setCreateClassOpen(true)}
+            className="flex w-full items-center gap-3 rounded-[20px] border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-left transition hover:border-primary/70 hover:bg-primary/10"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/10 text-primary">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-black text-primary">+ Klasse anlegen</p>
+              <p className="text-xs font-semibold text-muted-foreground">Neue Klasse erstellen und verwalten</p>
+            </div>
+          </button>
         )}
       </section>
 
@@ -1114,10 +1263,13 @@ export default function TeacherHome() {
   const renderUebersichtTab = () => {
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
+    // Always render the class selector so teachers can switch even when a class is empty.
+    const classSelector = renderClassSelector();
 
     if (studentsLoading || overviewLoading) {
       return (
         <div className="space-y-3">
+          {classSelector}
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-16 animate-pulse rounded-[20px] bg-muted" />
           ))}
@@ -1127,9 +1279,12 @@ export default function TeacherHome() {
 
     if (students.length === 0) {
       return (
-        <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
-          Für diese Klasse sind noch keine Schüler:innen aktiviert.
-        </Card>
+        <div className="space-y-4">
+          {classSelector}
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
+            Für diese Klasse sind noch keine Schüler:innen angelegt.
+          </Card>
+        </div>
       );
     }
 
@@ -1143,20 +1298,20 @@ export default function TeacherHome() {
 
     return (
       <div className="space-y-4">
-        {renderClassSelector()}
+        {classSelector}
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Heute aktiv</p>
-            <p className="mt-1 text-3xl font-black text-foreground">{todayPct}%</p>
+          <Card className="rounded-[20px] border-primary/15 bg-primary/5 p-4 shadow-[0_12px_26px_rgba(34,197,94,0.10)]">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-primary/70">Heute aktiv</p>
+            <p className="mt-1 text-3xl font-black text-primary">{todayPct}%</p>
             <p className="text-xs font-semibold text-muted-foreground">
               {todayActiveCount} von {students.length} Schüler:innen
             </p>
           </Card>
-          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Ø Wochenleistung</p>
-            <p className="mt-1 text-3xl font-black text-foreground">{weekPct}%</p>
+          <Card className="rounded-[20px] border-sky-200/60 bg-sky-50/60 p-4 shadow-[0_12px_26px_rgba(14,165,233,0.08)]">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-sky-600/70">Ø Wochenleistung</p>
+            <p className="mt-1 text-3xl font-black text-sky-600">{weekPct}%</p>
             <p className="text-xs font-semibold text-muted-foreground">Ø Tagesziele erreicht</p>
           </Card>
         </div>
@@ -1237,9 +1392,13 @@ export default function TeacherHome() {
   };
 
   const renderWertungTab = () => {
+    // Always render the class selector so teachers can switch even when a class is empty.
+    const classSelector = renderClassSelector();
+
     if (studentsLoading || rankingLoading) {
       return (
         <div className="space-y-3">
+          {classSelector}
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-14 animate-pulse rounded-[18px] bg-muted" />
           ))}
@@ -1249,15 +1408,18 @@ export default function TeacherHome() {
 
     if (students.length === 0) {
       return (
-        <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
-          Für diese Klasse sind noch keine Schüler:innen aktiviert.
-        </Card>
+        <div className="space-y-4">
+          {classSelector}
+          <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
+            Für diese Klasse sind noch keine Schüler:innen angelegt.
+          </Card>
+        </div>
       );
     }
 
     return (
       <div className="space-y-4">
-        {renderClassSelector()}
+        {classSelector}
 
         <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_12px_26px_rgba(0,0,0,0.06)]">
           <div className="mb-3 flex items-center justify-between">
@@ -1273,14 +1435,23 @@ export default function TeacherHome() {
           <div className="space-y-1.5">
             {studentRanks.map((student, i) => {
               const rank = i + 1;
+              const isTop3 = rank <= 3;
               return (
                 <div
                   key={student.id}
-                  className="flex items-center justify-between rounded-[14px] bg-muted/50 p-2.5"
+                  className={`flex items-center justify-between rounded-[16px] p-2.5 transition ${
+                    rank === 1
+                      ? "bg-yellow-50 border border-yellow-200/60"
+                      : rank === 2
+                        ? "bg-zinc-50 border border-zinc-200/60"
+                        : rank === 3
+                          ? "bg-amber-50 border border-amber-200/40"
+                          : "bg-muted/40 border border-transparent"
+                  }`}
                 >
                   <div className="flex items-center gap-2.5">
                     {getRankBadge(rank)}
-                    <span className="text-sm font-bold text-foreground">{formatDisplayName(student.name)}</span>
+                    <span className={`text-sm font-bold ${isTop3 ? "text-foreground" : "text-foreground/80"}`}>{formatDisplayName(student.name)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-black">{student.points}</span>
@@ -1331,13 +1502,40 @@ export default function TeacherHome() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-nav-safe">
-      <header className="border-b border-border bg-background px-4 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#f8fbf8] pb-nav-safe">
+      <header className="relative overflow-hidden border-b border-border/30 bg-gradient-to-br from-[#edfdf3] via-[#f3fdf6] to-white px-4 py-5">
+        {/* Decorative illustration shapes */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          {/* Large bg circle */}
+          <div className="absolute -right-6 -top-8 h-36 w-36 rounded-full bg-primary/8" />
+          {/* Medium teal circle */}
+          <div className="absolute right-10 top-3 h-20 w-20 rounded-full bg-sky-400/8" />
+          {/* Small amber dot */}
+          <div className="absolute right-20 top-10 h-8 w-8 rounded-full bg-amber-400/12" />
+          {/* Leaf 1 */}
+          <div className="absolute right-5 top-5 h-14 w-7 rotate-[25deg] rounded-[100%_0_100%_0] bg-primary/18" />
+          {/* Leaf 2 */}
+          <div className="absolute right-14 top-8 h-9 w-4 rotate-[-18deg] rounded-[100%_0_100%_0] bg-primary/12" />
+          {/* Leaf 3 small */}
+          <div className="absolute right-3 top-14 h-6 w-3 rotate-[40deg] rounded-[100%_0_100%_0] bg-sky-500/14" />
+          {/* Pencil-like vertical bar */}
+          <div className="absolute right-24 top-4 h-12 w-2.5 rotate-[-8deg] rounded-full bg-amber-400/18" />
+          <div className="absolute right-[5.5rem] top-3.5 h-2.5 w-2.5 rounded-full bg-amber-500/25" />
+        </div>
+
+        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Lehrer Home</p>
             <h1 className="text-2xl font-black leading-tight text-foreground">{teacherName}</h1>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate("/teacher-profile")}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-black/5 bg-white/80 shadow-[0_4px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+            aria-label="Profil öffnen"
+          >
+            <LogOut className="h-4 w-4 text-foreground/70" />
+          </button>
         </div>
       </header>
 
@@ -1349,6 +1547,66 @@ export default function TeacherHome() {
       </main>
 
       <TeacherBottomNav active={activeTab} onTabChange={setActiveTab} />
+
+      {/* ── Klasse anlegen Dialog ─────────────────────────────── */}
+      <Dialog open={createClassOpen} onOpenChange={(open) => { if (!createClassLoading) setCreateClassOpen(open); }}>
+        <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">
+          <DialogHeader>
+            <DialogTitle>Neue Klasse anlegen</DialogTitle>
+            <DialogDescription>
+              Erstelle eine weitere Klasse an deiner Schule. Schüler:innen können sich bei der Registrierung für diese Klasse anmelden.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-foreground">Schule</label>
+              {teacherOwnSchool ? (
+                <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/50 px-3 py-2.5 text-sm">
+                  <span className="font-semibold text-foreground">{teacherOwnSchool.name}</span>
+                  <span className="ml-auto text-[11px] font-bold text-muted-foreground">fix</span>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-700">
+                  Kein Schuleintrag gefunden. Bitte übernimm zuerst eine Klasse über die Verwaltung.
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-bold text-foreground">Klassenname</label>
+              <Input
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                placeholder="z. B. 4a, 3b, …"
+                disabled={createClassLoading || !teacherOwnSchool}
+                className="rounded-2xl"
+                onKeyDown={(e) => { if (e.key === "Enter") void handleCreateClass(); }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-2xl"
+              onClick={() => setCreateClassOpen(false)}
+              disabled={createClassLoading}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              className="rounded-2xl"
+              onClick={() => void handleCreateClass()}
+              disabled={createClassLoading || !newClassName.trim() || !teacherOwnSchool}
+            >
+              {createClassLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {createClassLoading ? "Wird angelegt…" : "Klasse anlegen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">

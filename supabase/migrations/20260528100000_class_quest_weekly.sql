@@ -141,7 +141,7 @@ DECLARE
   v_class          text;
   v_school         text;
   v_goal           integer := 1000;
-  v_reward         integer := 2000;
+  v_reward         integer := 200;
   v_total          integer := 0;
   v_wstart         date := date_trunc(
     'week',
@@ -263,7 +263,7 @@ AS $$
     CROSS JOIN week_value wv
     WHERE b.week_start = wv.wstart
     UNION ALL
-    SELECT w.school, w.class, 2000 AS reward_points
+    SELECT w.school, w.class, 200 AS reward_points
     FROM weekly_class_totals w
     WHERE w.weekly_amount >= 1000
   ),

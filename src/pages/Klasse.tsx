@@ -42,6 +42,14 @@ const numberFormat = new Intl.NumberFormat("de-AT");
 const ANCHOR_WEEK = new Date(2026, 5, 1); // 2026-06-01 Monday
 const EXERCISE_NAMES = ["Kniebeugen", "Hampelmänner", "Liegestütze", "Planks", "Situps"] as const;
 
+const EXERCISE_LABEL: Record<string, string> = {
+  "Kniebeugen":   "Knie-\nbeugen",
+  "Hampelmänner": "Hampel-\nmänner",
+  "Liegestütze":  "Liege-\nstütze",
+  "Planks":       "Planks",
+  "Situps":       "Situps",
+};
+
 function getExerciseIndex(weekStart: Date): number {
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const weeksDiff = Math.floor((weekStart.getTime() - ANCHOR_WEEK.getTime()) / msPerWeek);
@@ -346,8 +354,8 @@ const Klasse = () => {
                   >
                     <div className="flex h-full flex-col justify-between">
                       <div>
-                        <p className={`text-[9px] font-black uppercase leading-tight ${slot.complete ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
-                          {slot.label}
+                        <p className={`whitespace-pre-line text-[9px] font-black uppercase leading-tight ${slot.complete ? "text-primary-foreground/85" : "text-muted-foreground"}`}>
+                          {EXERCISE_LABEL[slot.label] ?? slot.label}
                         </p>
                       </div>
                       <div>

@@ -36,7 +36,7 @@ export const TeacherBottomNav = ({ active, onTabChange }: TeacherBottomNavProps)
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-card shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-white/95 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur-sm"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-6 px-1">
@@ -49,12 +49,13 @@ export const TeacherBottomNav = ({ active, onTabChange }: TeacherBottomNavProps)
               key={item.key}
               type="button"
               onClick={item.onClick}
-              className={`flex h-full min-w-0 flex-col items-center justify-center gap-1 ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+              className={`flex h-full min-w-0 flex-col items-center justify-center gap-0.5 transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`}
             >
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isActive ? "border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.12)]" : ""}`}>
-                <Icon className="h-[18px] w-[18px]" />
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${isActive ? "bg-primary/12 shadow-[0_4px_10px_rgba(34,197,94,0.18)]" : ""}`}>
+                <Icon className={`h-[18px] w-[18px] ${isActive ? "stroke-[2.5]" : ""}`} />
               </div>
-              <span className="max-w-full truncate text-[9px] leading-none">{item.label}</span>
+              <span className={`max-w-full truncate text-[9px] leading-none ${isActive ? "font-black" : "font-medium"}`}>{item.label}</span>
+              {isActive && <span className="mt-0.5 h-1 w-1 rounded-full bg-primary" />}
             </button>
           );
         })}

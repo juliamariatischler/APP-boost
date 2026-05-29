@@ -26,7 +26,7 @@ type ClassQuestProgressRow = {
 };
 
 const numberFormat = new Intl.NumberFormat("de-AT");
-const CLASS_QUEST_REWARD_POINTS = 2000;
+const CLASS_QUEST_REWARD_POINTS = 200;
 
 // Exercise rotation anchored at 2026-06-01, cycling every 5 weeks.
 const ANCHOR_WEEK = new Date(2026, 5, 1); // 2026-06-01 Monday

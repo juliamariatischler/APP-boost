@@ -29,7 +29,7 @@ export const FRIENDQUEST_EXERCISE_GOALS = {
 export const BOOST_POINT_RULES = {
   repOrSecond: 1,
   exerciseCompleted: 1,
-  dailyGoalCompleted: 20,
+  dailyGoalCompleted: 2,
   weeklyChallengeCompleted: 20,
   tryItCompleted: 25,
   tryItProbetraining: 10,

@@ -29,10 +29,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { HealthService } from "@/services/healthService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BOOST_POINT_RULES, countCompletedDailyExercises, isDailyGoalComplete } from "@/lib/gamification";
-import { endOfWeek, format, startOfWeek } from "date-fns";
-import { de } from "date-fns/locale";
-import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem, WEEKLY_AVATAR_ITEM_THRESHOLD } from "@/lib/avatarItems";
+import { format } from "date-fns";
+import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, AvatarItemKey, AVATAR_ITEM_POINTS_THRESHOLD, computeMaxItemSlots, isAvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem } from "@/lib/avatarItems";
 import { ONBOARDING_OPEN_EVENT } from "@/lib/onboarding";
 import { formatDisplayName } from "@/lib/formatName";
 import { logoutEverywhereOnDevice } from "@/lib/logout";
@@ -58,8 +56,9 @@ const Profil = () => {
   const [healthSyncInfo, setHealthSyncInfo] = useState<HealthSyncInfo | null>(null);
   const [connectingHealth, setConnectingHealth] = useState(false);
   const [userId, setUserId] = useState("");
-  const [weeklyBlitze, setWeeklyBlitze] = useState(0);
+  const [totalPoints, setTotalPoints] = useState(0);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [ownedAvatarItems, setOwnedAvatarItems] = useState<AvatarItemKey[]>([]);
   const [showAllAvatarItems, setShowAllAvatarItems] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -89,29 +88,52 @@ const Profil = () => {
           navigate("/");
           return;
         }
-        setUserId(session.user.id);
-        setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
+        const uid = session.user.id;
+        setUserId(uid);
 
         const [{ data: profileData }, healthStatus] = await Promise.all([
           supabase
             .from("profiles")
-            .select("username")
-            .eq("id", session.user.id)
+            .select("username, points, equipped_avatar_item, owned_avatar_items")
+            .eq("id", uid)
             .single(),
           HealthService.isAvailable().catch(() => false),
         ]);
 
-        await Promise.all([
-          loadWeeklyBlitze(session.user.id),
-          loadTodayHealthSyncInfo(session.user.id),
-        ]);
+        await loadTodayHealthSyncInfo(uid);
 
         if (profileData) {
-          setProfile(profileData);
+          setProfile({ username: profileData.username });
+          setTotalPoints(profileData.points ?? 0);
+
+          const dbOwned = ((profileData.owned_avatar_items ?? []) as string[])
+            .filter(isAvatarItemId) as AvatarItemKey[];
+          let finalOwned = dbOwned;
+          let finalEquipped: AvatarItemId = "none";
+
+          if (dbOwned.length === 0 && !profileData.equipped_avatar_item) {
+            // Migrate existing localStorage selection to DB on first load.
+            const localItem = loadEquippedAvatarItem(uid);
+            const maxSlots = computeMaxItemSlots(profileData.points ?? 0);
+            if (localItem !== "none" && maxSlots >= 1) {
+              finalOwned = [localItem];
+              finalEquipped = localItem;
+              await supabase
+                .from("profiles")
+                .update({ owned_avatar_items: finalOwned, equipped_avatar_item: localItem })
+                .eq("id", uid);
+            }
+          } else {
+            if (profileData.equipped_avatar_item && isAvatarItemId(profileData.equipped_avatar_item)) {
+              finalEquipped = profileData.equipped_avatar_item;
+            }
+          }
+
+          setOwnedAvatarItems(finalOwned);
+          setEquippedAvatarItem(finalEquipped);
+          saveEquippedAvatarItem(uid, finalEquipped);
         } else {
-          setProfile({
-            username: "Spieler",
-          });
+          setProfile({ username: "Spieler" });
         }
 
         setHealthAvailable(healthStatus);
@@ -123,46 +145,6 @@ const Profil = () => {
 
     void init();
   }, [navigate, codeSession, codeAuthLoading]);
-
-  const loadWeeklyBlitze = async (uid: string) => {
-    const today = new Date();
-    const weekStart = startOfWeek(today, { locale: de, weekStartsOn: 1 });
-    const weekEnd = endOfWeek(today, { locale: de, weekStartsOn: 1 });
-
-    const { data } = await supabase
-      .from("daily_results")
-      .select("date, jumping_jacks, push_ups, squats, planks, sit_ups, steps")
-      .eq("user_id", uid)
-      .gte("date", format(weekStart, "yyyy-MM-dd"))
-      .lte("date", format(weekEnd, "yyyy-MM-dd"));
-
-    const total = (data || []).reduce((sum, day) => {
-      const completedExercises = countCompletedDailyExercises({
-        jumping_jacks: day.jumping_jacks || 0,
-        push_ups: day.push_ups || 0,
-        squats: day.squats || 0,
-        planks: day.planks || 0,
-        sit_ups: day.sit_ups || 0,
-      });
-
-      let dailyBlitze = completedExercises * BOOST_POINT_RULES.exerciseCompleted;
-      if (
-        isDailyGoalComplete(day.steps || 0, {
-          jumping_jacks: day.jumping_jacks || 0,
-          push_ups: day.push_ups || 0,
-          squats: day.squats || 0,
-          planks: day.planks || 0,
-          sit_ups: day.sit_ups || 0,
-        })
-      ) {
-        dailyBlitze += BOOST_POINT_RULES.dailyGoalCompleted;
-      }
-
-      return sum + dailyBlitze;
-    }, 0);
-
-    setWeeklyBlitze(total);
-  };
 
   const loadTodayHealthSyncInfo = async (uid: string) => {
     const today = format(new Date(), "yyyy-MM-dd");
@@ -212,23 +194,51 @@ const Profil = () => {
     return steps;
   };
 
-  const weeklyItemUnlocked = weeklyBlitze >= WEEKLY_AVATAR_ITEM_THRESHOLD;
+  const maxOwnedSlots = computeMaxItemSlots(totalPoints);
+  const availableSlots = maxOwnedSlots - ownedAvatarItems.length;
+  const progressToNextSlot = totalPoints % AVATAR_ITEM_POINTS_THRESHOLD;
+
   const selectedItemIndex = AVATAR_ITEM_LIST.findIndex((item) => item.id === equippedAvatarItem);
   const visibleAvatarItems = showAllAvatarItems
     ? AVATAR_ITEM_LIST
     : AVATAR_ITEM_LIST.filter((item, index) => index < INITIAL_VISIBLE_AVATAR_ITEMS || index === selectedItemIndex);
   const hasHiddenAvatarItems = AVATAR_ITEM_LIST.length > visibleAvatarItems.length;
 
-  const handleEquipAvatarItem = (itemId: AvatarItemId) => {
+  const handleEquipAvatarItem = async (itemId: AvatarItemId) => {
     if (!userId) return;
-    if (itemId !== "none" && !weeklyItemUnlocked) {
-      toast.info(`Sammle erst ${WEEKLY_AVATAR_ITEM_THRESHOLD} Blitze in dieser Woche.`);
+
+    if (itemId === "none") {
+      setEquippedAvatarItem("none");
+      saveEquippedAvatarItem(userId, "none");
+      await supabase.from("profiles").update({ equipped_avatar_item: null }).eq("id", userId);
+      toast.success("Avatar-Item entfernt.");
       return;
+    }
+
+    const isAlreadyOwned = ownedAvatarItems.includes(itemId);
+
+    if (!isAlreadyOwned) {
+      if (availableSlots <= 0) {
+        const blitzeNeeded = AVATAR_ITEM_POINTS_THRESHOLD - progressToNextSlot;
+        toast.info(`Noch ${blitzeNeeded} Blitze bis zum nächsten Item-Slot.`);
+        return;
+      }
+      const newOwned = [...ownedAvatarItems, itemId];
+      setOwnedAvatarItems(newOwned);
+      await supabase
+        .from("profiles")
+        .update({ owned_avatar_items: newOwned, equipped_avatar_item: itemId })
+        .eq("id", userId);
+    } else {
+      await supabase
+        .from("profiles")
+        .update({ equipped_avatar_item: itemId })
+        .eq("id", userId);
     }
 
     setEquippedAvatarItem(itemId);
     saveEquippedAvatarItem(userId, itemId);
-    toast.success(itemId === "none" ? "Avatar-Item entfernt." : "Avatar-Item gespeichert.");
+    toast.success("Avatar-Item gespeichert.");
   };
 
   const handleConnectHealthData = async () => {
@@ -396,12 +406,18 @@ const Profil = () => {
             <div>
               <h2 className="font-bold text-foreground">Avatar-Item</h2>
               <p className="text-sm text-muted-foreground">
-                Ab {WEEKLY_AVATAR_ITEM_THRESHOLD} Wochen-Blitzen schaltest du ein Item frei.
+                Pro {AVATAR_ITEM_POINTS_THRESHOLD} Blitze schaltest du einen neuen Item-Slot frei.
               </p>
             </div>
-            <div className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] ${weeklyItemUnlocked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-              {weeklyBlitze} / {WEEKLY_AVATAR_ITEM_THRESHOLD}
-            </div>
+            {maxOwnedSlots > 0 ? (
+              <div className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] ${availableSlots > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                {ownedAvatarItems.length} / {maxOwnedSlots}
+              </div>
+            ) : (
+              <div className="rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                {progressToNextSlot} / {AVATAR_ITEM_POINTS_THRESHOLD}
+              </div>
+            )}
           </div>
 
           <div className="rounded-[22px] border border-black/5 bg-[linear-gradient(135deg,#ffffff_0%,#edf8d7_100%)] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
@@ -416,13 +432,13 @@ const Profil = () => {
                   />
                 )}
               </div>
-              {weeklyItemUnlocked ? (
+              {availableSlots > 0 ? (
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
-                  Freigeschaltet
+                  {availableSlots === 1 ? "1 Slot frei" : `${availableSlots} Slots frei`}
                 </div>
               ) : (
                 <div className="rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                  Noch gesperrt
+                  {maxOwnedSlots === 0 ? "Noch gesperrt" : "Alle Slots belegt"}
                 </div>
               )}
             </div>
@@ -444,7 +460,7 @@ const Profil = () => {
                   type="button"
                   variant="outline"
                   className="rounded-2xl"
-                  onClick={() => handleEquipAvatarItem("none")}
+                  onClick={() => void handleEquipAvatarItem("none")}
                 >
                   Ohne Item
                 </Button>
@@ -454,14 +470,20 @@ const Profil = () => {
             <div className="grid grid-cols-3 gap-3">
               {visibleAvatarItems.map((item) => {
                 const isActive = equippedAvatarItem === item.id;
+                const isOwned = ownedAvatarItems.includes(item.id);
+                const isLocked = !isOwned && availableSlots <= 0;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => handleEquipAvatarItem(item.id)}
-                    disabled={!weeklyItemUnlocked}
-                    className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${isActive ? "border-primary bg-primary/10" : "border-black/5 bg-white"
-                      } ${weeklyItemUnlocked ? "opacity-100" : "opacity-55"}`}
+                    onClick={() => void handleEquipAvatarItem(item.id)}
+                    className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${
+                      isActive
+                        ? "border-primary bg-primary/10"
+                        : isOwned
+                          ? "border-primary/25 bg-primary/5"
+                          : "border-black/5 bg-white"
+                    } ${isLocked ? "opacity-55" : "opacity-100"}`}
                   >
                     <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.08)]" style={{ transform: 'translateZ(0)' }}>
                       <img src={AVATAR_BASE_ASSET} alt={item.name} className="h-full w-full object-contain" />
@@ -474,7 +496,7 @@ const Profil = () => {
                       </div>
                       {isActive ? (
                         <Check className="h-4 w-4 shrink-0 text-primary" />
-                      ) : !weeklyItemUnlocked ? (
+                      ) : isLocked ? (
                         <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
                       ) : null}
                     </div>

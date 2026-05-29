@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronRight, Flame, Footprints, Play, Zap } from "lucide-react";
+import { Check, ChevronRight, Flame, RefreshCw, Play, Zap } from "lucide-react";
+import { toast } from "sonner";
+import { HealthService } from "@/services/healthService";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -65,6 +67,7 @@ const Dashboard = () => {
   const [weeklyData, setWeeklyData] = useState<WeeklyResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [stepsRefreshing, setStepsRefreshing] = useState(false);
   const pendingCounterProcessedRef = useRef(false);
 
   useEffect(() => {
@@ -289,6 +292,126 @@ const Dashboard = () => {
     setPoints((prev) => prev + delta);
     window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta } }));
     return true;
+  };
+
+  const syncDashboardSteps = async () => {
+    if (!userId) return;
+
+    // Code students: just reload their dashboard data from the DB
+    if (codeSession?.user_type === "student") {
+      setStepsRefreshing(true);
+      try {
+        await loadCodeStudentProgress(codeSession);
+      } finally {
+        setStepsRefreshing(false);
+      }
+      return;
+    }
+
+    if (!HealthService.isHealthPlatformSupported()) {
+      toast.info("Schrittzähler ist nur in der mobilen App verfügbar.", {
+        description: HealthService.getHealthSetupDescription(),
+      });
+      return;
+    }
+
+    setStepsRefreshing(true);
+    try {
+      const authorized = await HealthService.requestAuthorization();
+      if (!authorized) {
+        toast.error("Zugriff auf Schritte verweigert.", {
+          description: "Bitte erlaube den Zugriff auf deine Schritte, damit BOOST deine Aktivität synchronisieren kann.",
+        });
+        return;
+      }
+
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+
+      // Ensure tracking is marked active for today
+      const { data: existingRow } = await supabase
+        .from("daily_results")
+        .select("id, steps, steps_tracking_active")
+        .eq("user_id", userId)
+        .eq("date", todayStr)
+        .maybeSingle();
+
+      if (!existingRow?.steps_tracking_active) {
+        if (existingRow) {
+          await supabase
+            .from("daily_results")
+            .update({ steps_tracking_active: true, updated_at: new Date().toISOString() })
+            .eq("id", existingRow.id);
+        } else {
+          await supabase
+            .from("daily_results")
+            .insert({ user_id: userId, date: todayStr, steps: 0, steps_tracking_active: true });
+        }
+      }
+
+      const realSteps = await HealthService.getTodaySteps();
+
+      if (realSteps === 0 && HealthService.isNativeAndroid()) {
+        const help = await HealthService.getNoStepDataHelp();
+        toast.info("Noch keine Schritte gefunden.", { description: help });
+      }
+
+      // Save step count to DB
+      const { data: rowAfterActivation } = await supabase
+        .from("daily_results")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("date", todayStr)
+        .maybeSingle();
+
+      if (rowAfterActivation) {
+        await supabase
+          .from("daily_results")
+          .update({ steps: realSteps, updated_at: new Date().toISOString() })
+          .eq("id", rowAfterActivation.id);
+      }
+
+      // Update local weeklyData immediately so UI reflects new count
+      setWeeklyData((prev) => {
+        const hasToday = prev.some((d) => d.date === todayStr);
+        if (hasToday) {
+          return prev.map((day) =>
+            day.date === todayStr
+              ? { ...day, steps: realSteps, steps_tracking_active: true }
+              : day
+          );
+        }
+        return [
+          ...prev,
+          {
+            date: todayStr,
+            steps: realSteps,
+            steps_tracking_active: true,
+            jumping_jacks: 0,
+            push_ups: 0,
+            squats: 0,
+            planks: 0,
+            sit_ups: 0,
+          },
+        ];
+      });
+
+      // Award flashes if the step goal was not yet met and is now met
+      const prevSteps = Number(existingRow?.steps || 0);
+      const prevActive = existingRow?.steps_tracking_active ?? false;
+      const wasGoalMet = prevActive && prevSteps >= DAILY_STEP_GOAL;
+      if (!wasGoalMet && realSteps >= DAILY_STEP_GOAL) {
+        await awardFlashes(STEP_TASK_REWARD);
+      }
+
+      if (realSteps > 0) {
+        toast.success(`${realSteps.toLocaleString("de-DE")} Schritte synchronisiert!`);
+      }
+    } catch (error) {
+      console.error("Step sync error:", error);
+      toast.error("Fehler beim Synchronisieren der Schritte.");
+    } finally {
+      setStepsRefreshing(false);
+    }
   };
 
   const processPendingCounterResults = async (currentUserId: string, session: CodeSession | null) => {
@@ -625,15 +748,20 @@ const Dashboard = () => {
         </div>
 
         <div className="mb-5 grid grid-cols-3 overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_16px_34px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-          <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center">
+          <button
+            type="button"
+            onClick={syncDashboardSteps}
+            disabled={stepsRefreshing}
+            className="flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center w-full transition-opacity active:opacity-60"
+          >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
-              <Footprints className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${stepsRefreshing ? "animate-spin" : ""}`} />
             </div>
             <div className="min-w-0 max-w-full">
               <p className="text-[1.05rem] font-black leading-none text-foreground">{todaySteps.toLocaleString("de-DE")}</p>
               <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Schritte</p>
             </div>
-          </div>
+          </button>
           <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 border-x border-black/6 px-2 py-2 text-center">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
               <Check className="h-4 w-4 stroke-[3]" />

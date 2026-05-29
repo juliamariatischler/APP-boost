@@ -64,6 +64,8 @@ type RewardItemAdmin = {
   threshold: number;
   category: string;
   icon: string | null;
+  image_url: string | null;
+  sponsor_logo_url: string | null;
   is_active: boolean;
 };
 
@@ -141,6 +143,8 @@ const Admin = () => {
     threshold: 50,
     category: "gutscheine",
     icon: "🎁",
+    image_url: "",
+    sponsor_logo_url: "",
   });
   const [newMilestone, setNewMilestone] = useState({
     threshold: 2500,
@@ -343,7 +347,7 @@ const Admin = () => {
     const [{ data: rewardsData, error: rewardsError }, { data: milestoneData, error: milestoneError }] = await Promise.all([
       (supabase as any)
         .from("reward_items")
-        .select("id, title, partner, threshold, category, icon, is_active")
+        .select("id, title, partner, threshold, category, icon, image_url, sponsor_logo_url, is_active")
         .order("threshold", { ascending: true }),
       (supabase as any)
         .from("class_milestones")
@@ -487,6 +491,8 @@ const Admin = () => {
       p_threshold: Number(newReward.threshold),
       p_category: newReward.category.trim() || "allgemein",
       p_icon: newReward.icon.trim() || null,
+      p_image_url: newReward.image_url.trim() || null,
+      p_sponsor_logo_url: newReward.sponsor_logo_url.trim() || null,
     });
     setSavingReward(false);
 
@@ -497,7 +503,7 @@ const Admin = () => {
     }
 
     toast.success("Belohnung erstellt");
-    setNewReward({ title: "", partner: "", threshold: 50, category: "gutscheine", icon: "🎁" });
+    setNewReward({ title: "", partner: "", threshold: 50, category: "gutscheine", icon: "🎁", image_url: "", sponsor_logo_url: "" });
     await loadRewardsAdminData();
   };
 
@@ -880,9 +886,17 @@ const Admin = () => {
                     <Input value={newReward.category} onChange={(e) => setNewReward((p) => ({ ...p, category: e.target.value }))} />
                   </div>
                   <div>
-                    <Label>Icon</Label>
+                    <Label>Icon (Emoji)</Label>
                     <Input value={newReward.icon} onChange={(e) => setNewReward((p) => ({ ...p, icon: e.target.value }))} />
                   </div>
+                </div>
+                <div>
+                  <Label>Produktbild URL</Label>
+                  <Input placeholder="https://..." value={newReward.image_url} onChange={(e) => setNewReward((p) => ({ ...p, image_url: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Sponsor-Logo URL</Label>
+                  <Input placeholder="https://..." value={newReward.sponsor_logo_url} onChange={(e) => setNewReward((p) => ({ ...p, sponsor_logo_url: e.target.value }))} />
                 </div>
                 <Button onClick={handleCreateReward} disabled={savingReward}>
                   {savingReward ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

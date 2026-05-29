@@ -336,6 +336,7 @@ export async function saveCodeStudentCounterResults(
 export interface TeacherClass {
   class_id:      string;
   class_name:    string;
+  school_id?:    string;
   school_name:   string;
   student_count: number;
 }
