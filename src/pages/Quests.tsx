@@ -11,7 +11,7 @@ import classAvatarImg from "@/assets/quest-class-avatar.png";
 import friendAvatarImg from "@/assets/quest-friend-emoji.svg";
 import tryitAvatarImg from "@/assets/quest-tryit-football-avatar.png";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
-import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemKey, loadEquippedAvatarItems } from "@/lib/avatarItems";
 
 type QuestCard = {
   id: string;
@@ -118,14 +118,14 @@ const Quests = () => {
   const { session: codeSession, loading: codeAuthLoading } = useCodeAuth();
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
-  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [equippedAvatarItems, setEquippedAvatarItems] = useState<AvatarItemKey[]>([]);
 
   useEffect(() => {
     const loadProfile = async () => {
       if (codeAuthLoading) return;
       if (codeSession?.user_type === "student") {
         setUserId(codeSession.user_id);
-        setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+        setEquippedAvatarItems(loadEquippedAvatarItems(codeSession.user_id));
         setLoading(false);
         return;
       }
@@ -135,7 +135,7 @@ const Quests = () => {
         return;
       }
       setUserId(session.user.id);
-      setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
+      setEquippedAvatarItems(loadEquippedAvatarItems(session.user.id));
       setLoading(false);
     };
 
@@ -146,7 +146,7 @@ const Quests = () => {
     if (!userId) return;
 
     const handleStorage = () => {
-      setEquippedAvatarItem(loadEquippedAvatarItem(userId));
+      setEquippedAvatarItems(loadEquippedAvatarItems(userId));
     };
 
     window.addEventListener("storage", handleStorage);
@@ -172,13 +172,9 @@ const Quests = () => {
             <div className="mb-5 flex items-center gap-3">
               <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
                 <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
-                {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
-                  <img
-                    src={AVATAR_ITEMS[equippedAvatarItem].asset}
-                    alt={AVATAR_ITEMS[equippedAvatarItem].name}
-                    className="absolute inset-0 h-full w-full object-contain"
-                  />
-                )}
+                {equippedAvatarItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                  <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt={AVATAR_ITEMS[itemId].name} className="absolute inset-0 h-full w-full object-contain" />
+                ))}
               </div>
               <div className="min-w-0">
                 <h1 className="text-3xl font-black tracking-tight text-foreground">Meine Quests</h1>

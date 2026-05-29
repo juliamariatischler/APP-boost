@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Loader2, LogOut, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Users } from "lucide-react";
+import { Loader2, MoreHorizontal, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Users } from "lucide-react";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { toast } from "sonner";
@@ -24,7 +24,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { env } from "@/lib/env";
 import { formatDisplayName } from "@/lib/formatName";
 import { getCurrentAppRole } from "@/lib/roles";
-import { logoutEverywhereOnDevice } from "@/lib/logout";
 import {
   addStudent,
   addStudentAuth,
@@ -134,7 +133,7 @@ const createActivationPdf = async (tickets: ExportTicket[]) => {
 
 export default function TeacherManagement() {
   const navigate = useNavigate();
-  const { session: codeSession, loading: codeLoading, signOut } = useCodeAuth();
+  const { session: codeSession, loading: codeLoading } = useCodeAuth();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [teacherName, setTeacherName] = useState("Lehrkraft");
   const [classes, setClasses] = useState<TeacherClass[]>([]);
@@ -151,10 +150,6 @@ export default function TeacherManagement() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedExportStudentIds, setSelectedExportStudentIds] = useState<string[]>([]);
 
-  // "Neue Klasse anlegen" state (supabase auth only)
-  const [createClassName, setCreateClassName] = useState("");
-  const [createClassLoading, setCreateClassLoading] = useState(false);
-  const [teacherOwnSchool, setTeacherOwnSchool] = useState<{ id: string; name: string } | null>(null);
 
   const selectedClass = useMemo(
     () => classes.find((item) => item.class_id === selectedClassId),
@@ -242,67 +237,7 @@ export default function TeacherManagement() {
     void loadStudents(authMode, selectedClassId);
   }, [authMode, loadStudents, selectedClassId]);
 
-  // Load teacher's own school for "Neue Klasse anlegen" (supabase auth only)
-  useEffect(() => {
-    if (authMode !== "supabase") return;
-    const load = async () => {
-      try {
-        const { data } = await (supabase.rpc as any)("get_teacher_own_school_auth");
-        const rows = Array.isArray(data) ? data : [];
-        if (rows.length > 0) {
-          const row = rows[0] as { school_id: string; school_name: string };
-          setTeacherOwnSchool({ id: row.school_id, name: row.school_name });
-        }
-      } catch { /* ignore */ }
-    };
-    void load();
-  }, [authMode]);
 
-  // Fallback: derive own school from already-loaded classes when RPC returned nothing
-  useEffect(() => {
-    if (authMode !== "supabase") return;
-    if (teacherOwnSchool) return;
-    const first = classes.find((c) => c.school_id && c.school_name);
-    if (first) {
-      setTeacherOwnSchool({ id: first.school_id!, name: first.school_name });
-    }
-  }, [classes, authMode, teacherOwnSchool]);
-
-  const handleCreateNewClass = async () => {
-    const name = createClassName.trim();
-    if (!name || !teacherOwnSchool) {
-      toast.error("Bitte Klassenname eingeben.");
-      return;
-    }
-    setCreateClassLoading(true);
-    try {
-      const { data, error } = await (supabase.rpc as any)("create_class_and_assign_auth", {
-        p_school_id:  teacherOwnSchool.id,
-        p_class_name: name,
-      });
-      if (error) { toast.error(error.message); return; }
-      const rows = Array.isArray(data) ? data : [];
-      if (rows.length === 0) { toast.error("Klasse konnte nicht angelegt werden."); return; }
-      toast.success(`Klasse „${name}" angelegt.`);
-      setCreateClassName("");
-      await loadClasses("supabase");
-    } catch (err: any) {
-      toast.error(err?.message ?? "Fehler beim Anlegen der Klasse");
-    } finally {
-      setCreateClassLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    if (authMode === "code") {
-      await signOut();
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    await logoutEverywhereOnDevice();
-    navigate("/auth", { replace: true });
-  };
 
   const showActivationQr = async (code: string, studentName: string) => {
     const qrDataUrl = await QRCode.toDataURL(getActivationUrl(code), {
@@ -464,6 +399,8 @@ export default function TeacherManagement() {
   const allExportStudentsSelected =
     exportableStudents.length > 0 && selectedExportStudentIds.length === exportableStudents.length;
 
+  const [studentActionsStudent, setStudentActionsStudent] = useState<ClassStudent | null>(null);
+
   return (
     <div className="min-h-screen bg-[#f8fbf8] pb-nav-safe">
       <style>{`
@@ -565,128 +502,132 @@ export default function TeacherManagement() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Verwaltung</p>
             <h1 className="text-2xl font-black leading-tight text-foreground">{teacherName}</h1>
           </div>
-          <Button variant="outline" size="icon" className="rounded-xl border-black/5 shadow-sm" onClick={handleLogout} aria-label="Abmelden">
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-5 px-4 py-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">
-              <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-              Klassen
-            </h2>
-            {loading && <span className="text-xs text-muted-foreground">Lädt...</span>}
-          </div>
+      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
+        {/* ── Klassen-Sidebar ─────────────────────────────────── */}
+        <section className="space-y-2">
+          <h2 className="px-1 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+            {loading ? "Lädt…" : "Klassen"}
+          </h2>
 
-          {classes.map((cls) => (
-            <button
-              key={cls.class_id}
-              type="button"
-              onClick={() => setSelectedClassId(cls.class_id)}
-              className={`flex w-full items-center gap-3 rounded-[20px] border px-4 py-3.5 text-left transition-all ${
-                cls.class_id === selectedClassId
-                  ? "border-primary/30 bg-primary/10 shadow-[0_6px_16px_rgba(34,197,94,0.15)]"
-                  : "border-black/5 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.04)] hover:border-primary/20 hover:bg-primary/5"
-              }`}
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-primary/12 text-primary">
-                <Users className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-black text-foreground">Klasse {cls.class_name}</p>
-                <p className="truncate text-xs font-semibold text-muted-foreground">{cls.school_name}</p>
-              </div>
-              <Badge variant="secondary" className="rounded-full">{cls.student_count}</Badge>
-            </button>
-          ))}
+          {loading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-[60px] animate-pulse rounded-[20px] bg-muted" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {classes.map((cls) => (
+                <button
+                  key={cls.class_id}
+                  type="button"
+                  onClick={() => setSelectedClassId(cls.class_id)}
+                  className={`flex w-full items-center gap-3 rounded-[20px] px-4 py-3.5 text-left transition-all ${
+                    cls.class_id === selectedClassId
+                      ? "bg-primary/10"
+                      : "border border-black/5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-primary/5"
+                  }`}
+                >
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    cls.class_id === selectedClassId ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary"
+                  }`}>
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-black text-foreground">Klasse {cls.class_name}</p>
+                    <p className="truncate text-xs font-medium text-muted-foreground">{cls.school_name}</p>
+                  </div>
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-black text-muted-foreground">
+                    {cls.student_count}
+                  </div>
+                </button>
+              ))}
 
-          {!loading && classes.length === 0 && (
-            <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
-              Noch keine Klasse verfügbar.
-            </Card>
+              {classes.length === 0 && (
+                <p className="px-2 text-sm text-muted-foreground">Noch keine Klasse verfügbar.</p>
+              )}
+            </div>
           )}
 
-          {/* Neue Klasse anlegen (supabase auth only) */}
           {authMode === "supabase" && (
-            <div className="space-y-3 rounded-[20px] border border-dashed border-primary/30 bg-primary/5 p-4">
-              <h3 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.14em] text-primary">
-                <Plus className="h-3.5 w-3.5" />
-                Neue Klasse anlegen
-              </h3>
-              {teacherOwnSchool ? (
-                <div className="flex items-center justify-between rounded-2xl border border-black/5 bg-white px-3 py-2.5 text-sm shadow-sm">
-                  <span className="font-semibold text-foreground truncate">{teacherOwnSchool.name}</span>
-                  <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground">fix</span>
-                </div>
-              ) : (
-                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700">
-                  Kein Schuleintrag gefunden. Bitte übernimm zuerst eine Klasse.
-                </p>
-              )}
-              <Input
-                value={createClassName}
-                onChange={(e) => setCreateClassName(e.target.value)}
-                placeholder="Klassenname, z. B. 4a"
-                disabled={createClassLoading || !teacherOwnSchool}
-                className="h-10 rounded-2xl text-sm"
-                onKeyDown={(e) => { if (e.key === "Enter") void handleCreateNewClass(); }}
-              />
-              <Button
+            <>
+              <div className="my-1 border-t border-black/5" />
+              <button
                 type="button"
-                size="sm"
-                className="w-full rounded-2xl"
-                disabled={createClassLoading || !createClassName.trim() || !teacherOwnSchool}
-                onClick={() => void handleCreateNewClass()}
+                onClick={() => navigate("/teacher-home", { state: { openCreateClass: true } })}
+                className="flex w-full items-center gap-2 rounded-2xl px-2 py-2.5 text-left text-sm text-muted-foreground transition hover:text-foreground"
               >
-                {createClassLoading
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Plus className="h-4 w-4" />}
-                Klasse anlegen
-              </Button>
-            </div>
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-white">
+                  <Plus className="h-3 w-3 text-primary" />
+                </div>
+                <span>
+                  Neue Klasse auf{" "}
+                  <span className="font-black text-primary">Home</span>{" "}
+                  anlegen
+                </span>
+              </button>
+            </>
           )}
         </section>
 
+        {/* ── Hauptbereich ────────────────────────────────────── */}
         <section className="space-y-5">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+
+          {/* Klassen-Heading + Exportansicht */}
+          <div className="flex items-end justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
-                {selectedClass && (
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/12">
-                    <span className="text-[10px] font-black text-primary">{selectedClass.class_name.substring(0, 2).toUpperCase()}</span>
-                  </div>
-                )}
-                <p className="text-sm font-semibold text-muted-foreground">{selectedClass?.school_name || "Klasse"}</p>
-              </div>
+              {selectedClass && (
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="rounded-full bg-primary/12 px-2 py-0.5 text-xs font-black text-primary">
+                    {selectedClass.class_name.toUpperCase()}
+                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{selectedClass.school_name}</span>
+                </div>
+              )}
               <h2 className="text-2xl font-black text-foreground">
                 {selectedClass ? `Klasse ${selectedClass.class_name} verwalten` : "Klasse auswählen"}
               </h2>
             </div>
-            <Button type="button" variant="outline" className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40" onClick={openExportDialog} disabled={exporting || !selectedClassId}>
-              <Printer className="h-4 w-4" />
-              Exportansicht
-            </Button>
+            {selectedClassId && (
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0 rounded-full border-primary/30 text-primary hover:bg-primary/5"
+                onClick={openExportDialog}
+                disabled={exporting}
+              >
+                <Printer className="h-4 w-4" />
+                Exportansicht
+              </Button>
+            )}
           </div>
 
-          <Card className="rounded-[20px] border-black/5 bg-white p-4 shadow-[0_8px_18px_rgba(0,0,0,0.05)]">
-            <form onSubmit={handleAddStudent} className="flex flex-col gap-3 sm:flex-row">
+          {/* Schüler:in hinzufügen */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-black text-foreground">Schüler:in hinzufügen</h3>
+            <form onSubmit={handleAddStudent} className="space-y-2">
               <Input
                 value={newStudentName}
                 onChange={(event) => setNewStudentName(event.target.value)}
                 placeholder="Vorname Schüler:in"
                 disabled={!selectedClassId}
-                className="h-11 rounded-2xl"
+                className="h-12 rounded-2xl border-black/8 bg-white text-base shadow-[0_2px_6px_rgba(0,0,0,0.04)]"
               />
-              <Button type="submit" disabled={!selectedClassId || !newStudentName.trim()} className="h-11 rounded-2xl">
+              <Button
+                type="submit"
+                disabled={!selectedClassId || !newStudentName.trim()}
+                className="h-12 w-full rounded-2xl text-base"
+              >
                 <Plus className="h-4 w-4" />
                 Hinzufügen
               </Button>
             </form>
-          </Card>
+          </div>
 
+          {/* QR-Code nach Hinzufügen */}
           {activationCode && activationQrDataUrl && (
             <Card className="overflow-hidden rounded-[20px] border-primary/15 bg-white p-5 shadow-[0_12px_28px_rgba(34,197,94,0.10)]">
               <div className="mb-3 flex items-center gap-2">
@@ -716,114 +657,178 @@ export default function TeacherManagement() {
             </Card>
           )}
 
-          <div className="space-y-3">
-            <h3 className="flex items-center gap-1.5 text-sm font-black uppercase tracking-[0.14em] text-muted-foreground">
-              <span className="inline-block h-2 w-2 rounded-full bg-sky-500" />
-              Schüler:innen
-            </h3>
-            {studentsLoading && (
-              <div className="space-y-2">
+          {/* Schüler:innen-Liste */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-black text-foreground">Schüler:innen</h3>
+
+            {studentsLoading ? (
+              <div className="space-y-px overflow-hidden rounded-[20px] border border-black/5 bg-white">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-[20px] bg-muted" />
+                  <div key={i} className="h-[58px] animate-pulse border-b border-black/5 bg-muted/30 last:border-0" />
                 ))}
               </div>
-            )}
-            {!studentsLoading && students.length === 0 && (
-              <Card className="rounded-[20px] border-black/5 bg-white p-6 text-center text-sm text-muted-foreground">
+            ) : students.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
                 Für diese Klasse sind noch keine Schüler:innen angelegt.
-              </Card>
-            )}
+              </p>
+            ) : (
+              <div className="overflow-hidden rounded-[20px] border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.04)]">
+                {students.map((student, index) => {
+                  const isBusy = busyStudentId === student.student_id;
+                  const isActivated = Boolean(student.activated_at || student.device_id);
+                  const isDeactivated = student.active === false;
 
-            {students.map((student) => {
-              const isBusy = busyStudentId === student.student_id;
-              const isProfileStudent = Boolean(student.is_profile_student);
-              const isActivated = Boolean(student.activated_at || student.device_id);
-              const codeAvailable = Boolean(student.activation_code_created_at && !student.activation_code_used_at);
+                  const nameParts = formatDisplayName(student.display_name).split(" ");
+                  const initials = nameParts.length >= 2
+                    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+                    : formatDisplayName(student.display_name).substring(0, 2).toUpperCase();
 
-              if (isProfileStudent) {
-                return (
-                  <Card key={student.student_id} className="rounded-[20px] border-primary/20 bg-primary/5 p-4 shadow-[0_6px_16px_rgba(34,197,94,0.09)]">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0 flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-black text-primary">
-                          {formatDisplayName(student.display_name).substring(0, 1).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="truncate text-base font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
-                            <Badge variant="default" className="rounded-full">aktiv</Badge>
-                            <Badge variant="outline" className="rounded-full border-primary/30 text-[10px] text-primary">eigene Anmeldung</Badge>
-                          </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Schüler:in hat sich selbst registriert und nutzt eine eigene App-Anmeldung.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              }
-
-              return (
-                <Card key={student.student_id} className={`rounded-[20px] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.05)] ${
-                  student.active === false
-                    ? "border-red-100 bg-red-50/40"
-                    : isActivated
-                      ? "border-primary/15 bg-white"
-                      : "border-black/5 bg-white"
-                }`}>
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0 flex items-start gap-3">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-black ${
-                        student.active === false
-                          ? "bg-red-100 text-red-600"
+                  return (
+                    <div
+                      key={student.student_id}
+                      className={`flex items-center gap-3 px-4 py-3.5 ${
+                        index < students.length - 1 ? "border-b border-black/5" : ""
+                      } ${isDeactivated ? "opacity-50" : ""}`}
+                    >
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-black ${
+                        isDeactivated
+                          ? "bg-red-100 text-red-500"
                           : isActivated
                             ? "bg-primary/15 text-primary"
-                            : "bg-muted text-muted-foreground"
+                            : "bg-primary/10 text-primary"
                       }`}>
-                        {formatDisplayName(student.display_name).substring(0, 1).toUpperCase()}
+                        {initials}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="truncate text-base font-black text-foreground">{formatDisplayName(student.display_name)}</h4>
-                          <Badge variant={student.active === false ? "destructive" : isActivated ? "default" : "secondary"} className="rounded-full">
-                            {student.active === false ? "deaktiviert" : isActivated ? "aktiviert" : "offen"}
-                          </Badge>
-                          {codeAvailable && <Badge variant="outline" className="rounded-full border-primary/30 text-primary">QR bereit</Badge>}
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {isActivated
-                            ? "Ein Gerät ist verbunden."
-                            : codeAvailable
-                              ? "QR-Code ist vorbereitet."
-                              : "Noch kein offener QR-Code."}
-                        </p>
-                      </div>
+                      <span className="min-w-0 flex-1 truncate font-bold text-foreground">
+                        {formatDisplayName(student.display_name)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setStudentActionsStudent(student)}
+                        disabled={isBusy}
+                        aria-label="Aktionen"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 disabled:opacity-50"
+                      >
+                        {isBusy
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <MoreHorizontal className="h-4 w-4" />}
+                      </button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" className="rounded-xl border-black/10" onClick={() => handleGenerate(student)} disabled={isBusy}>
-                        {codeAvailable ? <RefreshCcw className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
-                        {codeAvailable ? "Neu generieren" : "QR generieren"}
-                      </Button>
-                      <Button type="button" variant="outline" size="sm" className="rounded-xl border-black/10" onClick={() => handleResetDevice(student)} disabled={isBusy}>
-                        <RotateCcw className="h-4 w-4" />
-                        Gerät resetten
-                      </Button>
-                      <Button type="button" variant="destructive" size="sm" className="rounded-xl" onClick={() => handleDeactivate(student)} disabled={isBusy}>
-                        <ShieldOff className="h-4 w-4" />
-                        Deaktivieren
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       </main>
 
       <TeacherBottomNav active="verwaltung" />
       </div>
+
+      {/* ── Schüler:in Aktionen Dialog ──────────────────────── */}
+      <Dialog
+        open={!!studentActionsStudent}
+        onOpenChange={(open) => { if (!open && !busyStudentId) setStudentActionsStudent(null); }}
+      >
+        <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">
+          {studentActionsStudent && (() => {
+            const student = studentActionsStudent;
+            const isProfileStudent = Boolean(student.is_profile_student);
+            const isActivated = Boolean(student.activated_at || student.device_id);
+            const codeAvailable = Boolean(student.activation_code_created_at && !student.activation_code_used_at);
+            const isBusy = busyStudentId === student.student_id;
+
+            const nameParts = formatDisplayName(student.display_name).split(" ");
+            const initials = nameParts.length >= 2
+              ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+              : formatDisplayName(student.display_name).substring(0, 2).toUpperCase();
+
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-sm font-black text-primary">
+                      {initials}
+                    </div>
+                    <div>
+                      <DialogTitle className="text-left">{formatDisplayName(student.display_name)}</DialogTitle>
+                      <DialogDescription className="text-left">
+                        {isProfileStudent
+                          ? "Eigene App-Anmeldung"
+                          : isActivated
+                            ? "Gerät verbunden"
+                            : codeAvailable
+                              ? "QR-Code bereit"
+                              : "Noch kein QR-Code"}
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+
+                {isProfileStudent ? (
+                  <div className="rounded-2xl bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+                    Schüler:in hat sich selbst registriert und nutzt eine eigene App-Anmeldung.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      className="flex w-full items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3.5 text-left text-sm font-bold text-foreground transition hover:bg-muted/60 disabled:opacity-50"
+                      onClick={async () => {
+                        await handleGenerate(student);
+                        setStudentActionsStudent(null);
+                      }}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                        {codeAvailable ? <RefreshCcw className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
+                      </div>
+                      {codeAvailable ? "QR-Code neu generieren" : "QR-Code generieren"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      className="flex w-full items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3.5 text-left text-sm font-bold text-foreground transition hover:bg-muted/60 disabled:opacity-50"
+                      onClick={async () => {
+                        await handleResetDevice(student);
+                        setStudentActionsStudent(null);
+                      }}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/60">
+                        <RotateCcw className="h-4 w-4" />
+                      </div>
+                      Gerät zurücksetzen
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      className="flex w-full items-center gap-3 rounded-2xl bg-red-50 px-4 py-3.5 text-left text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                      onClick={async () => {
+                        await handleDeactivate(student);
+                        setStudentActionsStudent(null);
+                      }}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-500">
+                        <ShieldOff className="h-4 w-4" />
+                      </div>
+                      Deaktivieren
+                    </button>
+
+                    {isBusy && (
+                      <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Wird verarbeitet…
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={exportDialogOpen} onOpenChange={(open) => !exporting && setExportDialogOpen(open)}>
         <DialogContent className="max-h-[85vh] overflow-hidden rounded-[24px] sm:max-w-xl">

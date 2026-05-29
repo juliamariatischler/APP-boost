@@ -68,16 +68,53 @@ export const AVATAR_ITEMS = Object.fromEntries(
 export const AVATAR_ITEM_LIST = avatarItemDefinitions.map((item) => AVATAR_ITEMS[item.id]);
 
 const storageKey = (userId: string) => `boost:avatar-item:${userId}`;
+const storageKeyMulti = (userId: string) => `boost:avatar-items:${userId}`;
 
 export const isAvatarItemId = (value: string): value is AvatarItemKey => value in AVATAR_ITEMS;
 
-export const loadEquippedAvatarItem = (userId: string): AvatarItemId => {
-  if (typeof window === "undefined") return "none";
-  const value = window.localStorage.getItem(storageKey(userId));
-  return value && isAvatarItemId(value) ? value : "none";
+/** Parse the DB `equipped_avatar_item` field (may be JSON array or legacy single string). */
+export const parseDbEquippedItems = (raw: string | null | undefined): AvatarItemKey[] => {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter(isAvatarItemId) as AvatarItemKey[];
+  } catch {}
+  if (isAvatarItemId(raw)) return [raw];
+  return [];
 };
 
-export const saveEquippedAvatarItem = (userId: string, itemId: AvatarItemId) => {
+/** Serialize equipped items for DB storage. */
+export const serializeEquippedItems = (items: AvatarItemKey[]): string | null =>
+  items.length === 0 ? null : JSON.stringify(items);
+
+export const loadEquippedAvatarItems = (userId: string): AvatarItemKey[] => {
+  if (typeof window === "undefined") return [];
+  const multi = window.localStorage.getItem(storageKeyMulti(userId));
+  if (multi !== null) {
+    try {
+      const parsed = JSON.parse(multi);
+      if (Array.isArray(parsed)) return parsed.filter(isAvatarItemId) as AvatarItemKey[];
+    } catch {}
+  }
+  // Backward compat: old single-item key
+  const single = window.localStorage.getItem(storageKey(userId));
+  if (single && isAvatarItemId(single)) return [single];
+  return [];
+};
+
+export const saveEquippedAvatarItems = (userId: string, items: AvatarItemKey[]) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(storageKey(userId), itemId);
+  window.localStorage.setItem(storageKeyMulti(userId), JSON.stringify(items));
+};
+
+/** @deprecated Use loadEquippedAvatarItems */
+export const loadEquippedAvatarItem = (userId: string): AvatarItemId => {
+  const items = loadEquippedAvatarItems(userId);
+  return items[0] ?? "none";
+};
+
+/** @deprecated Use saveEquippedAvatarItems */
+export const saveEquippedAvatarItem = (userId: string, itemId: AvatarItemId) => {
+  if (itemId === "none") saveEquippedAvatarItems(userId, []);
+  else saveEquippedAvatarItems(userId, [itemId]);
 };

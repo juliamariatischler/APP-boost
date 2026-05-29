@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, BarChart2, Check, ClipboardList, Footprints, Loader2, LogOut, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, Check, ClipboardList, Footprints, Loader2, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -129,7 +129,9 @@ export default function TeacherHome() {
   const [teacherName, setTeacherName] = useState("Lehrkraft");
   const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [loading, setLoading] = useState(true);
-  const initialTab = (location.state as { tab?: ActiveTab } | null)?.tab ?? "home";
+  const locationState = location.state as { tab?: ActiveTab; openCreateClass?: boolean } | null;
+  const initialTab = locationState?.tab ?? "home";
+  const initialOpenCreateClass = locationState?.openCreateClass ?? false;
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
 
@@ -240,10 +242,14 @@ export default function TeacherHome() {
       );
       setTeacherId(session.user.id);
       await loadClasses("supabase");
+
+      if (initialOpenCreateClass) {
+        setCreateClassOpen(true);
+      }
     };
 
     void resolveTeacher();
-  }, [codeLoading, codeSession, loadClasses, navigate]);
+  }, [codeLoading, codeSession, loadClasses, navigate, initialOpenCreateClass]);
 
   // Load students when class or tab changes
   useEffect(() => {
@@ -1036,171 +1042,126 @@ export default function TeacherHome() {
 
   const renderHomeTab = () => (
     <>
-      <Card className="overflow-hidden rounded-[28px] border-0 bg-[linear-gradient(135deg,#22c55e_0%,#14b8a6_54%,#38bdf8_100%)] p-5 text-white shadow-[0_20px_44px_rgba(34,197,94,0.22)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <Badge className="border-0 bg-white/18 text-white hover:bg-white/18">
-              BOOST Verwaltung
-            </Badge>
-            <h2 className="mt-5 text-4xl font-black leading-[0.95] tracking-tight">
-              Willkommen
-              <br />
-              im Lehrerbereich
-            </h2>
-            <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-white/82">
-              Behalte deine Klassen im Blick und öffne die Verwaltung, wenn du Schüler:innen, QR-Codes oder Geräte bearbeiten möchtest.
-            </p>
-          </div>
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[24px] bg-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
-            <Users className="h-8 w-8" />
-          </div>
-        </div>
-      </Card>
+      {/* Greeting */}
+      <div className="mb-6">
+        <h1 className="text-[2rem] font-black leading-tight text-foreground">
+          Hallo {teacherName}! 👋
+        </h1>
+        <p className="mt-1 text-base font-medium text-muted-foreground">Schön, dass du da bist.</p>
+      </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {/* Klassen */}
+      {/* Stat cards — 2 columns, clickable */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Klassen → Übersicht-Tab */}
         <button
           type="button"
           onClick={() => setActiveTab("uebersicht")}
-          className="rounded-[20px] border border-black/5 bg-white p-3.5 shadow-[0_12px_26px_rgba(0,0,0,0.06)] text-left active:scale-[0.97] transition-transform"
+          className="flex items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-[26px] text-left shadow-[0_12px_26px_rgba(0,0,0,0.06)] transition active:scale-[0.98]"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12">
-            <Users className="h-[18px] w-[18px] text-primary" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12">
+            <Users className="h-5 w-5 text-primary" />
           </div>
-          <p className="mt-2 text-xl font-black leading-none">{loading ? "…" : classes.length}</p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">Klassen</p>
-          <div className="mt-2 flex justify-end">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15">
-              <ArrowRight className="h-3 w-3 text-primary" />
-            </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.6rem] font-black leading-none">{loading ? "…" : classes.length}</p>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">Klassen</p>
+          </div>
+          <div className="flex h-7 w-7 shrink-0 self-start items-center justify-center rounded-full bg-primary/15">
+            <ArrowRight className="h-3.5 w-3.5 text-primary" />
           </div>
         </button>
-        {/* Schüler:innen */}
-        <button
-          type="button"
-          onClick={() => setActiveTab("uebersicht")}
-          className="rounded-[20px] border border-black/5 bg-white p-3.5 shadow-[0_12px_26px_rgba(0,0,0,0.06)] text-left active:scale-[0.97] transition-transform"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/12">
-            <ClipboardList className="h-[18px] w-[18px] text-sky-600" />
-          </div>
-          <p className="mt-2 text-xl font-black leading-none">{loading ? "…" : totalStudents}</p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">Schüler:innen</p>
-          <div className="mt-2 flex justify-end">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/15">
-              <ArrowRight className="h-3 w-3 text-sky-600" />
-            </div>
-          </div>
-        </button>
-        {/* QR */}
+
+        {/* Schüler:innen → Verwaltung */}
         <button
           type="button"
           onClick={() => navigate("/teacher-management")}
-          className="rounded-[20px] border border-black/5 bg-white p-3.5 shadow-[0_12px_26px_rgba(0,0,0,0.06)] text-left active:scale-[0.97] transition-transform"
+          className="flex items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-[26px] text-left shadow-[0_12px_26px_rgba(0,0,0,0.06)] transition active:scale-[0.98]"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400/15">
-            <QrCode className="h-[18px] w-[18px] text-amber-600" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/12">
+            <ClipboardList className="h-5 w-5 text-sky-600" />
           </div>
-          <p className="mt-2 text-xl font-black leading-none">QR</p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">Aktivierung</p>
-          <div className="mt-2 flex justify-end">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/18">
-              <ArrowRight className="h-3 w-3 text-amber-600" />
-            </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.6rem] font-black leading-none">{loading ? "…" : totalStudents}</p>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">Schüler:innen</p>
+          </div>
+          <div className="flex h-7 w-7 shrink-0 self-start items-center justify-center rounded-full bg-sky-500/15">
+            <ArrowRight className="h-3.5 w-3.5 text-sky-600" />
           </div>
         </button>
       </div>
 
-      <section className="mt-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-black text-foreground">Schnellzugriff</h2>
-          <div className="flex items-center gap-1" aria-hidden="true">
-            <span className="h-0.5 w-4 rounded-full bg-primary" />
-            <span className="h-0.5 w-2.5 rounded-full bg-primary/50" />
-            <span className="h-0.5 w-1.5 rounded-full bg-primary/25" />
-          </div>
-        </div>
+      {/* Schnellzugriff */}
+      <section className="mt-6 space-y-3">
+        <h2 className="text-base font-black text-foreground">Schnellzugriff</h2>
 
+        {/* Verwaltung öffnen */}
         <button
           type="button"
           onClick={() => navigate("/teacher-management")}
-          className="flex w-full items-center gap-4 rounded-[24px] border border-primary/15 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-primary/40"
+          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_8px_22px_rgba(0,0,0,0.06)] transition hover:border-primary/20"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-primary/12 text-primary">
             <ClipboardList className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-black text-foreground">Verwaltung öffnen</h3>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
-              Schüler:innen hinzufügen, QR-Codes anzeigen, Geräte zurücksetzen.
+            <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+              Klassen, Schüler:innen, Geräte und QR-Codes verwalten.
             </p>
           </div>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12">
-            <ArrowRight className="h-4 w-4 text-primary" />
-          </div>
+          <ArrowRight className="h-5 w-5 shrink-0 text-primary" />
         </button>
 
+        {/* QR Aktivierung */}
+        <button
+          type="button"
+          onClick={() => navigate("/teacher-management")}
+          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_8px_22px_rgba(0,0,0,0.06)] transition hover:border-amber-200"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-amber-400/15 text-amber-600">
+            <QrCode className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-black text-foreground">QR Aktivierung</h3>
+            <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+              QR-Codes scannen und Aktivierungen durchführen.
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 shrink-0 text-amber-500" />
+        </button>
+
+        {/* Feedback senden */}
         <button
           type="button"
           onClick={() => setFeedbackOpen(true)}
-          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_14px_32px_rgba(0,0,0,0.07)] transition hover:border-sky-200"
+          className="flex w-full items-center gap-4 rounded-[24px] border border-black/5 bg-white p-4 text-left shadow-[0_8px_22px_rgba(0,0,0,0.06)] transition hover:border-sky-200"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-sky-500/12 text-sky-600">
             <MessageSquare className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-black text-foreground">Feedback senden</h3>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">
+            <p className="mt-0.5 text-sm font-medium text-muted-foreground">
               Idee, Problem oder Wunsch mitteilen.
             </p>
           </div>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500/12">
-            <ArrowRight className="h-4 w-4 text-sky-600" />
-          </div>
+          <ArrowRight className="h-5 w-5 shrink-0 text-sky-500" />
         </button>
 
-        {classes.map((cls) => (
-          <button
-            key={cls.class_id}
-            type="button"
-            onClick={() => { setSelectedClassId(cls.class_id); setActiveTab("uebersicht"); }}
-            className="flex w-full items-center gap-3 rounded-[20px] border border-black/5 bg-white px-4 py-3.5 text-left shadow-[0_10px_24px_rgba(0,0,0,0.05)] transition hover:border-primary/20"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/12 text-primary">
-              <Users className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-black text-foreground">Klasse {cls.class_name}</p>
-              <p className="truncate text-xs font-semibold text-muted-foreground">{cls.school_name}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/12 text-xs font-black text-primary">
-                {cls.student_count}
-              </div>
-              <BarChart2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </button>
-        ))}
-
-        {!loading && classes.length === 0 && (
-          <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
-            Noch keine Klasse verfügbar. Öffne die Verwaltung, um deine erste Klasse vorzubereiten.
-          </Card>
-        )}
-
+        {/* + Klasse anlegen */}
         {authMode === "supabase" && (
           <button
             type="button"
             onClick={() => setCreateClassOpen(true)}
-            className="flex w-full items-center gap-3 rounded-[20px] border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-left transition hover:border-primary/70 hover:bg-primary/10"
+            className="flex w-full items-center gap-3 rounded-[20px] border border-dashed border-primary/40 bg-primary/5 px-4 py-3.5 text-left transition hover:border-primary/60 hover:bg-primary/8"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-primary/20 bg-white text-primary shadow-sm">
               <Plus className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-black text-primary">+ Klasse anlegen</p>
-              <p className="text-xs font-semibold text-muted-foreground">Neue Klasse erstellen und verwalten</p>
+              <p className="text-xs font-semibold text-muted-foreground">Neue Klasse erstellen und verwalten.</p>
             </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-primary/60" />
           </button>
         )}
       </section>
@@ -1503,41 +1464,22 @@ export default function TeacherHome() {
 
   return (
     <div className="min-h-screen bg-[#f8fbf8] pb-nav-safe">
-      <header className="relative overflow-hidden border-b border-border/30 bg-gradient-to-br from-[#edfdf3] via-[#f3fdf6] to-white px-4 py-5">
-        {/* Decorative illustration shapes */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-          {/* Large bg circle */}
-          <div className="absolute -right-6 -top-8 h-36 w-36 rounded-full bg-primary/8" />
-          {/* Medium teal circle */}
-          <div className="absolute right-10 top-3 h-20 w-20 rounded-full bg-sky-400/8" />
-          {/* Small amber dot */}
-          <div className="absolute right-20 top-10 h-8 w-8 rounded-full bg-amber-400/12" />
-          {/* Leaf 1 */}
-          <div className="absolute right-5 top-5 h-14 w-7 rotate-[25deg] rounded-[100%_0_100%_0] bg-primary/18" />
-          {/* Leaf 2 */}
-          <div className="absolute right-14 top-8 h-9 w-4 rotate-[-18deg] rounded-[100%_0_100%_0] bg-primary/12" />
-          {/* Leaf 3 small */}
-          <div className="absolute right-3 top-14 h-6 w-3 rotate-[40deg] rounded-[100%_0_100%_0] bg-sky-500/14" />
-          {/* Pencil-like vertical bar */}
-          <div className="absolute right-24 top-4 h-12 w-2.5 rotate-[-8deg] rounded-full bg-amber-400/18" />
-          <div className="absolute right-[5.5rem] top-3.5 h-2.5 w-2.5 rounded-full bg-amber-500/25" />
-        </div>
-
-        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Lehrer Home</p>
-            <h1 className="text-2xl font-black leading-tight text-foreground">{teacherName}</h1>
+      {activeTab !== "home" && (
+        <header className="relative overflow-hidden border-b border-border/30 bg-gradient-to-br from-[#edfdf3] via-[#f3fdf6] to-white px-4 py-5">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute -right-6 -top-8 h-36 w-36 rounded-full bg-primary/8" />
+            <div className="absolute right-10 top-3 h-20 w-20 rounded-full bg-sky-400/8" />
+            <div className="absolute right-5 top-5 h-14 w-7 rotate-[25deg] rounded-[100%_0_100%_0] bg-primary/18" />
+            <div className="absolute right-14 top-8 h-9 w-4 rotate-[-18deg] rounded-[100%_0_100%_0] bg-primary/12" />
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/teacher-profile")}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-black/5 bg-white/80 shadow-[0_4px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
-            aria-label="Profil öffnen"
-          >
-            <LogOut className="h-4 w-4 text-foreground/70" />
-          </button>
-        </div>
-      </header>
+          <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Lehrer Home</p>
+              <h1 className="text-2xl font-black leading-tight text-foreground">{teacherName}</h1>
+            </div>
+          </div>
+        </header>
+      )}
 
       <main className="mx-auto max-w-6xl px-4 py-5">
         {activeTab === "home" && renderHomeTab()}

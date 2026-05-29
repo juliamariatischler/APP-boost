@@ -8,7 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import boostMascotBlue from "@/assets/boost-mascot-blue.png";
-import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemKey, loadEquippedAvatarItems } from "@/lib/avatarItems";
 import { formatDisplayName } from "@/lib/formatName";
 
 interface StudentRanking {
@@ -69,7 +69,7 @@ const Klasse = () => {
   const [loading, setLoading] = useState(true);
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [showAllStudents, setShowAllStudents] = useState(false);
-  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [equippedAvatarItems, setEquippedAvatarItems] = useState<AvatarItemKey[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -77,7 +77,7 @@ const Klasse = () => {
       try {
         if (codeSession?.user_type === "student") {
           setUserId(codeSession.user_id);
-          setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+          setEquippedAvatarItems(loadEquippedAvatarItems(codeSession.user_id));
           setUserClass(codeSession.class_name || "");
           setUserSchool(codeSession.school_name || "");
           await Promise.all([
@@ -93,7 +93,7 @@ const Klasse = () => {
           return;
         }
         setUserId(session.user.id);
-        setEquippedAvatarItem(loadEquippedAvatarItem(session.user.id));
+        setEquippedAvatarItems(loadEquippedAvatarItems(session.user.id));
 
         const { data: profile } = await supabase
           .from("profiles")
@@ -124,7 +124,7 @@ const Klasse = () => {
     if (!userId) return;
 
     const handleStorage = () => {
-      setEquippedAvatarItem(loadEquippedAvatarItem(userId));
+      setEquippedAvatarItems(loadEquippedAvatarItems(userId));
     };
 
     window.addEventListener("storage", handleStorage);
@@ -243,18 +243,13 @@ const Klasse = () => {
 
   const renderStudentAvatar = (student: StudentRanking, className = "h-10 w-10") => {
     const isCurrentUser = student.id === userId;
-    const equippedItem = isCurrentUser && equippedAvatarItem !== "none" ? AVATAR_ITEMS[equippedAvatarItem] : null;
 
     return (
       <div className={`relative shrink-0 overflow-hidden rounded-full border-2 border-white bg-white shadow-[0_8px_16px_rgba(0,0,0,0.1)] ${className}`}>
         <img src={AVATAR_BASE_ASSET} alt={formatDisplayName(student.username)} className="h-full w-full object-contain" />
-        {equippedItem && (
-          <img
-            src={equippedItem.asset}
-            alt={equippedItem.name}
-            className="absolute inset-0 h-full w-full object-contain"
-          />
-        )}
+        {isCurrentUser && equippedAvatarItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+          <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt={AVATAR_ITEMS[itemId].name} className="absolute inset-0 h-full w-full object-contain" />
+        ))}
       </div>
     );
   };
@@ -266,13 +261,9 @@ const Klasse = () => {
           <div className="flex items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]">
               <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
-              {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
-                <img
-                  src={AVATAR_ITEMS[equippedAvatarItem].asset}
-                  alt={AVATAR_ITEMS[equippedAvatarItem].name}
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              )}
+              {equippedAvatarItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt={AVATAR_ITEMS[itemId].name} className="absolute inset-0 h-full w-full object-contain" />
+              ))}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">

@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import boostLogo from '@/assets/boost-logo.png';
-import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from '@/lib/avatarItems';
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemKey, loadEquippedAvatarItems } from '@/lib/avatarItems';
 import { buildCameraUrl } from '@/lib/friendQuestChallenges';
 
 interface Challenge {
@@ -49,10 +49,10 @@ export const LiveBattle = ({
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [challengerId, setChallengerId] = useState<string>('');
   const [opponentId, setOpponentId] = useState<string>('');
-  const [equippedItem, setEquippedItem] = useState<AvatarItemId>('none');
+  const [equippedItems, setEquippedItems] = useState<AvatarItemKey[]>([]);
 
   useEffect(() => {
-    setEquippedItem(loadEquippedAvatarItem(userId));
+    setEquippedItems(loadEquippedAvatarItems(userId));
   }, [userId]);
 
   // Load initial data
@@ -287,9 +287,9 @@ export const LiveBattle = ({
           <div className="flex flex-col items-center gap-2">
             <div className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-primary/30 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
               <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
-              {equippedItem !== 'none' && AVATAR_ITEMS[equippedItem] && (
-                <img src={AVATAR_ITEMS[equippedItem].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
-              )}
+              {equippedItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+              ))}
             </div>
             <span className="text-sm font-black text-foreground">Du</span>
           </div>
@@ -319,9 +319,9 @@ export const LiveBattle = ({
               <div className="text-center">
                 <div className={`relative w-16 h-16 mx-auto rounded-full overflow-hidden border-2 transition-colors ${myReady ? 'border-primary' : 'border-muted'}`}>
                   <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
-                  {equippedItem !== 'none' && AVATAR_ITEMS[equippedItem] && (
-                    <img src={AVATAR_ITEMS[equippedItem].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
-                  )}
+                  {equippedItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                    <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                  ))}
                   {myReady && (
                     <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
                       <span className="text-xl">✓</span>

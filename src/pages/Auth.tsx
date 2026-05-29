@@ -1290,7 +1290,7 @@ const Auth = () => {
                   required
                   value={signupData.class}
                   onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
-                  placeholder="Klasse/Fach (z.B. Sport)"
+                  placeholder="Klasse"
                   className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
                 />
               )}

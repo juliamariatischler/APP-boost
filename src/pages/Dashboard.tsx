@@ -27,7 +27,7 @@ import volt39To59Img from "@/assets/volt-39-59.png";
 import volt60To79Img from "@/assets/volt-60-79.png";
 import volt80To89Img from "@/assets/volt-80-89.png";
 import volt90PlusImg from "@/assets/volt-90-plus.png";
-import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemKey, loadEquippedAvatarItems } from "@/lib/avatarItems";
 import { getCurrentWeeklyVideo } from "@/lib/weeklyVideo";
 import { getCodeStudentDashboard, saveCodeStudentCounterResults, type CodeSession } from "@/services/codeAuthService";
 import { formatDisplayName } from "@/lib/formatName";
@@ -66,7 +66,7 @@ const Dashboard = () => {
   const [weeklyCompleted, setWeeklyCompleted] = useState(0);
   const [weeklyData, setWeeklyData] = useState<WeeklyResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [equippedAvatarItems, setEquippedAvatarItems] = useState<AvatarItemKey[]>([]);
   const [stepsRefreshing, setStepsRefreshing] = useState(false);
   const pendingCounterProcessedRef = useRef(false);
 
@@ -86,7 +86,7 @@ const Dashboard = () => {
             setUserSchool(codeSession.school_name || "");
             setUserClass(codeSession.class_name || "");
             setIsTeacher(false);
-            setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+            setEquippedAvatarItems(loadEquippedAvatarItems(codeSession.user_id));
             void loadCodeStudentProgress(codeSession);
             setLoading(false);
             return;
@@ -110,7 +110,7 @@ const Dashboard = () => {
 
         const uid = session.user.id;
         setUserId(uid);
-        setEquippedAvatarItem(loadEquippedAvatarItem(uid));
+        setEquippedAvatarItems(loadEquippedAvatarItems(uid));
 
         // Kick off weekly progress fetch immediately — runs in parallel with profile queries
         void loadWeeklyProgress(uid, isDemoEmail(session.user.email));
@@ -183,7 +183,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!userId) return;
     const handleStorage = () => {
-      setEquippedAvatarItem(loadEquippedAvatarItem(userId));
+      setEquippedAvatarItems(loadEquippedAvatarItems(userId));
     };
 
     window.addEventListener("storage", handleStorage);
@@ -678,13 +678,9 @@ const Dashboard = () => {
         <div className="mb-5 flex items-start gap-3">
           <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]" style={{ transform: 'translateZ(0)' }}>
             <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
-            {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
-              <img
-                src={AVATAR_ITEMS[equippedAvatarItem].asset}
-                alt={AVATAR_ITEMS[equippedAvatarItem].name}
-                className="absolute inset-0 h-full w-full object-contain"
-              />
-            )}
+            {equippedAvatarItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+              <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt={AVATAR_ITEMS[itemId].name} className="absolute inset-0 h-full w-full object-contain" />
+            ))}
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-[1.9rem] font-black leading-none tracking-tight text-foreground">

@@ -30,7 +30,7 @@ import { HealthService } from "@/services/healthService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemId, AvatarItemKey, AVATAR_ITEM_POINTS_THRESHOLD, computeMaxItemSlots, isAvatarItemId, loadEquippedAvatarItem, saveEquippedAvatarItem } from "@/lib/avatarItems";
+import { AVATAR_BASE_ASSET, AVATAR_ITEM_LIST, AVATAR_ITEMS, AvatarItemKey, AVATAR_ITEM_POINTS_THRESHOLD, computeMaxItemSlots, isAvatarItemId, loadEquippedAvatarItems, saveEquippedAvatarItems, parseDbEquippedItems, serializeEquippedItems } from "@/lib/avatarItems";
 import { ONBOARDING_OPEN_EVENT } from "@/lib/onboarding";
 import { formatDisplayName } from "@/lib/formatName";
 import { logoutEverywhereOnDevice } from "@/lib/logout";
@@ -57,9 +57,10 @@ const Profil = () => {
   const [connectingHealth, setConnectingHealth] = useState(false);
   const [userId, setUserId] = useState("");
   const [totalPoints, setTotalPoints] = useState(0);
-  const [equippedAvatarItem, setEquippedAvatarItem] = useState<AvatarItemId>("none");
+  const [equippedAvatarItems, setEquippedAvatarItems] = useState<AvatarItemKey[]>([]);
   const [ownedAvatarItems, setOwnedAvatarItems] = useState<AvatarItemKey[]>([]);
   const [showAllAvatarItems, setShowAllAvatarItems] = useState(false);
+  const [pendingUnlockItem, setPendingUnlockItem] = useState<AvatarItemKey | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -73,7 +74,7 @@ const Profil = () => {
       try {
         if (codeSession?.user_type === "student") {
           setUserId(codeSession.user_id);
-          setEquippedAvatarItem(loadEquippedAvatarItem(codeSession.user_id));
+          setEquippedAvatarItems(loadEquippedAvatarItems(codeSession.user_id));
           setProfile({ username: codeSession.display_name || "Spieler" });
           setHealthAvailable(false);
           setCheckingHealth(false);
@@ -109,29 +110,25 @@ const Profil = () => {
           const dbOwned = ((profileData.owned_avatar_items ?? []) as string[])
             .filter(isAvatarItemId) as AvatarItemKey[];
           let finalOwned = dbOwned;
-          let finalEquipped: AvatarItemId = "none";
+          let finalEquipped: AvatarItemKey[] = parseDbEquippedItems(profileData.equipped_avatar_item);
 
           if (dbOwned.length === 0 && !profileData.equipped_avatar_item) {
             // Migrate existing localStorage selection to DB on first load.
-            const localItem = loadEquippedAvatarItem(uid);
+            const localItems = loadEquippedAvatarItems(uid);
             const maxSlots = computeMaxItemSlots(profileData.points ?? 0);
-            if (localItem !== "none" && maxSlots >= 1) {
-              finalOwned = [localItem];
-              finalEquipped = localItem;
+            if (localItems.length > 0 && maxSlots >= 1) {
+              finalOwned = localItems.slice(0, maxSlots);
+              finalEquipped = finalOwned;
               await supabase
                 .from("profiles")
-                .update({ owned_avatar_items: finalOwned, equipped_avatar_item: localItem })
+                .update({ owned_avatar_items: finalOwned, equipped_avatar_item: serializeEquippedItems(finalEquipped) })
                 .eq("id", uid);
-            }
-          } else {
-            if (profileData.equipped_avatar_item && isAvatarItemId(profileData.equipped_avatar_item)) {
-              finalEquipped = profileData.equipped_avatar_item;
             }
           }
 
           setOwnedAvatarItems(finalOwned);
-          setEquippedAvatarItem(finalEquipped);
-          saveEquippedAvatarItem(uid, finalEquipped);
+          setEquippedAvatarItems(finalEquipped);
+          saveEquippedAvatarItems(uid, finalEquipped);
         } else {
           setProfile({ username: "Spieler" });
         }
@@ -198,47 +195,65 @@ const Profil = () => {
   const availableSlots = maxOwnedSlots - ownedAvatarItems.length;
   const progressToNextSlot = totalPoints % AVATAR_ITEM_POINTS_THRESHOLD;
 
-  const selectedItemIndex = AVATAR_ITEM_LIST.findIndex((item) => item.id === equippedAvatarItem);
   const visibleAvatarItems = showAllAvatarItems
     ? AVATAR_ITEM_LIST
-    : AVATAR_ITEM_LIST.filter((item, index) => index < INITIAL_VISIBLE_AVATAR_ITEMS || index === selectedItemIndex);
-  const hasHiddenAvatarItems = AVATAR_ITEM_LIST.length > visibleAvatarItems.length;
+    : AVATAR_ITEM_LIST.slice(0, INITIAL_VISIBLE_AVATAR_ITEMS);
+  const hasHiddenAvatarItems = AVATAR_ITEM_LIST.length > INITIAL_VISIBLE_AVATAR_ITEMS;
 
-  const handleEquipAvatarItem = async (itemId: AvatarItemId) => {
+  const handleToggleEquipItem = async (itemId: AvatarItemKey) => {
     if (!userId) return;
 
-    if (itemId === "none") {
-      setEquippedAvatarItem("none");
-      saveEquippedAvatarItem(userId, "none");
-      await supabase.from("profiles").update({ equipped_avatar_item: null }).eq("id", userId);
-      toast.success("Avatar-Item entfernt.");
-      return;
-    }
+    const isOwned = ownedAvatarItems.includes(itemId);
+    const isEquipped = equippedAvatarItems.includes(itemId);
 
-    const isAlreadyOwned = ownedAvatarItems.includes(itemId);
-
-    if (!isAlreadyOwned) {
+    if (!isOwned) {
       if (availableSlots <= 0) {
         const blitzeNeeded = AVATAR_ITEM_POINTS_THRESHOLD - progressToNextSlot;
         toast.info(`Noch ${blitzeNeeded} Blitze bis zum nächsten Item-Slot.`);
         return;
       }
-      const newOwned = [...ownedAvatarItems, itemId];
-      setOwnedAvatarItems(newOwned);
-      await supabase
-        .from("profiles")
-        .update({ owned_avatar_items: newOwned, equipped_avatar_item: itemId })
-        .eq("id", userId);
-    } else {
-      await supabase
-        .from("profiles")
-        .update({ equipped_avatar_item: itemId })
-        .eq("id", userId);
+      // Show confirmation dialog before unlocking
+      setPendingUnlockItem(itemId);
+      return;
     }
 
-    setEquippedAvatarItem(itemId);
-    saveEquippedAvatarItem(userId, itemId);
-    toast.success("Avatar-Item gespeichert.");
+    // Toggle on/off for already owned items
+    const newEquipped = isEquipped
+      ? equippedAvatarItems.filter((id) => id !== itemId)
+      : [...equippedAvatarItems, itemId];
+
+    setEquippedAvatarItems(newEquipped);
+    saveEquippedAvatarItems(userId, newEquipped);
+    await supabase
+      .from("profiles")
+      .update({ equipped_avatar_item: serializeEquippedItems(newEquipped) })
+      .eq("id", userId);
+    toast.success(newEquipped.includes(itemId) ? "Item angelegt." : "Item abgelegt.");
+  };
+
+  const handleConfirmUnlockItem = async () => {
+    if (!userId || !pendingUnlockItem) return;
+    const itemId = pendingUnlockItem;
+    setPendingUnlockItem(null);
+
+    const newOwned = [...ownedAvatarItems, itemId];
+    const newEquipped = [...equippedAvatarItems, itemId];
+    setOwnedAvatarItems(newOwned);
+    setEquippedAvatarItems(newEquipped);
+    saveEquippedAvatarItems(userId, newEquipped);
+    await supabase
+      .from("profiles")
+      .update({ owned_avatar_items: newOwned, equipped_avatar_item: serializeEquippedItems(newEquipped) })
+      .eq("id", userId);
+    toast.success("Item freigeschaltet und angelegt!");
+  };
+
+  const handleRemoveAllItems = async () => {
+    if (!userId) return;
+    setEquippedAvatarItems([]);
+    saveEquippedAvatarItems(userId, []);
+    await supabase.from("profiles").update({ equipped_avatar_item: null }).eq("id", userId);
+    toast.success("Alle Items entfernt.");
   };
 
   const handleConnectHealthData = async () => {
@@ -376,13 +391,9 @@ const Profil = () => {
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white text-zinc-950 shadow-[0_12px_28px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.75)]" style={{ transform: 'translateZ(0)' }}>
               <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
-              {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
-                <img
-                  src={AVATAR_ITEMS[equippedAvatarItem].asset}
-                  alt={AVATAR_ITEMS[equippedAvatarItem].name}
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              )}
+              {equippedAvatarItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt={AVATAR_ITEMS[itemId].name} className="absolute inset-0 h-full w-full object-contain" />
+              ))}
             </div>
             <div className="min-w-0">
               <p className="text-[18px] font-semibold text-muted-foreground">Profil</p>
@@ -421,16 +432,13 @@ const Profil = () => {
           </div>
 
           <div className="rounded-[22px] border border-black/5 bg-[linear-gradient(135deg,#ffffff_0%,#edf8d7_100%)] p-4 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
+            {/* Avatar preview + slot status */}
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_10px_22px_rgba(0,0,0,0.08)]" style={{ transform: 'translateZ(0)' }}>
                 <img src={AVATAR_BASE_ASSET} alt="Avatar Vorschau" className="h-full w-full object-contain" />
-                {equippedAvatarItem !== "none" && AVATAR_ITEMS[equippedAvatarItem] && (
-                  <img
-                    src={AVATAR_ITEMS[equippedAvatarItem].asset}
-                    alt={AVATAR_ITEMS[equippedAvatarItem].name}
-                    className="absolute inset-0 h-full w-full object-contain"
-                  />
-                )}
+                {equippedAvatarItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                  <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt={AVATAR_ITEMS[itemId].name} className="absolute inset-0 h-full w-full object-contain" />
+                ))}
               </div>
               {availableSlots > 0 ? (
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
@@ -443,8 +451,51 @@ const Profil = () => {
               )}
             </div>
 
+            {/* Meine Items — owned items wardrobe */}
+            {ownedAvatarItems.length > 0 && (
+              <div className="mb-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">Meine Items</p>
+                  {equippedAvatarItems.length > 0 && (
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => void handleRemoveAllItems()}>
+                      Alle ablegen
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {ownedAvatarItems.map((itemId) => {
+                    const item = AVATAR_ITEMS[itemId];
+                    if (!item) return null;
+                    const isEquipped = equippedAvatarItems.includes(itemId);
+                    return (
+                      <button
+                        key={itemId}
+                        type="button"
+                        onClick={() => void handleToggleEquipItem(itemId)}
+                        className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold transition ${
+                          isEquipped
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-black/10 bg-white text-muted-foreground"
+                        }`}
+                      >
+                        <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full bg-white" style={{ transform: 'translateZ(0)' }}>
+                          <img src={AVATAR_BASE_ASSET} alt="" className="h-full w-full object-contain" />
+                          <img src={item.asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                        </div>
+                        {item.name}
+                        {isEquipped && <Check className="h-3 w-3 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* All items browser */}
             <div className="mb-3 flex items-center justify-between">
-              <p className="font-semibold text-foreground">Wähle dein Item</p>
+              <p className="font-semibold text-foreground">
+                {ownedAvatarItems.length === 0 ? "Wähle dein erstes Item" : "Alle Items"}
+              </p>
               <div className="flex items-center gap-2">
                 {AVATAR_ITEM_LIST.length > INITIAL_VISIBLE_AVATAR_ITEMS && (
                   <Button
@@ -456,29 +507,31 @@ const Profil = () => {
                     {showAllAvatarItems ? "Weniger" : "Alle"}
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-2xl"
-                  onClick={() => void handleEquipAvatarItem("none")}
-                >
-                  Ohne Item
-                </Button>
+                {equippedAvatarItems.length > 0 && ownedAvatarItems.length === 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-2xl"
+                    onClick={() => void handleRemoveAllItems()}
+                  >
+                    Ohne Item
+                  </Button>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               {visibleAvatarItems.map((item) => {
-                const isActive = equippedAvatarItem === item.id;
+                const isEquipped = equippedAvatarItems.includes(item.id);
                 const isOwned = ownedAvatarItems.includes(item.id);
                 const isLocked = !isOwned && availableSlots <= 0;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => void handleEquipAvatarItem(item.id)}
+                    onClick={() => void handleToggleEquipItem(item.id)}
                     className={`rounded-[20px] border p-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.72)] transition ${
-                      isActive
+                      isEquipped
                         ? "border-primary bg-primary/10"
                         : isOwned
                           ? "border-primary/25 bg-primary/5"
@@ -488,24 +541,25 @@ const Profil = () => {
                     <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full border border-black/5 bg-white shadow-[0_8px_18px_rgba(0,0,0,0.08)]" style={{ transform: 'translateZ(0)' }}>
                       <img src={AVATAR_BASE_ASSET} alt={item.name} className="h-full w-full object-contain" />
                       <img src={item.asset} alt={item.name} className="absolute inset-0 h-full w-full object-contain" />
+                      {isLocked && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/20">
+                          <Lock className="h-5 w-5 text-white drop-shadow" />
+                        </div>
+                      )}
                     </div>
                     <div className="mt-3 flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-bold text-foreground">{item.name}</p>
                         <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{item.description}</p>
                       </div>
-                      {isActive ? (
-                        <Check className="h-4 w-4 shrink-0 text-primary" />
-                      ) : isLocked ? (
-                        <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      ) : null}
+                      {isEquipped && <Check className="h-4 w-4 shrink-0 text-primary" />}
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {hasHiddenAvatarItems && (
+            {hasHiddenAvatarItems && !showAllAvatarItems && (
               <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
                 Tippe auf "Alle", um weitere Items zu sehen.
               </p>
@@ -685,6 +739,53 @@ const Profil = () => {
           </Card>
         </div>
       </div>
+
+      {/* Unlock confirmation dialog */}
+      <Dialog open={pendingUnlockItem !== null} onOpenChange={(open) => { if (!open) setPendingUnlockItem(null); }}>
+        <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">
+          {pendingUnlockItem && AVATAR_ITEMS[pendingUnlockItem] && (() => {
+            const item = AVATAR_ITEMS[pendingUnlockItem];
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Item einlösen?</DialogTitle>
+                  <DialogDescription>
+                    Du verwendest einen freien Item-Slot für <span className="font-semibold text-foreground">{item.name}</span>.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Avatar preview with item */}
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-primary/20 bg-white shadow-[0_12px_28px_rgba(0,0,0,0.10)]" style={{ transform: 'translateZ(0)' }}>
+                    <img src={AVATAR_BASE_ASSET} alt="Avatar" className="h-full w-full object-contain" />
+                    {equippedAvatarItems.map((id) => AVATAR_ITEMS[id] && (
+                      <img key={id} src={AVATAR_ITEMS[id].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                    ))}
+                    <img src={item.asset} alt={item.name} className="absolute inset-0 h-full w-full object-contain" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-foreground">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-bold text-primary">
+                    <Zap className="h-4 w-4 fill-primary" />
+                    1 Slot wird verwendet · {ownedAvatarItems.length + 1} / {maxOwnedSlots}
+                  </div>
+                </div>
+
+                <DialogFooter className="flex-row gap-2">
+                  <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={() => setPendingUnlockItem(null)}>
+                    Abbrechen
+                  </Button>
+                  <Button type="button" className="flex-1 rounded-2xl" onClick={() => void handleConfirmUnlockItem()}>
+                    Einlösen
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent className="w-[calc(100%-2rem)] rounded-[24px]">

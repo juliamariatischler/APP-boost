@@ -19,10 +19,10 @@ INSERT INTO public.reward_items (title, partner, threshold, category, icon, is_a
 SELECT v.title, v.partner, v.threshold, v.category, v.icon, true
 FROM (VALUES
   ('Thieme Gutschein 10EUR',    'Thieme',     600,  'gutscheine', '📖'),
-  ('Frisbeescheibe',            'Murbak',     750,  'sport',      '🥏'),
+  ('Frisbeescheibe',            'Murpark',   750,  'sport',      '🥏'),
   ('Sport Gutschein',           'Sport 2000', 900,  'gutscheine', '🎫'),
   ('Thieme Gutschein 20EUR',    'Thieme',     1000, 'gutscheine', '📖'),
-  ('Ping-Pong-Set',             'Murbak',     1200, 'sport',      '🏓'),
+  ('Ping-Pong-Set',             'Murpark',   1200, 'sport',      '🏓'),
   ('Sport2000 Gutschein 20EUR', 'Sport 2000', 1500, 'gutscheine', '🎫')
 ) AS v(title, partner, threshold, category, icon)
 WHERE NOT EXISTS (

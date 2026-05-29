@@ -98,9 +98,6 @@ export default function TeacherProfile() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Lehrer Profil</p>
             <h1 className="text-2xl font-black leading-tight text-foreground">{formatDisplayName(teacherName)}</h1>
           </div>
-          <Button variant="outline" size="icon" className="rounded-xl border-black/5 shadow-sm" onClick={handleLogout} disabled={loggingOut} aria-label="Abmelden">
-            <LogOut className="h-4 w-4" />
-          </Button>
         </div>
       </header>
 

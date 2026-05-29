@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDisplayName } from "@/lib/formatName";
 import { toast } from "sonner";
 import flashAvatarImg from "@/assets/quest-class-avatar.png";
-import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemId, loadEquippedAvatarItem } from "@/lib/avatarItems";
+import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemKey, loadEquippedAvatarItems } from "@/lib/avatarItems";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 
 type ClassQuestProgressRow = {
@@ -57,7 +57,7 @@ const ClassQuest = () => {
   const [rows, setRows] = useState<ClassQuestProgressRow[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [equippedItem, setEquippedItem] = useState<AvatarItemId>("none");
+  const [equippedItems, setEquippedItems] = useState<AvatarItemKey[]>([]);
 
   const weekStartDate = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const weekEndDate   = useMemo(() => endOfWeek(new Date(), { weekStartsOn: 1 }), []);
@@ -78,7 +78,7 @@ const ClassQuest = () => {
       if (!session) {
         if (codeSession?.user_type === "student") {
           setCurrentUserId(codeSession.user_id);
-          setEquippedItem(loadEquippedAvatarItem(codeSession.user_id));
+          setEquippedItems(loadEquippedAvatarItems(codeSession.user_id));
 
           const { data: codeData, error: codeError } = await (supabase.rpc as any)("get_code_class_quest_progress", {
             p_device_id: codeSession.device_id,
@@ -97,7 +97,7 @@ const ClassQuest = () => {
         return;
       }
       setCurrentUserId(session.user.id);
-      setEquippedItem(loadEquippedAvatarItem(session.user.id));
+      setEquippedItems(loadEquippedAvatarItems(session.user.id));
 
       const { data, error } = await (supabase.rpc as any)("get_class_quest_progress", {
         p_week_start: weekStart,
@@ -324,9 +324,9 @@ const ClassQuest = () => {
                         </div>
                         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary/20 bg-white shadow-[0_6px_16px_rgba(22,198,83,0.20)]">
                           <img src={AVATAR_BASE_ASSET} alt={name} className="h-full w-full object-contain" />
-                          {row.student_id === currentUserId && equippedItem !== "none" && AVATAR_ITEMS[equippedItem] && (
-                            <img src={AVATAR_ITEMS[equippedItem].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
-                          )}
+                          {row.student_id === currentUserId && equippedItems.map((itemId) => AVATAR_ITEMS[itemId] && (
+                            <img key={itemId} src={AVATAR_ITEMS[itemId].asset} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                          ))}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="mb-2 flex items-center justify-between gap-3">
