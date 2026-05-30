@@ -867,7 +867,7 @@ const Auth = () => {
   };
 
   const handleAddClass = async () => {
-    const name = newClassName.trim();
+    const name = newClassName.trim().replace(/\s+/g, "").toUpperCase();
     if (!name) return;
     setNewClassLoading(true);
     try {
@@ -1248,7 +1248,7 @@ const Auth = () => {
                       type="text"
                       required={!showNewClassInput}
                       value={signupData.class}
-                      onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
+                      onChange={(e) => setSignupData({ ...signupData, class: e.target.value.replace(/\s+/g, "").toUpperCase() })}
                       placeholder="Klasse (z.B. 5a)"
                       className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
                     />
@@ -1267,7 +1267,7 @@ const Auth = () => {
                     <div className="space-y-2 rounded-2xl border border-gray-200 p-3 bg-gray-50">
                       <Input
                         value={newClassName}
-                        onChange={(e) => setNewClassName(e.target.value)}
+                        onChange={(e) => setNewClassName(e.target.value.replace(/\s+/g, "").toUpperCase())}
                         placeholder="Klassenname (z.B. 4a)"
                         className="rounded-xl"
                       />
@@ -1289,7 +1289,7 @@ const Auth = () => {
                   type="text"
                   required
                   value={signupData.class}
-                  onChange={(e) => setSignupData({ ...signupData, class: e.target.value })}
+                  onChange={(e) => setSignupData({ ...signupData, class: e.target.value.replace(/\s+/g, "").toUpperCase() })}
                   placeholder="Klasse"
                   className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-inset focus:ring-green-100"
                 />

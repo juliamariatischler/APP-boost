@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, LogOut, Mail, ShieldCheck, User, Users } from "lucide-react";
+import { ClipboardList, LogOut, Mail, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -122,12 +122,6 @@ export default function TeacherProfile() {
                     <Badge className="border-0 bg-primary/12 text-primary hover:bg-primary/12">Lehrer:in</Badge>
                   </div>
                   <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-                        <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <span className="font-medium">{authMode === "code" ? "Lehrer-Code Login" : "Lehrer-Account"}</span>
-                    </div>
                     {teacherEmail && (
                       <div className="flex items-center gap-2">
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">

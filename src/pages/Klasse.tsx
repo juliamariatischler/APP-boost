@@ -539,16 +539,16 @@ const Klasse = () => {
       </Dialog>
 
       <Dialog open={showAllRankings} onOpenChange={setShowAllRankings}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-xl rounded-[28px] border border-black/5 bg-background p-0 shadow-[0_24px_64px_rgba(0,0,0,0.18)]">
-          <div className="rounded-[28px] border border-black/5 bg-white p-5 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
-            <DialogHeader className="mb-4 text-left">
+        <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-[28px] border border-black/5 bg-background p-0 shadow-[0_24px_64px_rgba(0,0,0,0.18)]">
+          <div className="flex max-h-[85vh] flex-col rounded-[28px] border border-black/5 bg-white p-5 shadow-[0_18px_36px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <DialogHeader className="mb-4 shrink-0 text-left">
               <div className="pr-10">
                 <DialogTitle className="text-xl font-black text-foreground">Klassenranking</DialogTitle>
                 <p className="text-sm text-muted-foreground">Steirische Unterstufen im Ranking</p>
               </div>
             </DialogHeader>
 
-            <div className="space-y-2">
+            <div className="flex-1 space-y-2 overflow-y-auto pr-1">
               {classRankings.map((cls, i) => {
                 const isMyClass = cls.className === userClass && cls.school === userSchool;
                 return (
@@ -581,7 +581,7 @@ const Klasse = () => {
             </div>
 
             {myClassRank > 0 && (
-              <div className="mt-4 flex items-center justify-between rounded-[20px] border border-primary bg-primary/10 px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.42)]">
+              <div className="mt-4 shrink-0 flex items-center justify-between rounded-[20px] border border-primary bg-primary/10 px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.42)]">
                 <div className="flex items-center gap-2">
                   <Trophy className="h-4 w-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">Dein aktueller Klassenrang</span>
