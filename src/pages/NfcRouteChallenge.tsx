@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
+  MapPin,
   Nfc,
   Trophy,
   Zap,
@@ -126,6 +127,15 @@ const NfcRouteChallenge = () => {
     }
   };
 
+  const openNavigation = (station: NfcStation) => {
+    const url =
+      station.google_maps_url ??
+      (station.latitude != null && station.longitude != null
+        ? `https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}`
+        : null);
+    if (url) window.open(url, '_blank', 'noopener');
+  };
+
   const stationDone = (station: NfcStation): boolean =>
     progress?.scanned_station_ids?.includes(station.id) ?? false;
 
@@ -196,6 +206,17 @@ const NfcRouteChallenge = () => {
           </div>
         </Card>
 
+        {/* Route map / image */}
+        {!loadingRoute && route?.image_url && (
+          <div className="overflow-hidden rounded-[28px] border border-black/5 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+            <img
+              src={route.image_url}
+              alt="Karte"
+              className="w-full object-cover"
+            />
+          </div>
+        )}
+
         {/* Station list */}
         {!loadingRoute && route ? (
           <Card className="overflow-hidden rounded-[28px] border border-black/5 bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
@@ -206,43 +227,75 @@ const NfcRouteChallenge = () => {
             <div className="mt-4 space-y-3">
               {route.stations.map((station, index) => {
                 const done = stationDone(station);
+                const hasNav =
+                  station.google_maps_url != null ||
+                  (station.latitude != null && station.longitude != null);
                 return (
                   <div
                     key={station.id}
-                    className={`flex items-center gap-4 rounded-2xl border px-4 py-3.5 transition-colors ${
+                    className={`rounded-2xl border px-4 py-3.5 transition-colors ${
                       done
                         ? "border-green-200 bg-green-50"
                         : "border-sky-100 bg-sky-50/60"
                     }`}
                   >
-                    {/* Order badge */}
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
-                        done
-                          ? "bg-green-100 text-green-600"
-                          : "bg-sky-100 text-sky-600"
-                      }`}
-                    >
-                      {done ? (
-                        <CheckCircle2 className="h-5 w-5" />
-                      ) : (
-                        <Circle className="h-5 w-5" />
+                    {/* Station image */}
+                    {station.image_url && (
+                      <div className="mb-3 overflow-hidden rounded-xl">
+                        <img
+                          src={station.image_url}
+                          alt={station.name}
+                          className="w-full object-cover max-h-40"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-4">
+                      {/* Order badge */}
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                          done
+                            ? "bg-green-100 text-green-600"
+                            : "bg-sky-100 text-sky-600"
+                        }`}
+                      >
+                        {done ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : (
+                          <Circle className="h-5 w-5" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                          Station {index + 1}
+                        </p>
+                        <p className="mt-0.5 text-base font-black text-foreground">
+                          {station.name}
+                        </p>
+                        {station.description && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {station.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {done && (
+                        <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-xs font-black text-green-600">
+                          ✓ Gescannt
+                        </span>
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                        Station {index + 1}
-                      </p>
-                      <p className="mt-0.5 text-base font-black text-foreground">
-                        {station.name}
-                      </p>
-                    </div>
-
-                    {done && (
-                      <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-xs font-black text-green-600">
-                        ✓ Gescannt
-                      </span>
+                    {/* Navigation button */}
+                    {hasNav && (
+                      <button
+                        onClick={() => openNavigation(station)}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white py-2 text-xs font-bold text-sky-600 transition-colors hover:bg-sky-50 active:bg-sky-100"
+                      >
+                        <MapPin className="h-3.5 w-3.5" />
+                        Route öffnen
+                      </button>
                     )}
                   </div>
                 );

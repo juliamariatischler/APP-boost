@@ -7,6 +7,8 @@ export interface NfcRoute {
   points_reward: number;
   active: boolean;
   week_start: string | null;
+  image_url: string | null;
+  ends_at: string | null;
 }
 
 export interface NfcStation {
@@ -15,6 +17,11 @@ export interface NfcStation {
   name: string;
   nfc_tag_id: string;
   station_order: number;
+  description: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  google_maps_url: string | null;
+  image_url: string | null;
 }
 
 export type NfcRouteWithStations = NfcRoute & { stations: NfcStation[] };
@@ -41,7 +48,7 @@ export interface NfcScanResponse {
 /** Loads the most-recently-started active NFC route including its stations. */
 export async function getActiveRoute(): Promise<NfcRouteWithStations | null> {
   const { data, error } = await (supabase.from('nfc_routes') as any)
-    .select('id, name, description, points_reward, active, week_start, nfc_stations(id, route_id, name, nfc_tag_id, station_order)')
+    .select('id, name, description, points_reward, active, week_start, image_url, ends_at, nfc_stations(id, route_id, name, nfc_tag_id, station_order, description, latitude, longitude, google_maps_url, image_url)')
     .eq('active', true)
     .order('week_start', { ascending: false })
     .limit(1);
@@ -60,6 +67,8 @@ export async function getActiveRoute(): Promise<NfcRouteWithStations | null> {
     points_reward: row.points_reward,
     active: row.active,
     week_start: row.week_start ?? null,
+    image_url: row.image_url ?? null,
+    ends_at: row.ends_at ?? null,
     stations,
   };
 }
