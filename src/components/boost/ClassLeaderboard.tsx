@@ -29,7 +29,6 @@ const PRESENTATION_RANKINGS_UNAVAILABLE_KEY = "boost:presentation_class_rankings
 const PRESENTATION_CLASS_RANKINGS: ClassRanking[] = [
   { className: "3b", school: "NMS Klusemann", totalFlashes: 2840, studentCount: 30 },
   { className: "4a", school: "NMS Straden", totalFlashes: 2635, studentCount: 30 },
-  { className: "3e", school: "Ursulinen", totalFlashes: 2410, studentCount: 30 },
   { className: "3c", school: "NMS Graz St. Peter", totalFlashes: 2195, studentCount: 30 },
   { className: "2a", school: "MS Graz Smart City", totalFlashes: 1980, studentCount: 30 },
 ];
