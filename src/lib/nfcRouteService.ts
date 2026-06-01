@@ -45,11 +45,13 @@ export interface NfcScanResponse {
   error?: string;
 }
 
-/** Loads the most-recently-started active NFC route including its stations. */
+/** Loads the most-recently-started active NFC route including its stations.
+ *  Routes with a past ends_at are treated as expired and not returned. */
 export async function getActiveRoute(): Promise<NfcRouteWithStations | null> {
   const { data, error } = await (supabase.from('nfc_routes') as any)
     .select('id, name, description, points_reward, active, week_start, image_url, ends_at, nfc_stations(id, route_id, name, nfc_tag_id, station_order, description, latitude, longitude, google_maps_url, image_url)')
     .eq('active', true)
+    .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
     .order('week_start', { ascending: false })
     .limit(1);
 

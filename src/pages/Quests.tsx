@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Sparkles, Users, Zap } from "lucide-react";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
@@ -12,6 +14,7 @@ import friendAvatarImg from "@/assets/quest-friend-emoji.svg";
 import tryitAvatarImg from "@/assets/quest-tryit-football-avatar.png";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
 import { AVATAR_BASE_ASSET, AVATAR_ITEMS, AvatarItemKey, loadEquippedAvatarItems } from "@/lib/avatarItems";
+import { getActiveRoute } from "@/lib/nfcRouteService";
 
 type QuestCard = {
   id: string;
@@ -66,14 +69,14 @@ const QuestAvatar = ({ quest }: { quest: QuestCard }) => (
   </div>
 );
 
-const quests: QuestCard[] = [
+const STATIC_QUESTS: QuestCard[] = [
   {
     id: "weekly",
     title: "Wochen-Quest",
     eyebrow: "WOCHENZIEL",
     description: `Bewältige die 2 Wochenchallenge und hole dir die ${BOOST_POINT_RULES.weeklyChallengeCompleted} Blitze.`,
     reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡`,
-    meta: "Endet Sonntag 23:59",
+    meta: "Aktuelle Mission",
     image: weeklyAvatarImg,
     icon: Sparkles,
     imgClass: "relative z-10 max-h-[116%] w-auto max-w-[112%] object-contain object-bottom drop-shadow-[0_26px_22px_rgba(15,23,42,0.36)] saturate-[1.1] contrast-[1.05]",
@@ -119,6 +122,15 @@ const Quests = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [equippedAvatarItems, setEquippedAvatarItems] = useState<AvatarItemKey[]>([]);
+  const [weeklyMeta, setWeeklyMeta] = useState("Aktuelle Mission");
+
+  useEffect(() => {
+    void getActiveRoute().then((route) => {
+      if (route?.ends_at) {
+        setWeeklyMeta(`Endet ${format(new Date(route.ends_at), "d. MMM", { locale: de })}`);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -183,8 +195,9 @@ const Quests = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {quests.map((quest) => {
+              {STATIC_QUESTS.map((quest) => {
                 const Icon = quest.icon;
+                const meta = quest.id === "weekly" ? weeklyMeta : quest.meta;
 
                 return (
                   <Card
@@ -210,7 +223,7 @@ const Quests = () => {
                         </div>
                         <div className="mt-4 space-y-1">
                           <RewardDisplay reward={quest.reward} />
-                          <span className="block text-xs text-muted-foreground">{quest.meta}</span>
+                          <span className="block text-xs text-muted-foreground">{meta}</span>
                         </div>
                       </div>
                     </button>
