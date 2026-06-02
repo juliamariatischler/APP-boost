@@ -1,130 +1,147 @@
 -- ============================================================
 -- DIAGNOSE + GEZIELTER BACKFILL: Fehlende FriendQuest-Blitze
 -- ============================================================
--- Kontext:
---   - 01.06.2026: vollständiger Launch-Reset → alle Schülerpunkte auf 0
---   - Seit 01.06. aktiver Bug in submit_friendquest_battle_result:
---     Spaltenname boost_points (existiert nicht) statt points
---     → Blitze wurden nach jedem FriendQuest-Abschluss NIEMALS gebucht
---   - Betroffene Challenges: alle (falsche Spalte), speziell push-ups/squats
---     bei denen das 50-Reps-Minimum ohnehin nicht erreicht werden konnte (Ziel=30)
+-- Hintergrund (01.06.2026 – heute):
+--   Migration 20260529240000_friendquest_min_50_reps.sql enthielt zwei Bugs:
+--   1. Spaltenname boost_points (existiert nicht) statt points
+--      → Blitze wurden nach jedem Abschluss NIEMALS gebucht (kein Fehler sichtbar,
+--        da UPDATE auf nicht-existente Spalte in plpgsql stillschweigend fehlschlägt)
+--   2. Hartes >= 50 Minimum: Kniebeugen/Liegestütze (Ziel 30) bekamen ohnehin nichts
 --
--- Relevante Periode: 2026-06-01 bis heute (Reset-Zeitpunkt bis Bugfix)
+--   Relevante Periode: ab Launch-Reset 2026-06-01
+--   Nicht betroffen: Tages-/Klassen-Challenge-Punkte (eigene Funktion, korrekter Spaltenname)
+--
+-- Idempotenz: Die Backfill-Buchungen erhalten source = 'fq_backfill_<invitation_id>'.
+-- Ein zweites Ausführen ist sicher – INSERT passiert nur wenn noch kein Eintrag
+-- mit diesem source für diesen user_id existiert.
 -- ============================================================
 
--- ── SCHRITT 1: DIAGNOSE – was fehlt? ────────────────────────
--- Kopiere diesen Block in den Supabase SQL Editor und führe ihn aus.
--- Er ändert NICHTS, zeigt aber genau wer welche Punkte nicht bekommen hat.
 
-WITH battle_participants AS (
+-- ══════════════════════════════════════════════════════════════
+-- SCHRITT 1: DIAGNOSE (nur lesen, ändert nichts)
+-- Zeigt: wer hat welche Battle abgeschlossen, wie viele Reps,
+--        und wie viele Blitze fehlen.
+-- Im Supabase SQL Editor ausführen → Ergebnis prüfen.
+-- ══════════════════════════════════════════════════════════════
+
+WITH participants AS (
   SELECT
-    ci.id                           AS invitation_id,
-    unnest(ARRAY[ci.challenger_id, ci.opponent_id])     AS user_id,
-    unnest(ARRAY[ci.challenger_result, ci.opponent_result]) AS result,
-    ci.updated_at                   AS completed_at,
-    fc.name                         AS challenge_name,
-    fc.winner_points                AS points_due
+    ci.id                             AS invitation_id,
+    unnest(ARRAY[
+      ci.challenger_id,
+      ci.opponent_id
+    ])                                AS user_id,
+    unnest(ARRAY[
+      ci.challenger_result,
+      ci.opponent_result
+    ])                                AS result,
+    COALESCE(ci.completed_at, ci.updated_at)  AS completed_at,
+    fc.name                           AS challenge_name,
+    fc.winner_points                  AS points_due
   FROM public.challenge_invitations ci
   JOIN public.friend_challenges fc ON fc.id = ci.challenge_id
   WHERE ci.status = 'completed'
-    AND ci.updated_at >= '2026-06-01'   -- nach Launch-Reset
+    AND COALESCE(ci.completed_at, ci.updated_at) >= '2026-06-01'
 ),
-eligible AS (
-  -- Nur wer wirklich teilgenommen hat (result > 0) und Punkte verdient hat
-  SELECT *
-  FROM battle_participants
-  WHERE result > 0
-    AND points_due > 0
-),
-awarded AS (
-  -- Punkte die tatsächlich als FriendQuest gebucht wurden
-  SELECT user_id, SUM(points) AS already_awarded
+already_backfilled AS (
+  -- Buchungen durch früheren Backfill-Lauf ODER durch die neue (korrekte) Funktion.
+  -- Backfill: source = 'fq_backfill_<invitation_id>'  → invitation_id = letzten 36 Zeichen
+  -- Neue Funktion: source = 'friendquest_battle', kein Invitation-Bezug im source.
+  -- Wir nutzen beide, um Doppelbuchungen in jedem Fall zu verhindern.
+  SELECT
+    user_id,
+    RIGHT(source, 36) AS invitation_id,
+    SUM(points)       AS points_booked
   FROM public.point_awards
-  WHERE source = 'friendquest_battle'
-    AND created_at >= '2026-06-01'
-  GROUP BY user_id
+  WHERE source LIKE 'fq_backfill_%'
+  GROUP BY user_id, source
 )
 SELECT
   pr.username,
-  e.challenge_name,
-  e.result         AS reps_achieved,
-  e.points_due     AS blitze_sollte_erhalten,
-  COALESCE(a.already_awarded, 0) AS blitze_tatsaechlich_erhalten,
-  e.points_due - COALESCE(a.already_awarded, 0) AS fehlende_blitze,
-  e.completed_at::timestamptz AT TIME ZONE 'Europe/Vienna' AS wann,
-  e.invitation_id
-FROM eligible e
-JOIN public.profiles pr ON pr.id = e.user_id
-LEFT JOIN awarded a ON a.user_id = e.user_id
-WHERE e.points_due > COALESCE(a.already_awarded, 0)  -- nur wirklich Fehlende
-ORDER BY e.completed_at DESC, pr.username;
+  p.challenge_name,
+  p.result                                      AS reps_achieved,
+  p.points_due                                  AS blitze_sollte_erhalten,
+  COALESCE(ab.points_booked, 0)                 AS bereits_gebucht,
+  p.points_due - COALESCE(ab.points_booked, 0) AS noch_fehlend,
+  (p.completed_at AT TIME ZONE 'Europe/Vienna')::date AS datum,
+  p.invitation_id
+FROM participants p
+JOIN public.profiles pr ON pr.id = p.user_id
+LEFT JOIN already_backfilled ab
+  ON ab.user_id = p.user_id
+  AND ab.invitation_id = p.invitation_id::text
+WHERE p.result > 0                                          -- hat wirklich teilgenommen
+  AND p.points_due > 0
+  AND p.points_due > COALESCE(ab.points_booked, 0)         -- noch nicht vollständig gebucht
+ORDER BY p.completed_at DESC, pr.username;
 
 
--- ── SCHRITT 2: BACKFILL ──────────────────────────────────────
--- Erst Schritt 1 prüfen! Dann die Kommentare unten entfernen und ausführen.
--- Der Backfill bucht exakt die Differenz aus Schritt 1 – keine Doppelbuchung möglich,
--- weil er zuvor gebuchte FriendQuest-Punkte berücksichtigt.
+-- ══════════════════════════════════════════════════════════════
+-- SCHRITT 2: BACKFILL
+-- Erst Schritt 1 prüfen und Ergebnis bestätigen!
+-- Dann die /* … */ Kommentare entfernen und ausführen.
+--
+-- Sicherheiten:
+--   – Nur Teilnehmer mit result > 0
+--   – Nur wenn für diese invitation_id noch kein Backfill-Eintrag existiert
+--   – Kein Update von Profilen die nicht gefunden werden (WHERE id = ...)
+--   – Gibt am Ende eine Zusammenfassung aus (RAISE NOTICE im Message-Tab)
+-- ══════════════════════════════════════════════════════════════
 
 /*
 DO $$
 DECLARE
   v_row            RECORD;
-  v_already        INTEGER;
-  v_to_add         INTEGER;
-  v_total_bookings INTEGER := 0;
-  v_total_points   INTEGER := 0;
+  v_source_key     TEXT;
+  v_already_exists BOOLEAN;
+  v_total_bookings INT := 0;
+  v_total_points   INT := 0;
 BEGIN
 
   FOR v_row IN
-    WITH battle_participants AS (
-      SELECT
-        ci.id   AS invitation_id,
-        unnest(ARRAY[ci.challenger_id, ci.opponent_id])       AS user_id,
-        unnest(ARRAY[ci.challenger_result, ci.opponent_result]) AS result,
-        fc.winner_points AS points_due
-      FROM public.challenge_invitations ci
-      JOIN public.friend_challenges fc ON fc.id = ci.challenge_id
-      WHERE ci.status = 'completed'
-        AND ci.updated_at >= '2026-06-01'
-    )
-    SELECT user_id, invitation_id, result, points_due
-    FROM battle_participants
-    WHERE result > 0 AND points_due > 0
+    SELECT
+      unnest(ARRAY[ci.challenger_id,   ci.opponent_id  ]) AS user_id,
+      unnest(ARRAY[ci.challenger_result, ci.opponent_result]) AS result,
+      ci.id        AS invitation_id,
+      fc.winner_points AS points_due
+    FROM public.challenge_invitations ci
+    JOIN public.friend_challenges fc ON fc.id = ci.challenge_id
+    WHERE ci.status = 'completed'
+      AND COALESCE(ci.completed_at, ci.updated_at) >= '2026-06-01'
+      AND fc.winner_points > 0
   LOOP
+    -- Nur wer wirklich teilgenommen hat
+    CONTINUE WHEN v_row.result IS NULL OR v_row.result <= 0;
 
-    -- Prüfe ob für diese Invitation schon FriendQuest-Punkte gebucht wurden
-    SELECT COALESCE(SUM(points), 0)
-    INTO v_already
-    FROM public.point_awards
-    WHERE user_id = v_row.user_id
-      AND source = 'friendquest_battle'
-      AND metadata->>'invitation_id' = v_row.invitation_id::text;
+    -- Eindeutiger Buchungsschlüssel pro Person + Battle
+    v_source_key := 'fq_backfill_' || v_row.invitation_id::text;
 
-    v_to_add := GREATEST(0, v_row.points_due - v_already);
+    -- Idempotenz: bereits gebucht?
+    SELECT EXISTS (
+      SELECT 1 FROM public.point_awards
+      WHERE user_id = v_row.user_id
+        AND source   = v_source_key
+    ) INTO v_already_exists;
 
-    IF v_to_add > 0 THEN
-      -- Punkte auf Profil addieren
-      UPDATE public.profiles
-      SET points = COALESCE(points, 0) + v_to_add
-      WHERE id = v_row.user_id;
+    CONTINUE WHEN v_already_exists;
 
-      -- Buchung in point_awards für Transparenz und Idempotenz
-      INSERT INTO public.point_awards (user_id, points, source, metadata)
-      VALUES (
-        v_row.user_id,
-        v_to_add,
-        'friendquest_battle',
-        jsonb_build_object('invitation_id', v_row.invitation_id, 'backfill', true)
-      );
+    -- Punkte auf profiles.points addieren
+    UPDATE public.profiles
+    SET    points = COALESCE(points, 0) + v_row.points_due
+    WHERE  id = v_row.user_id;
 
-      v_total_bookings := v_total_bookings + 1;
-      v_total_points   := v_total_points + v_to_add;
+    -- Buchung als Belege eintragen (kein metadata-Feld nötig, source ist eindeutig)
+    INSERT INTO public.point_awards (user_id, points, source)
+    VALUES (v_row.user_id, v_row.points_due, v_source_key);
 
-      RAISE NOTICE 'Backfill: user=% invitation=% +% Blitze', v_row.user_id, v_row.invitation_id, v_to_add;
-    END IF;
+    v_total_bookings := v_total_bookings + 1;
+    v_total_points   := v_total_points   + v_row.points_due;
+
+    RAISE NOTICE 'Backfill: % +% Blitze (invitation=%)',
+      v_row.user_id, v_row.points_due, v_row.invitation_id;
   END LOOP;
 
-  RAISE NOTICE '✓ Backfill fertig: % Buchungen, % Blitze total vergeben.', v_total_bookings, v_total_points;
+  RAISE NOTICE '✓ Fertig: % Buchungen, % Blitze gesamt.', v_total_bookings, v_total_points;
 END;
 $$;
 */

@@ -1,7 +1,6 @@
--- Fix submit_friendquest_battle_result:
--- 1. Wrong column name: boost_points → points (boost_points does not exist, points were silently lost)
--- 2. Remove the hardcoded 50-rep minimum (breaks push-up/squat battles whose goal is only 30)
---    New rule: award points to any participant who submitted p_result > 0 (they actually exercised)
+-- Update submit_friendquest_battle_result to write point_awards entries
+-- using source = 'fq_backfill_<invitation_id>' so the backfill script
+-- can detect already-awarded battles and never double-books.
 
 CREATE OR REPLACE FUNCTION public.submit_friendquest_battle_result(
   p_invitation_id uuid,
@@ -13,10 +12,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_user_id uuid := auth.uid();
+  v_user_id    uuid := auth.uid();
   v_invitation public.challenge_invitations%ROWTYPE;
-  v_challenge public.friend_challenges%ROWTYPE;
-  v_winner_id uuid;
+  v_challenge  public.friend_challenges%ROWTYPE;
+  v_winner_id  uuid;
+  v_source_key text;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Unauthorized';
@@ -26,7 +26,6 @@ BEGIN
     RAISE EXCEPTION 'Invalid result';
   END IF;
 
-  -- Lock the invitation row for the duration of this transaction
   SELECT *
   INTO v_invitation
   FROM public.challenge_invitations
@@ -39,42 +38,31 @@ BEGIN
     RAISE EXCEPTION 'Battle not available';
   END IF;
 
-  -- Write this user's result
   IF v_invitation.challenger_id = v_user_id THEN
     IF v_invitation.challenger_result IS NOT NULL THEN
       RAISE EXCEPTION 'Result already submitted';
     END IF;
-
     UPDATE public.challenge_invitations
-    SET challenger_result = p_result,
-        status = 'in_progress',
-        updated_at = now()
+    SET challenger_result = p_result, status = 'in_progress', updated_at = now()
     WHERE id = p_invitation_id;
   ELSE
     IF v_invitation.opponent_result IS NOT NULL THEN
       RAISE EXCEPTION 'Result already submitted';
     END IF;
-
     UPDATE public.challenge_invitations
-    SET opponent_result = p_result,
-        status = 'in_progress',
-        updated_at = now()
+    SET opponent_result = p_result, status = 'in_progress', updated_at = now()
     WHERE id = p_invitation_id;
   END IF;
 
-  -- Re-fetch with lock to get the freshest state (handles concurrent submissions)
-  SELECT *
-  INTO v_invitation
+  SELECT * INTO v_invitation
   FROM public.challenge_invitations
   WHERE id = p_invitation_id
   FOR UPDATE;
 
-  -- Both results are in → settle the battle
   IF v_invitation.challenger_result IS NOT NULL
     AND v_invitation.opponent_result IS NOT NULL
     AND v_invitation.status <> 'completed'
   THEN
-    -- Determine winner (higher result wins; NULL = draw)
     IF v_invitation.challenger_result > v_invitation.opponent_result THEN
       v_winner_id := v_invitation.challenger_id;
     ELSIF v_invitation.opponent_result > v_invitation.challenger_result THEN
@@ -83,21 +71,17 @@ BEGIN
       v_winner_id := NULL;
     END IF;
 
-    SELECT *
-    INTO v_challenge
+    SELECT * INTO v_challenge
     FROM public.friend_challenges
     WHERE id = v_invitation.challenge_id;
 
     UPDATE public.challenge_invitations
-    SET status = 'completed',
-        winner_id = v_winner_id,
-        updated_at = now()
+    SET status = 'completed', winner_id = v_winner_id, updated_at = now()
     WHERE id = p_invitation_id;
 
-    -- Award points to every participant who actually did something (result > 0).
-    -- No arbitrary rep-count floor — the exercise counter itself validates quality.
-    -- source uses 'fq_backfill_<invitation_id>' — same format as the backfill script —
-    -- so the backfill's idempotency check covers both normal and backfilled completions.
+    -- source key shared with backfill for idempotent double-booking protection
+    v_source_key := 'fq_backfill_' || p_invitation_id::text;
+
     IF v_challenge.winner_points IS NOT NULL AND v_challenge.winner_points > 0 THEN
       IF v_invitation.challenger_result > 0 THEN
         UPDATE public.profiles
@@ -105,13 +89,10 @@ BEGIN
         WHERE id = v_invitation.challenger_id;
 
         INSERT INTO public.point_awards (user_id, points, source)
-        SELECT v_invitation.challenger_id,
-               v_challenge.winner_points,
-               'fq_backfill_' || p_invitation_id::text
+        SELECT v_invitation.challenger_id, v_challenge.winner_points, v_source_key
         WHERE NOT EXISTS (
           SELECT 1 FROM public.point_awards
-          WHERE user_id = v_invitation.challenger_id
-            AND source   = 'fq_backfill_' || p_invitation_id::text
+          WHERE user_id = v_invitation.challenger_id AND source = v_source_key
         );
       END IF;
 
@@ -121,23 +102,18 @@ BEGIN
         WHERE id = v_invitation.opponent_id;
 
         INSERT INTO public.point_awards (user_id, points, source)
-        SELECT v_invitation.opponent_id,
-               v_challenge.winner_points,
-               'fq_backfill_' || p_invitation_id::text
+        SELECT v_invitation.opponent_id, v_challenge.winner_points, v_source_key
         WHERE NOT EXISTS (
           SELECT 1 FROM public.point_awards
-          WHERE user_id = v_invitation.opponent_id
-            AND source   = 'fq_backfill_' || p_invitation_id::text
+          WHERE user_id = v_invitation.opponent_id AND source = v_source_key
         );
       END IF;
     END IF;
   END IF;
 
-  RETURN QUERY
-  SELECT v_invitation.status, v_winner_id;
+  RETURN QUERY SELECT v_invitation.status, v_winner_id;
 END;
 $$;
 
--- Make sure only authenticated users can call this function
 REVOKE EXECUTE ON FUNCTION public.submit_friendquest_battle_result(uuid, integer) FROM PUBLIC;
 GRANT  EXECUTE ON FUNCTION public.submit_friendquest_battle_result(uuid, integer) TO authenticated;
