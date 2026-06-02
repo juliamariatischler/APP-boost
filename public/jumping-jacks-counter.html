@@ -192,6 +192,24 @@
     const POSE_READY_REQUIRED = 6;  // ~0.4s mit gültiger Pose bevor gezählt wird
     const KEYPOINT_CONFIDENCE = 0.35; // zurück auf Vor-Heute-Wert – Android-Zoom macht 0.38 für Beine zu streng
 
+    // ── Android-only Hampelmann-Erkennung ───────────────────────────────────
+    // iOS verhält sich unverändert (nutzt processJumpingJack). Nur auf Android
+    // greift die robustere Zustandsmaschine processJumpingJackAndroid.
+    const IS_ANDROID = (window.Capacitor?.getPlatform?.() === 'android')
+      || /android/i.test(navigator.userAgent || '');
+    const DEBUG_JJ = _bp.get('debug') === '1'; // temporäres Debug-Overlay, nur mit ?debug=1
+
+    // Sensitivere, aber nicht beliebige Schwellen (normiert auf Schulterbreite):
+    const A_ARM_OPEN   = 0.12;  // Handgelenke klar über Schulterlinie (nicht erst über Kopf)
+    const A_ARM_CLOSE  = 0.00;  // Arme wieder auf/unter Schulterhöhe
+    const A_LEG_OPEN_ANKLE  = 0.85, A_LEG_CLOSE_ANKLE = 0.65; // vorher 1.0 / 0.75
+    const A_LEG_OPEN_KNEE   = 0.55, A_LEG_CLOSE_KNEE  = 0.42; // vorher 0.65 / 0.45
+    const A_EMA = 0.5;          // leichtes Smoothing gegen Jitter/Frame-Drops
+    let aEmaLeg = null, aEmaArm = null;
+    let aArmUpSeen = false, aLegOpenSeen = false;     // Latches während Phase 'closed'
+    let aArmDownSeen = false, aLegClosedSeen = false; // Latches während Phase 'open'
+    let aLastCountTs = 0;
+
     // Hilfsfunktionen
     function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 
@@ -435,6 +453,116 @@
       }
     }
 
+    // JJ-Erkennung Android: robuster Bewegungszyklus (closed → open → closed = +1).
+    // Arme UND Beine müssen sich bewegen (kein Zählen bei reinem Springen oder reiner
+    // Armbewegung). Sub-Bedingungen werden über die Phase „gelatcht“, müssen also nicht
+    // im selben Frame zutreffen → toleriert Frame-Drops und Erkennungslücken.
+    function processJumpingJackAndroid(pose){
+      const k = pose.keypoints;
+      const ls = get(k,'left_shoulder'),  rs = get(k,'right_shoulder');
+      const la = get(k,'left_ankle'),     ra = get(k,'right_ankle');
+      const lk = get(k,'left_knee'),      rk = get(k,'right_knee');
+      const lw = get(k,'left_wrist'),     rw = get(k,'right_wrist');
+
+      const anklesOk = ready(la) && ready(ra);
+      const kneesOk  = ready(lk) && ready(rk);
+      let lowL, lowR, legSource;
+      if(anklesOk){ lowL = la; lowR = ra; legSource = 'ankle'; }
+      else if(kneesOk){ lowL = lk; lowR = rk; legSource = 'knee'; }
+
+      const shouldersOk = ready(ls) && ready(rs);
+      const anyWristOk  = ready(lw) || ready(rw); // ein erkanntes Handgelenk reicht (Arme bewegen sich symmetrisch)
+
+      if(!(shouldersOk && (anklesOk || kneesOk) && anyWristOk)){
+        poseReadyFrames = 0;
+        if(!shouldersOk){
+          feedbackEl.textContent = "Schultern nicht erkannt – frontal zur Kamera stellen, Handy weiter weg.";
+        } else if(!(anklesOk || kneesOk)){
+          feedbackEl.textContent = "Beine nicht erkannt – Handy so aufstellen, dass mindestens deine Knie im Bild sind.";
+        } else {
+          feedbackEl.textContent = "Hände nicht erkannt – Arme seitlich ausbreiten, damit sie sichtbar sind.";
+        }
+        feedbackEl.style.color = "#b45309";
+        stageEl.textContent = "-";
+        return;
+      }
+
+      poseReadyFrames = Math.min(poseReadyFrames + 1, POSE_READY_REQUIRED + 1);
+      if(poseReadyFrames < POSE_READY_REQUIRED){
+        feedbackEl.textContent = "Position wird erkannt… kurz halten.";
+        feedbackEl.style.color = "#0369a1";
+        stageEl.textContent = "-";
+        return;
+      }
+
+      const shoulderWidth = Math.max(1, dist(ls, rs));
+      const legNormRaw = dist(lowL, lowR) / shoulderWidth;
+
+      // Arm-Hub: mittlere Höhe der erkannten Handgelenke über der Schulterlinie, normiert.
+      // >0 = Handgelenke über Schultern, <0 = darunter (Arme unten/seitlich).
+      let armSum = 0, armN = 0;
+      if(ready(lw)){ armSum += (ls.y - lw.y); armN++; }
+      if(ready(rw)){ armSum += (rs.y - rw.y); armN++; }
+      const armRaw = armN > 0 ? (armSum / armN) / shoulderWidth : (aEmaArm ?? 0);
+
+      // Leichtes Smoothing: ein einzelner Ausreißer-Frame kippt keine Schwelle.
+      aEmaLeg = aEmaLeg === null ? legNormRaw : aEmaLeg + A_EMA * (legNormRaw - aEmaLeg);
+      aEmaArm = aEmaArm === null ? armRaw     : aEmaArm + A_EMA * (armRaw     - aEmaArm);
+
+      const legOpenTh  = legSource === 'knee' ? A_LEG_OPEN_KNEE  : A_LEG_OPEN_ANKLE;
+      const legCloseTh = legSource === 'knee' ? A_LEG_CLOSE_KNEE : A_LEG_CLOSE_ANKLE;
+
+      const armsUp     = aEmaArm > A_ARM_OPEN;
+      const armsDown   = aEmaArm < A_ARM_CLOSE;
+      const legsOpen   = aEmaLeg > legOpenTh;
+      const legsClosed = aEmaLeg < legCloseTh;
+
+      if(phase === 'closed'){
+        if(armsUp)   aArmUpSeen = true;
+        if(legsOpen) aLegOpenSeen = true;
+        if(aArmUpSeen && aLegOpenSeen){
+          phase = 'open';
+          aArmDownSeen = false; aLegClosedSeen = false;
+          stageEl.textContent = 'OPEN';
+          feedbackEl.textContent = 'Oben – sauber!';
+          feedbackEl.style.color = '#059669';
+        } else {
+          stageEl.textContent = 'CLOSED';
+          feedbackEl.textContent = aArmUpSeen ? 'Beine breiter!' : (aLegOpenSeen ? 'Arme hoch!' : 'Arme hoch & Beine breiter!');
+          feedbackEl.style.color = '#374151';
+        }
+      } else { // phase === 'open'
+        if(armsDown)   aArmDownSeen = true;
+        if(legsClosed) aLegClosedSeen = true;
+        if(aArmDownSeen && aLegClosedSeen){
+          const now = performance.now();
+          if(now - aLastCountTs > 300){ // Debounce gegen Doppelzählung durch Jitter an der Schwelle
+            counter++;
+            countEl.textContent = counter;
+            aLastCountTs = now;
+          }
+          phase = 'closed';
+          aArmUpSeen = false; aLegOpenSeen = false;
+          stageEl.textContent = 'CLOSED';
+          feedbackEl.textContent = 'Super! Weiter so!';
+          feedbackEl.style.color = '#059669';
+          if(BATTLE_MODE && BATTLE_GOAL !== null && counter >= BATTLE_GOAL){ finishBattle(); return; }
+        } else {
+          stageEl.textContent = 'OPEN';
+          feedbackEl.textContent = 'Zurück in die Ausgangsposition!';
+          feedbackEl.style.color = '#374151';
+        }
+      }
+
+      if(DEBUG_JJ){
+        const dbg = `JJ[A] ph=${phase} leg=${aEmaLeg.toFixed(2)}(${legSource}) arm=${aEmaArm.toFixed(2)} `
+          + `up=${armsUp?1:0} dn=${armsDown?1:0} lo=${legsOpen?1:0} lc=${legsClosed?1:0} `
+          + `latch[${aArmUpSeen?'A':'-'}${aLegOpenSeen?'L':'-'}|${aArmDownSeen?'A':'-'}${aLegClosedSeen?'L':'-'}]`;
+        debugLog.textContent = dbg;
+        console.log(dbg);
+      }
+    }
+
     async function loop(){
       if(!detector || video.readyState !== 4){ requestAnimationFrame(loop); return; }
       canvas.width = video.videoWidth; canvas.height = video.videoHeight;
@@ -446,7 +574,7 @@
           const pose = poses[0];
           drawSkeleton(pose);
           drawKeypoints(pose);
-          processJumpingJack(pose);
+          if(IS_ANDROID){ processJumpingJackAndroid(pose); } else { processJumpingJack(pose); }
         }
       }catch(err){
         debugLog.textContent = 'Fehler: ' + err.message;
@@ -457,6 +585,10 @@
 
     document.getElementById('reset-button').addEventListener('click', () => {
       counter = 0; phase = 'closed'; poseReadyFrames = 0;
+      // Android-Zustand mit zurücksetzen (auf iOS unbenutzt, daher unschädlich)
+      aEmaLeg = null; aEmaArm = null;
+      aArmUpSeen = false; aLegOpenSeen = false; aArmDownSeen = false; aLegClosedSeen = false;
+      aLastCountTs = 0;
       countEl.textContent = '0'; stageEl.textContent = '-';
       feedbackEl.textContent = 'Zurückgesetzt!';
     });
