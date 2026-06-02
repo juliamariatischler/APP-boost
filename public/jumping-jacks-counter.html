@@ -190,7 +190,7 @@
     let phase = "closed"; // "closed" = Füße zusammen, Arme unten; "open" = Arme oben, Beine breit
     let poseReadyFrames = 0;
     const POSE_READY_REQUIRED = 6;  // ~0.4s mit gültiger Pose bevor gezählt wird
-    const KEYPOINT_CONFIDENCE = 0.38; // slightly raised for reliability
+    const KEYPOINT_CONFIDENCE = 0.35; // zurück auf Vor-Heute-Wert – Android-Zoom macht 0.38 für Beine zu streng
 
     // Hilfsfunktionen
     function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
@@ -361,16 +361,25 @@
       const k = pose.keypoints;
       const ls = get(k,'left_shoulder'),  rs = get(k,'right_shoulder');
       const la = get(k,'left_ankle'),     ra = get(k,'right_ankle');
+      const lk = get(k,'left_knee'),      rk = get(k,'right_knee');
       const lw = get(k,'left_wrist'),     rw = get(k,'right_wrist');
       const nose = get(k,'nose');
 
-      if(!(ready(ls)&&ready(rs)&&ready(la)&&ready(ra)&&ready(lw)&&ready(rw)&&ready(nose))){
+      // Untere Körperhälfte: Knöchel bevorzugt, sonst Knie als Fallback.
+      // Android zoomt stärker → Knöchel sind oft außerhalb des Bilds, Knie aber noch sichtbar.
+      const anklesOk = ready(la) && ready(ra);
+      const kneesOk  = ready(lk) && ready(rk);
+      let lowL, lowR, legSource;
+      if(anklesOk){ lowL = la; lowR = ra; legSource = 'ankle'; }
+      else if(kneesOk){ lowL = lk; lowR = rk; legSource = 'knee'; }
+
+      if(!(ready(ls)&&ready(rs)&&(anklesOk||kneesOk)&&ready(lw)&&ready(rw)&&ready(nose))){
         poseReadyFrames = 0;
         // Tell user specifically what's missing
         if(!(ready(ls)||ready(rs))){
           feedbackEl.textContent = "Schultern nicht erkannt – frontal zur Kamera stellen, Handy weiter weg.";
-        } else if(!(ready(la)||ready(ra))){
-          feedbackEl.textContent = "Füße/Knöchel nicht erkannt – Handy so aufstellen, dass du ganz im Bild bist.";
+        } else if(!(anklesOk||kneesOk)){
+          feedbackEl.textContent = "Beine nicht erkannt – Handy so aufstellen, dass mindestens deine Knie im Bild sind.";
         } else if(!(ready(lw)||ready(rw))){
           feedbackEl.textContent = "Hände nicht erkannt – Arme seitlich ausbreiten, damit sie sichtbar sind.";
         } else if(!ready(nose)){
@@ -392,17 +401,18 @@
       }
 
       const shoulderWidth = Math.max(1, dist(ls, rs));
-      const ankleDistNorm = dist(la, ra) / shoulderWidth;
+      const legDistNorm = dist(lowL, lowR) / shoulderWidth;
       const headTolerance = shoulderWidth * 0.12;
       const shoulderTolerance = shoulderWidth * 0.1;
       const wristsAboveHead = (lw.y < nose.y + headTolerance) && (rw.y < nose.y + headTolerance);
       const wristsLow = (lw.y > ls.y - shoulderTolerance) && (rw.y > rs.y - shoulderTolerance);
 
-      const OPEN_LEGS  = 1.0;
-      const CLOSE_LEGS = 0.75;
+      // Knie spreizen beim Hampelmann weniger weit als Knöchel → niedrigere Schwellen, wenn nur Knie sichtbar.
+      const OPEN_LEGS  = legSource === 'knee' ? 0.65 : 1.0;
+      const CLOSE_LEGS = legSource === 'knee' ? 0.45 : 0.75;
 
       if(phase === 'closed'){
-        if(ankleDistNorm > OPEN_LEGS && wristsAboveHead){
+        if(legDistNorm > OPEN_LEGS && wristsAboveHead){
           phase = 'open';
           stageEl.textContent = 'OPEN';
           feedbackEl.textContent = 'Oben – sauber!';
@@ -411,7 +421,7 @@
           feedbackEl.textContent = 'Arme hoch & Beine breiter!';
         }
       } else {
-        if(ankleDistNorm < CLOSE_LEGS && wristsLow){
+        if(legDistNorm < CLOSE_LEGS && wristsLow){
           phase = 'closed';
           counter++;
           countEl.textContent = counter;
