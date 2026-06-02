@@ -115,7 +115,7 @@ const Rewards = () => {
               .eq("is_active", true)
               .order("sort_order", { ascending: true })
               .order("threshold", { ascending: true }),
-            (supabase.rpc as any)("get_code_class_student_rankings", {
+            (supabase.rpc as any)("get_global_june_student_rankings_code", {
               p_device_id: codeSession.device_id,
               p_session_token: codeSession.session_token,
             }),
@@ -163,7 +163,7 @@ const Rewards = () => {
           .order("sort_order", { ascending: true })
           .order("threshold", { ascending: true }),
         (supabase.rpc as any)("get_class_total_points", { p_school: profile.school, p_class: profile.class }),
-        (supabase.rpc as any)("get_my_class_student_rankings"),
+        (supabase.rpc as any)("get_global_june_student_rankings"),
       ]);
 
     if (rewardsError) {
