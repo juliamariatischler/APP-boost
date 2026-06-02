@@ -381,7 +381,7 @@ const Rewards = () => {
                   </div>
                   <span className="font-bold text-foreground text-sm">Tageschallenge</span>
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                    1 Wdh. / 1 Sek. = {BOOST_POINT_RULES.repOrSecond} ⚡
+                    +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
                   </span>
                 </button>
 
@@ -530,7 +530,7 @@ const Rewards = () => {
                   </div>
                   <span className="font-bold text-foreground text-sm">Tageschallenge</span>
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                    1 Wdh. / 1 Sek. = {BOOST_POINT_RULES.repOrSecond} ⚡
+                    +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
                   </span>
                 </button>
 

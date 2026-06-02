@@ -7,8 +7,6 @@ import tryitFootballNetImg from "@/assets/quest-tryit-football-net.png";
 
 const POINTS_PROBETRAINING = BOOST_POINT_RULES.tryItProbetraining;
 const POINTS_KURS = BOOST_POINT_RULES.tryItCompleted;
-const TRIAL_STATUS = "Probetraining verfügbar";
-const PHONE_REGEX = /^\+?[0-9\s\/\-()]{7,20}$/;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,8 +58,8 @@ type StaticProvider = {
 // ─── Static providers (Probetraining verfügbar) ───────────────────────────────
 
 const STATIC_PROVIDERS: StaticProvider[] = [
-  { id: "aikido-graz", sport: "Aikido", club: "ASKÖ-Aikido-Club Graz", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0664/1012658", contactEmail: "guenther.steger@gmx.at" },
   { id: "aikido-pro", sport: "Aikido", club: "ASKÖ Aikido Pro", trialInfo: "Termin bitte direkt mit dem Trainer (Valentin Lasnik) vereinbaren.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/9430503", contactEmail: "V.lasnik@aikidopro.at" },
+  { id: "aikido-graz", sport: "Aikido", club: "ASKÖ-Aikido-Club Graz", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0664/1012658", contactEmail: "guenther.steger@gmx.at" },
   { id: "football-giants", sport: "American Football", club: "GIANTS Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "8 bis 15 Jahre", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
   { id: "badminton-smash", sport: "Badminton", club: "BC Smash Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/5809058", contactEmail: "ruediger_rudolf@yahoo.de" },
   { id: "badminton-dropin", sport: "Badminton", club: "Drop In Badminton", trialInfo: "Flexibles Probetraining nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0699/11881222", contactEmail: "schmidt@dropin.at" },
@@ -78,6 +76,12 @@ const STATIC_PROVIDERS: StaticProvider[] = [
   { id: "spikeball-roundnet", sport: "Spikeball / Roundnet", club: "Roundnet Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactEmail: "contact@roundnetclubgraz.at" },
   { id: "trampolin-graz", sport: "Trampolinturnen", club: "Trampolin- und Freestyle-Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/3907017", contactEmail: "hayngu@yahoo.com" },
   { id: "turnen-abenteuer", sport: "Abenteuer- / Zirkusturnen / Parkour", club: "ATUS Graz – Abenteuerturnen", trialInfo: "Probetraining für Kinder nach Vereinbarung.", ageLabel: "Kinder", contactPhone: "0681/81429142", contactEmail: "veronika@sport-abenteuer-kittler.at" },
+];
+
+// ─── Sichtbare Termin-Vereine (nur fixe, freigeschaltete Try-it Angebote) ──────
+const VISIBLE_CLUB_IDS = [
+  "a1000000-0000-0000-0000-000000000006", // Footvolley Austria / Futvolei Club Graz
+  "a1000000-0000-0000-0000-000000000007", // HIB Handball
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -121,11 +125,7 @@ const isFootballSport = (sportType: string) => {
 const validateGuardianEmail = (email: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
-const validateGuardianPhone = (phone: string): boolean =>
-  PHONE_REGEX.test(phone.trim());
-
 type VerificationStep = "input" | "sending" | "waiting" | "confirmed";
-type ProviderSheet = "info" | "form" | "submitting" | "success";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -146,12 +146,6 @@ const TrialSessionsList = () => {
 
   // Static provider sheet state
   const [selectedProvider, setSelectedProvider] = useState<StaticProvider | null>(null);
-  const [providerSheet, setProviderSheet] = useState<ProviderSheet>("info");
-  const [childName, setChildName] = useState("");
-  const [childNameError, setChildNameError] = useState("");
-  const [childAge, setChildAge] = useState("");
-  const [guardianPhone, setGuardianPhone] = useState("");
-  const [guardianPhoneError, setGuardianPhoneError] = useState("");
 
   useEffect(() => {
     loadData();
@@ -164,17 +158,6 @@ const TrialSessionsList = () => {
     setVerificationStep("input");
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
   }, [selectedSession]);
-
-  useEffect(() => {
-    if (!selectedProvider) {
-      setProviderSheet("info");
-      setChildName("");
-      setChildNameError("");
-      setChildAge("");
-      setGuardianPhone("");
-      setGuardianPhoneError("");
-    }
-  }, [selectedProvider]);
 
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -191,6 +174,7 @@ const TrialSessionsList = () => {
     const { data, error } = await supabase
       .from("trial_sessions")
       .select(`*, clubs (*)`)
+      .in("club_id", VISIBLE_CLUB_IDS)
       .gte("date", today)
       .order("date", { ascending: true });
 
@@ -292,49 +276,6 @@ const TrialSessionsList = () => {
       toast.error("Fehler beim Speichern der Teilnahme.");
     } finally {
       setIsAttending(false);
-    }
-  };
-
-  const handleProviderInquiry = async (provider: StaticProvider) => {
-    let hasError = false;
-    if (!childName.trim()) {
-      setChildNameError("Bitte gib den Namen des Kindes ein.");
-      hasError = true;
-    } else {
-      setChildNameError("");
-    }
-    if (!validateGuardianPhone(guardianPhone)) {
-      setGuardianPhoneError("Bitte gib eine gültige Telefonnummer eines Erziehungsberechtigten ein.");
-      hasError = true;
-    } else {
-      setGuardianPhoneError("");
-    }
-    if (hasError) return;
-
-    setProviderSheet("submitting");
-    try {
-      const { error } = await (supabase as any).from("try_it_trial_requests").insert({
-        sport_type: provider.sport,
-        provider_name: provider.club,
-        child_name: childName.trim(),
-        child_age: childAge ? parseInt(childAge, 10) : null,
-        guardian_phone: guardianPhone.trim(),
-        trial_training_status: TRIAL_STATUS,
-        trial_training_info: provider.trialInfo,
-        request_status: "requested",
-      });
-
-      if (error) {
-        console.error("Provider inquiry error:", error);
-        toast.error("Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.");
-        setProviderSheet("form");
-        return;
-      }
-      setProviderSheet("success");
-    } catch (e) {
-      console.error("Provider inquiry error:", e);
-      toast.error("Anfrage konnte nicht gesendet werden. Bitte versuche es erneut.");
-      setProviderSheet("form");
     }
   };
 
@@ -546,11 +487,11 @@ const TrialSessionsList = () => {
                     <div className="flex flex-col gap-0.5">
                       <p className="text-[13px] font-black leading-tight text-foreground break-words">{provider.sport}</p>
                       <span className="w-fit rounded-full px-1.5 py-0.5 text-[9px] font-bold border border-emerald-300 bg-emerald-50 text-emerald-700">
-                        ✓ {TRIAL_STATUS}
+                        Nach Vereinbarung
                       </span>
                       <p className="text-[11px] font-semibold leading-snug text-foreground/80 break-words">{provider.club}</p>
                       {provider.contactPhone && (
-                        <p className="text-[10px] leading-snug text-muted-foreground">📞 {provider.contactPhone}</p>
+                        <p className="text-[10px] font-semibold leading-snug text-foreground/70">📞 {provider.contactPhone}</p>
                       )}
                     </div>
                     <div className="mt-1 flex items-center justify-end">
@@ -762,7 +703,7 @@ const TrialSessionsList = () => {
         );
       })()}
 
-      {/* ─── Static provider inquiry bottom sheet ─────────────────────────────── */}
+      {/* ─── Static provider info bottom sheet (Anmeldung rein telefonisch) ───── */}
       {selectedProvider && (() => {
         const p = selectedProvider;
         const emoji = getSportEmoji(p.sport);
@@ -777,195 +718,66 @@ const TrialSessionsList = () => {
                 <div className="h-1 w-10 rounded-full bg-black/10" />
               </div>
 
-              {/* ── Info view ── */}
-              {providerSheet === "info" && (
-                <>
-                  <div className="flex items-start justify-between px-5 pb-3 pt-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[2.4rem] leading-none">{emoji}</span>
-                      <div>
-                        <p className="text-[1.3rem] font-black leading-tight text-foreground">{p.sport}</p>
-                        <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700">
-                          ✓ {TRIAL_STATUS}
-                        </span>
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => setSelectedProvider(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/6 text-foreground/60">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 px-5 pb-2">
-                    <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-foreground">
-                        <span className="text-base">🏛</span>
-                        <span className="font-semibold">{p.club}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-foreground">
-                        <span className="text-base">👥</span>
-                        <span>{p.ageLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-emerald-700">
-                        <span className="text-base">✅</span>
-                        <span className="font-semibold">{p.trialInfo}</span>
-                      </div>
-                    </div>
-
-                    {(p.contactPhone || p.contactEmail) && (
-                      <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
-                        <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Kontakt</p>
-                        {p.contactPhone && (
-                          <a href={`tel:${p.contactPhone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                            <span className="text-base">📞</span>{p.contactPhone}
-                          </a>
-                        )}
-                        {p.contactEmail && (
-                          <a href={`mailto:${p.contactEmail}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
-                            <span className="text-base">✉️</span>{p.contactEmail}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setProviderSheet("form")}
-                      className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)]"
-                    >
-                      Anfragen
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* ── Form view ── */}
-              {(providerSheet === "form" || providerSheet === "submitting") && (
-                <>
-                  <div className="flex items-center justify-between px-5 pt-1 pb-3">
-                    <button
-                      type="button"
-                      onClick={() => setProviderSheet("info")}
-                      className="text-sm font-semibold text-muted-foreground"
-                    >
-                      ← Zurück
-                    </button>
-                    <button type="button" onClick={() => setSelectedProvider(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/6 text-foreground/60">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] space-y-3">
-                    <div>
-                      <p className="text-[1.1rem] font-black text-foreground">Probetraining anfragen</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{p.club} · {p.sport}</p>
-                    </div>
-
-                    {/* child_name */}
-                    <div className="space-y-1">
-                      <label className="block text-[13px] font-bold text-foreground/80">
-                        Vorname Kind <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={childName}
-                        onChange={(e) => { setChildName(e.target.value); if (childNameError) setChildNameError(""); }}
-                        placeholder="z. B. Lena"
-                        className={`w-full rounded-[14px] border px-4 py-3 text-sm outline-none transition-colors ${
-                          childNameError ? "border-red-400 bg-red-50" : "border-black/10 bg-gray-50 focus:border-primary"
-                        }`}
-                      />
-                      {childNameError && <p className="text-xs font-medium text-red-500">{childNameError}</p>}
-                    </div>
-
-                    {/* child_age */}
-                    <div className="space-y-1">
-                      <label className="block text-[13px] font-bold text-foreground/80">Alter Kind</label>
-                      <input
-                        type="number"
-                        value={childAge}
-                        onChange={(e) => setChildAge(e.target.value)}
-                        placeholder="z. B. 10"
-                        min={3}
-                        max={99}
-                        className="w-full rounded-[14px] border border-black/10 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-
-                    {/* guardian_phone */}
-                    <div className="space-y-1">
-                      <label className="block text-[13px] font-bold text-foreground/80">
-                        Telefonnummer Erziehungsberechtigte:r <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={guardianPhone}
-                        onChange={(e) => { setGuardianPhone(e.target.value); if (guardianPhoneError) setGuardianPhoneError(""); }}
-                        placeholder="z. B. +43 660 1234567"
-                        className={`w-full rounded-[14px] border px-4 py-3 text-sm outline-none transition-colors ${
-                          guardianPhoneError ? "border-red-400 bg-red-50" : "border-black/10 bg-gray-50 focus:border-primary"
-                        }`}
-                      />
-                      {guardianPhoneError && <p className="text-xs font-medium text-red-500">{guardianPhoneError}</p>}
-                      <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Die Telefonnummer wird verwendet, um die Freigabe durch eine erziehungsberechtigte Person zu ermöglichen.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={providerSheet === "submitting"}
-                      onClick={() => void handleProviderInquiry(p)}
-                      className="w-full rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)] disabled:opacity-60"
-                    >
-                      {providerSheet === "submitting" ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Wird gesendet…
-                        </span>
-                      ) : "Anfragen absenden"}
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* ── Success view ── */}
-              {providerSheet === "success" && (
-                <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-2 space-y-4 text-center">
-                  <div className="flex justify-center pt-2">
-                    <CheckCircle2 className="h-14 w-14 text-primary" />
-                  </div>
+              <div className="flex items-start justify-between px-5 pb-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-[2.4rem] leading-none">{emoji}</span>
                   <div>
-                    <p className="text-[1.2rem] font-black text-foreground">Anfrage gesendet!</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Deine Anfrage beim <span className="font-bold text-foreground">{p.club}</span> wurde übermittelt.
-                    </p>
+                    <p className="text-[1.3rem] font-black leading-tight text-foreground">{p.sport}</p>
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                      Nach Vereinbarung
+                    </span>
                   </div>
-                  {(p.contactPhone || p.contactEmail) && (
-                    <div className="rounded-[16px] bg-gray-50 p-3.5 text-left space-y-2">
-                      <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Direkt Kontakt aufnehmen</p>
-                      {p.contactPhone && (
-                        <a href={`tel:${p.contactPhone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                          <span>📞</span>{p.contactPhone}
-                        </a>
-                      )}
-                      {p.contactEmail && (
-                        <a href={`mailto:${p.contactEmail}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
-                          <span>✉️</span>{p.contactEmail}
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProvider(null)}
-                    className="w-full rounded-[16px] border border-black/10 bg-white py-3 text-sm font-semibold text-foreground/70"
-                  >
-                    Schließen
-                  </button>
                 </div>
-              )}
+                <button type="button" onClick={() => setSelectedProvider(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/6 text-foreground/60">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 px-5 pb-2">
+                <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <span className="text-base">🏛</span>
+                    <span className="font-semibold">{p.club}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <span className="text-base">👥</span>
+                    <span>{p.ageLabel}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-emerald-700">
+                    <span className="text-base">✅</span>
+                    <span className="font-semibold">{p.trialInfo}</span>
+                  </div>
+                </div>
+
+                {p.contactEmail && (
+                  <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                    <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Weiterer Kontakt</p>
+                    <a href={`mailto:${p.contactEmail}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      <span className="text-base">✉️</span>{p.contactEmail}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] pt-1">
+                {p.contactPhone ? (
+                  <>
+                    <a
+                      href={`tel:${p.contactPhone}`}
+                      className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-primary py-4 text-sm font-black text-white shadow-[0_8px_24px_rgba(22,198,83,0.35)]"
+                    >
+                      📞 Anrufen · {p.contactPhone}
+                    </a>
+                    <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+                      Termin und Anmeldung bitte direkt telefonisch mit dem Verein vereinbaren.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-center text-[12px] leading-relaxed text-muted-foreground">
+                    Termin und Anmeldung bitte direkt mit dem Verein vereinbaren.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         );

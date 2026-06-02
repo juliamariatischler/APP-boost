@@ -6,7 +6,6 @@ import { BOOST_POINT_RULES } from "@/lib/gamification";
 export const ChallengeButtons = () => {
   const navigate = useNavigate();
   const flashOverview = [
-    { label: "1 Wdh. / 1 Sek.", reward: `+${BOOST_POINT_RULES.repOrSecond} ⚡` },
     { label: "Tagesziel geschafft", reward: `+${BOOST_POINT_RULES.dailyGoalCompleted} ⚡` },
     { label: "Wochenchallenge", reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡` },
     { label: "Try It ausprobiert", reward: `+${BOOST_POINT_RULES.tryItCompleted} ⚡` },
@@ -15,7 +14,7 @@ export const ChallengeButtons = () => {
   ];
 
   const challenges = [
-    { label: "Tageschallenge", reward: `1 Wdh. / 1 Sek. = ${BOOST_POINT_RULES.repOrSecond} ⚡`, icon: Zap, path: "/dashboard", colorClass: "bg-primary/10 hover:bg-primary/20 border-primary/30", iconBg: "bg-primary/20", iconColor: "text-primary fill-primary", rewardBg: "bg-primary/20 text-primary" },
+    { label: "Tageschallenge", reward: `+${BOOST_POINT_RULES.dailyGoalCompleted} ⚡`, icon: Zap, path: "/dashboard", colorClass: "bg-primary/10 hover:bg-primary/20 border-primary/30", iconBg: "bg-primary/20", iconColor: "text-primary fill-primary", rewardBg: "bg-primary/20 text-primary" },
     { label: "Wochenchallenge", reward: `+${BOOST_POINT_RULES.weeklyChallengeCompleted} ⚡`, icon: Calendar, path: "/challenge/weekly", colorClass: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30", iconBg: "bg-blue-500/20", iconColor: "text-blue-500", rewardBg: "bg-blue-500/20 text-blue-600" },
     { label: "Friendquest", reward: `+${BOOST_POINT_RULES.friendQuestCompleted} ⚡`, icon: Swords, path: "/challenge/friend", colorClass: "bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30", iconBg: "bg-purple-500/20", iconColor: "text-purple-500", rewardBg: "bg-purple-500/20 text-purple-600" },
     { label: "Try It", reward: `+${BOOST_POINT_RULES.tryItCompleted} ⚡`, icon: MapPin, path: "/challenge/tryit", colorClass: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30", iconBg: "bg-orange-500/20", iconColor: "text-orange-500", rewardBg: "bg-orange-500/20 text-orange-600" },

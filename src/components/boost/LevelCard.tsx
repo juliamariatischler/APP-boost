@@ -14,7 +14,6 @@ export const LevelCard = ({ points, level, showPointSystem = false }: Props) => 
   const toNext = getPointsToNextLevel(points);
   const nextLevel = getNextLevel(points);
   const pointFacts = [
-    { label: "1 Wdh. / 1 Sek.", value: `+${BOOST_POINT_RULES.repOrSecond}` },
     { label: "3 Tage in Folge", value: `+${BOOST_POINT_RULES.streak3DaysBonus}` },
     { label: "7 Tage in Folge", value: `+${BOOST_POINT_RULES.streak7DaysBonus}` },
     { label: "Wochen-Quest", value: `+${BOOST_POINT_RULES.weeklyChallengeCompleted}` },
