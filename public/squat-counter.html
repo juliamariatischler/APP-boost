@@ -377,7 +377,6 @@
 
       if(!(hip?.score>KEYPOINT_CONFIDENCE && knee?.score>KEYPOINT_CONFIDENCE && ankle?.score>KEYPOINT_CONFIDENCE)){
         poseReadyFrames = 0;
-        // Specific feedback about which body part is missing
         if(!(hip?.score>KEYPOINT_CONFIDENCE)){
           feedbackEl.textContent = "Hüfte nicht erkannt – seitlich zur Kamera stellen und weiter weg gehen.";
         } else if(!(knee?.score>KEYPOINT_CONFIDENCE)){
@@ -388,6 +387,19 @@
         feedbackEl.style.color = "#b45309";
         stageEl.textContent = "-";
         return;
+      }
+
+      // Block frontal view: both hips visible AND clearly separated in X → facing camera
+      const lh = k.find(p=>p.name==='left_hip');
+      const rh = k.find(p=>p.name==='right_hip');
+      if(lh?.score>KEYPOINT_CONFIDENCE && rh?.score>KEYPOINT_CONFIDENCE){
+        if(Math.abs(lh.x - rh.x) > canvas.width * 0.18){
+          poseReadyFrames = 0;
+          feedbackEl.textContent = "Bitte seitlich zur Kamera drehen!";
+          feedbackEl.style.color = "#b45309";
+          stageEl.textContent = "-";
+          return;
+        }
       }
 
       // Pose-ready guard: require N frames of valid pose before counting

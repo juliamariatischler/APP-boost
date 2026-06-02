@@ -27,6 +27,12 @@ let package = Package(
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
                 .product(name: "CapgoCapacitorNfc", package: "CapgoCapacitorNfc"),
                 .product(name: "CordovaPluginHealth", package: "CordovaPluginHealth")
+            ],
+            cSettings: [
+                .unsafeFlags(["-Wno-deprecated-declarations"])
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xcc", "-Wno-deprecated-declarations"])
             ]
         )
     ]

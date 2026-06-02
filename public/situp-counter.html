@@ -246,7 +246,13 @@
     async function initBackend(){
       try{ await tf.setBackend('webgl'); await tf.ready(); }
       catch(e){ await tf.setBackend('cpu'); await tf.ready(); }
-      backendInfo.textContent = 'TFJS-Backend: ' + tf.getBackend();
+      backendInfo.style.display='block';
+      if(tf.getBackend()==='cpu'){
+        backendInfo.textContent='⚠️ Langsamer Modus (CPU) – Kamera-KI stark eingeschränkt. Wechsle den Browser oder nutze ein neueres Gerät.';
+        backendInfo.style.color='#b45309';
+      }else{
+        backendInfo.textContent='TFJS-Backend: '+tf.getBackend();
+      }
     }
 
     function isMirrored(){ return currentFacingMode === 'user'; }

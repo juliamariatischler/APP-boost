@@ -334,11 +334,13 @@
     let detector,isPlanking=false,time=0,timerInterval=null;
     let currentFacingMode='user';
     let currentDeviceId='';
-    const POSE_SCORE = 0.40;           // raised from 0.35 – more reliable detections only
-    const BACK_ANGLE_THRESHOLD = 158;  // near-straight body line required
-    const HIP_SAG_MAX_RATIO = 0.07;    // max 7% of frame height below shoulder-knee line
-    const HOLLOW_BACK_GRACE = 5;       // frames before timer pauses on hollow back (~0.3s)
-    const STABLE_HOLD_REQUIRED = 8;    // ~0.5 s of stable pose before timer starts
+    const POSE_SCORE = 0.40;              // raised from 0.35 – more reliable detections only
+    const BACK_ANGLE_THRESHOLD = 158;    // near-straight body line required
+    const HIP_SAG_MAX_RATIO = 0.07;      // max 7% of frame height below shoulder-knee line
+    const HOLLOW_BACK_GRACE = 5;         // frames before timer pauses on hollow back (~0.3s)
+    const STABLE_HOLD_REQUIRED = 8;      // ~0.5 s of stable pose before timer starts
+    const ELBOW_DROP_MIN_RATIO = 0.06;   // elbow must be ≥6% frame height below shoulder (anti-flat-lying)
+    const SHOULDER_ABOVE_ANKLE_RATIO = 0.05; // shoulder must be ≥5% frame height above ankle level
     let stableHoldFrames = 0;
     let stableBreakFrames = 0;
     let missingPoseFrames = 0;
@@ -725,6 +727,47 @@
         return;
       }
       missingPoseFrames = 0;
+
+      // Flat-lying guard: a real plank requires the torso to be elevated off the floor.
+      // We check (a) the elbow is visibly lower than the shoulder (support arm on the floor),
+      // and (b) the shoulder is elevated above ankle / floor level.
+      // Both checks only fire when the respective keypoint has sufficient confidence.
+      const elbow = pickSide(k, 'elbow');
+      const ankle = pickSide(k, 'ankle');
+
+      let isLyingFlat = false;
+      let flatFeedback = '';
+
+      if (elbow?.score > POSE_SCORE) {
+        // In a proper plank the elbow is on the floor while the shoulder is elevated.
+        // In image coordinates y increases downward, so a correct plank yields elbow.y > shoulder.y.
+        const elbowDrop = elbow.y - shoulder.y;
+        if (elbowDrop < canvas.height * ELBOW_DROP_MIN_RATIO) {
+          isLyingFlat = true;
+          flatFeedback = 'Flach liegen zählt nicht – auf die Unterarme stützen!';
+          debugLog.textContent = `Ellenbogen nicht tief genug: Δy=${Math.round(elbowDrop)}px`;
+        }
+      }
+
+      if (!isLyingFlat && ankle?.score > POSE_SCORE) {
+        // Ankle marks the floor level. In a plank the shoulder must be clearly above it.
+        const shoulderLift = ankle.y - shoulder.y;
+        if (shoulderLift < canvas.height * SHOULDER_ABOVE_ANKLE_RATIO) {
+          isLyingFlat = true;
+          flatFeedback = 'Schulter zu tief – Unterarmstütz einnehmen!';
+          debugLog.textContent = `Schulter nicht hoch genug über Boden: Δy=${Math.round(shoulderLift)}px`;
+        }
+      }
+
+      if (isLyingFlat) {
+        stableHoldFrames = 0;
+        stableBreakFrames++;
+        if (isPlanking) { stopTimer(); isPlanking = false; }
+        stageEl.textContent = 'KORRIGIEREN';
+        feedbackEl.textContent = flatFeedback;
+        feedbackEl.style.color = '#b45309';
+        return;
+      }
 
       // Hollow-back check takes priority — catches hips sagging below the body line.
       const hollowBack = detectHollowBack(shoulder, hip, knee);

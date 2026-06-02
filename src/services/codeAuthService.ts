@@ -134,6 +134,33 @@ export async function activateWithQrCode(code: string): Promise<CodeSession> {
 
 const normalizeQrCode = (code: string) => code.trim().toUpperCase();
 
+/** Wandelt einen rohen QR-Fehler in eine schülerfreundliche Meldung um. */
+export function getQrActivationErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  const lower = message.toLowerCase();
+
+  if (lower.includes("bereits verwendet") || lower.includes("already used")) {
+    return "Dieser QR-Code wurde bereits aktiviert. Bitte bitte deine Lehrkraft, einen neuen QR-Code zu generieren.";
+  }
+  if (lower.includes("abgelaufen") || lower.includes("expired")) {
+    return "Dieser QR-Code ist abgelaufen. Bitte bitte deine Lehrkraft um einen neuen Code.";
+  }
+  if (lower.includes("deaktiviert") || lower.includes("deactivated")) {
+    return "Dieses Profil ist deaktiviert. Bitte wende dich an deine Lehrkraft.";
+  }
+  if (lower.includes("gerät") || lower.includes("geraet") || lower.includes("device") || lower.includes("verbunden")) {
+    return "Dieses Profil ist bereits mit einem Gerät verbunden. Bitte bitte deine Lehrkraft, das Gerät zurückzusetzen.";
+  }
+  if (lower.includes("kein zugriff") || lower.includes("zugriff")) {
+    return "Zugriff verweigert. Bitte wende dich an deine Lehrkraft.";
+  }
+  if (lower.includes("nicht angemeldet") || lower.includes("keine antwort") || lower.includes("server")) {
+    return "Verbindungsfehler. Bitte versuche es erneut.";
+  }
+
+  return "Dieser QR-Code ist nicht gültig. Prüfe, ob du den neuesten Code scannst.";
+}
+
 const getQrAccountPassword = (code: string, studentId: string) =>
   `Boost-${normalizeQrCode(code)}-${studentId.slice(0, 8)}!`;
 
@@ -141,21 +168,42 @@ export async function activateQrAsSupabaseUser(code: string): Promise<QrRegistra
   const normalizedCode = normalizeQrCode(code);
   const device_id = getOrCreateDeviceId();
 
+  console.log('[BOOST QR] Schritt 1 – Aktivierung gestartet');
+  console.log('[BOOST QR] Code (Anfang):', normalizedCode.slice(0, 4) + '****' + normalizedCode.slice(-4));
+  console.log('[BOOST QR] Device-ID (Präfix):', device_id.slice(0, 8));
+
   const { data: contextData, error: contextError } = await (supabase.rpc as any)(
     "prepare_student_qr_registration",
     { p_code: normalizedCode }
   );
 
+  console.log('[BOOST QR] Schritt 2 – prepare_student_qr_registration:', {
+    hasData: !!contextData,
+    rpcError: contextError?.message ?? null,
+    appError: (contextData as any)?.error ?? null,
+  });
+
   if (contextError) throw new Error(contextError.message);
 
   const context = contextData as QrRegistrationContext & { error?: string };
   if (!context) throw new Error("Keine Antwort vom Server");
-  if (context.error) throw new Error(context.error);
+  if (context.error) {
+    console.log('[BOOST QR] prepare_student_qr_registration Fehler:', context.error);
+    throw new Error(context.error);
+  }
+
+  console.log('[BOOST QR] Schritt 3 – Schülerprofil gefunden:', {
+    student_id: context.student_id?.slice(0, 8),
+    class_name: context.class_name,
+    school_name: context.school_name,
+  });
 
   const password = getQrAccountPassword(normalizedCode, context.student_id);
 
   clearSession();
   await supabase.auth.signOut();
+
+  console.log('[BOOST QR] Schritt 4 – Alte Session gelöscht');
 
   const signUpResult = await supabase.auth.signUp({
     email: context.email,
@@ -171,24 +219,42 @@ export async function activateQrAsSupabaseUser(code: string): Promise<QrRegistra
     },
   });
 
+  console.log('[BOOST QR] Schritt 5 – signUp:', {
+    error: signUpResult.error?.message ?? null,
+    hasUser: !!signUpResult.data.user,
+    hasSession: !!signUpResult.data.session,
+  });
+
   if (signUpResult.error) {
     const message = signUpResult.error.message.toLowerCase();
     if (!message.includes("already") && !message.includes("registered")) {
+      console.log('[BOOST QR] signUp Fehler (schwerwiegend):', signUpResult.error.message);
       throw signUpResult.error;
     }
+    console.log('[BOOST QR] Konto bereits vorhanden – versuche Anmeldung');
   }
 
   const currentSession = (await supabase.auth.getSession()).data.session;
   if (!currentSession) {
+    console.log('[BOOST QR] Schritt 6 – Kein Session vorhanden, melde an...');
     const signInResult = await supabase.auth.signInWithPassword({
       email: context.email,
       password,
     });
 
+    console.log('[BOOST QR] signIn:', {
+      error: signInResult.error?.message ?? null,
+      hasSession: !!signInResult.data.session,
+    });
+
     if (signInResult.error || !signInResult.data.session) {
       throw signInResult.error ?? new Error("QR-Konto konnte nicht angemeldet werden.");
     }
+  } else {
+    console.log('[BOOST QR] Schritt 6 – Session bereits vorhanden, weiter');
   }
+
+  console.log('[BOOST QR] Schritt 7 – complete_student_qr_registration...');
 
   const { data: completionData, error: completionError } = await (supabase.rpc as any)(
     "complete_student_qr_registration",
@@ -198,11 +264,26 @@ export async function activateQrAsSupabaseUser(code: string): Promise<QrRegistra
     }
   );
 
+  console.log('[BOOST QR] Schritt 8 – complete_student_qr_registration:', {
+    hasData: !!completionData,
+    rpcError: completionError?.message ?? null,
+    appError: (completionData as any)?.error ?? null,
+  });
+
   if (completionError) throw new Error(completionError.message);
 
   const result = completionData as QrRegistrationResult & { error?: string };
   if (!result) throw new Error("Keine Antwort vom Server");
-  if (result.error) throw new Error(result.error);
+  if (result.error) {
+    console.log('[BOOST QR] complete_student_qr_registration Fehler:', result.error);
+    throw new Error(result.error);
+  }
+
+  console.log('[BOOST QR] Schritt 9 – Aktivierung erfolgreich!', {
+    user_id: result.user_id?.slice(0, 8),
+    student_id: result.student_id?.slice(0, 8),
+    class_name: result.class_name,
+  });
 
   clearSession();
   return result;

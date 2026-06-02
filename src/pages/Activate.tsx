@@ -4,7 +4,7 @@ import { Loader2, QrCode, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { activateQrAsSupabaseUser } from "@/services/codeAuthService";
+import { activateQrAsSupabaseUser, getQrActivationErrorMessage } from "@/services/codeAuthService";
 
 const normalizeCode = (value: string) => value.replace(/\s+/g, "").toUpperCase();
 
@@ -27,7 +27,7 @@ export default function Activate() {
       toast.success("Profil aktiviert.");
       navigate("/dashboard", { replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Aktivierung fehlgeschlagen");
+      toast.error(getQrActivationErrorMessage(error));
     } finally {
       setSubmitting(false);
     }

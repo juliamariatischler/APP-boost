@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, MoreHorizontal, Plus, Printer, QrCode, RefreshCcw, RotateCcw, ShieldOff, Users } from "lucide-react";
 import { jsPDF } from "jspdf";
@@ -143,6 +143,7 @@ export default function TeacherManagement() {
   const [activationCode, setActivationCode] = useState("");
   const [activationQrDataUrl, setActivationQrDataUrl] = useState("");
   const [activationStudentName, setActivationStudentName] = useState("");
+  const activationCardRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
@@ -248,6 +249,10 @@ export default function TeacherManagement() {
     setActivationCode(code);
     setActivationQrDataUrl(qrDataUrl);
     setActivationStudentName(studentName);
+    // Nach kurzer Verzögerung zum neuen QR-Code scrollen
+    setTimeout(() => {
+      activationCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const handleAddStudent = async (event: FormEvent<HTMLFormElement>) => {
@@ -627,9 +632,9 @@ export default function TeacherManagement() {
             </form>
           </div>
 
-          {/* QR-Code nach Hinzufügen */}
+          {/* QR-Code nach Hinzufügen / Neugenerierung */}
           {activationCode && activationQrDataUrl && (
-            <Card className="overflow-hidden rounded-[20px] border-primary/15 bg-white p-5 shadow-[0_12px_28px_rgba(34,197,94,0.10)]">
+            <Card ref={activationCardRef} className="overflow-hidden rounded-[20px] border-primary/15 bg-white p-5 shadow-[0_12px_28px_rgba(34,197,94,0.10)]">
               <div className="mb-3 flex items-center gap-2">
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/12">
                   <QrCode className="h-3.5 w-3.5 text-primary" />
@@ -838,6 +843,9 @@ export default function TeacherManagement() {
               Wähle aus, für welche Schüler:innen neue QR-Codes erzeugt und als Zettel gedruckt werden sollen.
             </DialogDescription>
           </DialogHeader>
+          <div className="rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <span className="font-bold">Hinweis:</span> Für jede ausgewählte Person wird ein <span className="font-bold">neuer QR-Code</span> erzeugt. Bereits gezeigte oder ausgedruckte Codes werden damit ungültig.
+          </div>
 
           <div className="space-y-3 overflow-hidden">
             <label className="flex items-center gap-3 rounded-[18px] border border-black/5 bg-primary/5 px-4 py-3 shadow-sm">

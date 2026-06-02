@@ -18,7 +18,7 @@ import { z } from "zod";
 import ForgotPassword from "@/components/ForgotPassword";
 import { DEMO_MIN_POINTS } from "@/lib/demo";
 import { getCurrentAppRole, routeForRole } from "@/lib/roles";
-import { activateQrAsSupabaseUser } from "@/services/codeAuthService";
+import { activateQrAsSupabaseUser, getQrActivationErrorMessage } from "@/services/codeAuthService";
 import jsQR from "jsqr";
 
 const REGISTERED_SCHOOLS_RPC_UNAVAILABLE_KEY = "boost:get_registered_schools_unavailable";
@@ -139,25 +139,7 @@ const Auth = () => {
     }
   };
 
-  const getActivationErrorMessage = (error: unknown) => {
-    const message = error instanceof Error ? error.message : "Dieser QR-Code ist nicht gültig.";
-    const lower = message.toLowerCase();
-
-    if (lower.includes("used") || lower.includes("bereits verwendet")) {
-      return "Dieser QR-Code wurde bereits verwendet.";
-    }
-    if (lower.includes("expired") || lower.includes("abgelaufen")) {
-      return "Dieser QR-Code ist abgelaufen. Bitte bitte deine Lehrkraft um einen neuen Code.";
-    }
-    if (lower.includes("device") || lower.includes("gerät") || lower.includes("geraet")) {
-      return "Dieses Profil ist bereits mit einem Gerät verbunden. Bitte wende dich an deine Lehrkraft.";
-    }
-    if (lower.includes("student") || lower.includes("schüler")) {
-      return message;
-    }
-
-    return "Dieser QR-Code ist nicht gültig.";
-  };
+  const getActivationErrorMessage = getQrActivationErrorMessage;
 
   const activateScannedCode = async (rawValue: string): Promise<boolean> => {
     const code = extractActivationCode(rawValue);
