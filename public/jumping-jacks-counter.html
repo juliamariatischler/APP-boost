@@ -188,7 +188,7 @@
     let currentDeviceId = '';
     let counter = 0;
     let phase = "closed"; // "closed" = Füße zusammen, Arme unten; "open" = Arme oben, Beine breit
-    const KEYPOINT_CONFIDENCE = 0.35;
+    const KEYPOINT_CONFIDENCE = 0.38; // slightly raised for reliability
 
     // Hilfsfunktionen
     function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
@@ -201,7 +201,13 @@
     async function initBackend(){
       try{ await tf.setBackend('webgl'); await tf.ready(); }
       catch(e){ await tf.setBackend('cpu'); await tf.ready(); }
-      backendInfo.textContent = 'TFJS-Backend: ' + tf.getBackend();
+      backendInfo.style.display='block';
+      if(tf.getBackend()==='cpu'){
+        backendInfo.textContent='⚠️ Langsamer Modus (CPU) – Kamera-KI stark eingeschränkt. Wechsle den Browser oder nutze ein neueres Gerät.';
+        backendInfo.style.color='#b45309';
+      }else{
+        backendInfo.textContent='TFJS-Backend: '+tf.getBackend();
+      }
     }
 
     function isMirrored(){ return currentFacingMode === 'user'; }
@@ -357,7 +363,19 @@
       const nose = get(k,'nose');
 
       if(!(ready(ls)&&ready(rs)&&ready(la)&&ready(ra)&&ready(lw)&&ready(rw)&&ready(nose))){
-        feedbackEl.textContent = "Position schlecht erkennbar – stell dich mittig hin.";
+        // Tell user specifically what's missing
+        if(!(ready(ls)||ready(rs))){
+          feedbackEl.textContent = "Schultern nicht erkannt – frontal zur Kamera stellen, Handy weiter weg.";
+        } else if(!(ready(la)||ready(ra))){
+          feedbackEl.textContent = "Füße/Knöchel nicht erkannt – Handy so aufstellen, dass du ganz im Bild bist.";
+        } else if(!(ready(lw)||ready(rw))){
+          feedbackEl.textContent = "Hände nicht erkannt – Arme seitlich ausbreiten, damit sie sichtbar sind.";
+        } else if(!ready(nose)){
+          feedbackEl.textContent = "Gesicht nicht erkannt – Handy etwas tiefer stellen.";
+        } else {
+          feedbackEl.textContent = "Nicht alle Körperpunkte erkennbar – ganz in den Bildbereich stellen.";
+        }
+        feedbackEl.style.color = "#b45309";
         stageEl.textContent = "-";
         return;
       }

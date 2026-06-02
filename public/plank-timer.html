@@ -298,12 +298,11 @@
     </div>
   </div>
 
-  <!-- TensorFlow -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+  <!-- TensorFlow – pinned to same versions as other counters -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.22.0/dist/tf-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.22.0/dist/tf-converter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.22.0/dist/tf-backend-webgl.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 
   <script>
     const video=document.getElementById('webcam');
@@ -335,11 +334,11 @@
     let detector,isPlanking=false,time=0,timerInterval=null;
     let currentFacingMode='user';
     let currentDeviceId='';
-    const POSE_SCORE = 0.35;
-    const BACK_ANGLE_THRESHOLD = 158;  // was 132 — stricter: requires near-straight body line
-    const TORSO_TILT_MAX = 30;         // was 38 — slightly stricter for torso-only check
+    const POSE_SCORE = 0.40;           // raised from 0.35 – more reliable detections only
+    const BACK_ANGLE_THRESHOLD = 158;  // near-straight body line required
     const HIP_SAG_MAX_RATIO = 0.07;    // max 7% of frame height below shoulder-knee line
     const HOLLOW_BACK_GRACE = 5;       // frames before timer pauses on hollow back (~0.3s)
+    const STABLE_HOLD_REQUIRED = 8;    // ~0.5 s of stable pose before timer starts
     let stableHoldFrames = 0;
     let stableBreakFrames = 0;
     let missingPoseFrames = 0;
@@ -437,6 +436,13 @@
     async function initBackend(){
       try{await tf.setBackend('webgl');await tf.ready();}
       catch(e){await tf.setBackend('cpu');await tf.ready();}
+      backendInfo.style.display='block';
+      if(tf.getBackend()==='cpu'){
+        backendInfo.textContent='⚠️ Langsamer Modus (CPU) – Kamera-KI stark eingeschränkt. Wechsle in einen anderen Browser oder nutze ein neueres Gerät.';
+        backendInfo.style.color='#b45309';
+      }else{
+        backendInfo.textContent='TFJS-Backend: '+tf.getBackend();
+      }
     }
 
     function isLocalhostHost(hostname){
@@ -619,9 +625,10 @@
         stableHoldFrames = 0;
       }
 
-      if(stableHoldFrames >= 2){
+      if(stableHoldFrames >= STABLE_HOLD_REQUIRED){
         stageEl.textContent="HALTEN";
         feedbackEl.textContent=stableMessage;
+        feedbackEl.style.color='#059669';
         if(!isPlanking){isPlanking=true;startTimer();}
         return;
       }
@@ -629,12 +636,18 @@
       if(isPlanking){
         stageEl.textContent="HALTEN";
         feedbackEl.textContent=unstableMessage;
+        feedbackEl.style.color='#b45309';
         return;
       }
 
       if(stableBreakFrames >= 3){
         stageEl.textContent="AUSRICHTEN";
         feedbackEl.textContent=unstableMessage;
+        feedbackEl.style.color='#b45309';
+      } else if(stableHoldFrames > 0 && stableHoldFrames < STABLE_HOLD_REQUIRED){
+        stageEl.textContent="AUSRICHTEN";
+        feedbackEl.textContent='Position halten… ' + stableHoldFrames + '/' + STABLE_HOLD_REQUIRED;
+        feedbackEl.style.color='#0369a1';
       }
     }
 
@@ -664,9 +677,15 @@
       const hip=pickSide(k,'hip');
       const knee=pickSide(k,'knee');
 
+      // Schulter und Hüfte sind Pflicht
       if(!(shoulder?.score>POSE_SCORE && hip?.score>POSE_SCORE)){
         missingPoseFrames++;
-        feedbackEl.textContent="Rücken und Hüfte müssen sichtbar sein.";
+        feedbackEl.style.color='#b45309';
+        if(!shoulder || shoulder.score<=POSE_SCORE){
+          feedbackEl.textContent="Schulter nicht erkannt – Kamera seitlich auf Schulter, Hüfte und Knie richten.";
+        } else {
+          feedbackEl.textContent="Hüfte nicht erkannt – Kamera weiter zurück stellen.";
+        }
         if(missingPoseFrames >= 4){
           stageEl.textContent="-";
           stableHoldFrames = 0;
@@ -680,6 +699,22 @@
       if(!isSideView(shoulder, hip)){
         missingPoseFrames++;
         feedbackEl.textContent="Bitte seitlich zur Kamera stellen.";
+        feedbackEl.style.color='#b45309';
+        if(missingPoseFrames >= 4){
+          stageEl.textContent="-";
+          stableHoldFrames = 0;
+          stableBreakFrames = 0;
+          stopTimer();
+          isPlanking=false;
+        }
+        return;
+      }
+
+      // Knie ist Pflicht – verhindert das einfache-Liegen-Bug
+      if(!(knee?.score>POSE_SCORE)){
+        missingPoseFrames++;
+        feedbackEl.textContent="Bitte Knie ins Bild bringen – Kamera etwas weiter zurück stellen.";
+        feedbackEl.style.color='#b45309';
         if(missingPoseFrames >= 4){
           stageEl.textContent="-";
           stableHoldFrames = 0;
@@ -697,36 +732,25 @@
         hollowBackFrames++;
         stableHoldFrames = 0;
         if(hollowBackFrames >= HOLLOW_BACK_GRACE && isPlanking){
-          // Pause the timer; time value is kept so it resumes when form is fixed.
           stopTimer();
           isPlanking = false;
           stableBreakFrames = 0;
         }
         stageEl.textContent = isPlanking ? "HALTEN" : "KORRIGIEREN";
         feedbackEl.textContent = "Bauch anspannen und Hüfte etwas höher bringen!";
+        feedbackEl.style.color='#b45309';
         debugLog.textContent = `Hohlkreuz erkannt! (${hollowBackFrames}F)`;
         return;
       }
       hollowBackFrames = 0;
 
-      if(knee?.score>POSE_SCORE){
-        const back=angle(shoulder,hip,knee);
-        updatePlankState(
-          back > BACK_ANGLE_THRESHOLD,
-          "Super – Körper gerade halten!",
-          "Achte darauf, dass Rücken und Hüfte eine gerade Linie bilden."
-        );
-        debugLog.textContent = `Rückenwinkel: ${Math.round(back)}°`;
-        return;
-      }
-
-      const torsoTilt = angleToHorizontal(shoulder, hip);
+      const back=angle(shoulder,hip,knee);
       updatePlankState(
-        torsoTilt <= TORSO_TILT_MAX,
-        "Rücken gerade halten!",
-        "Achte darauf, dass Rücken und Hüfte eine gerade Linie bilden."
+        back > BACK_ANGLE_THRESHOLD,
+        "Super – Körper gerade halten!",
+        "Achte auf eine gerade Linie von Schulter bis Knie."
       );
-      debugLog.textContent = `Torso: ${torsoTilt.toFixed(1)}°`;
+      debugLog.textContent = `Rückenwinkel: ${Math.round(back)}°`;
     }
 
     async function loop(){

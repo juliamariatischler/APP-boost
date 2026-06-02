@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, Check, ClipboardList, Footprints, Loader2, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, ClipboardList, Footprints, Loader2, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -165,6 +165,7 @@ export default function TeacherHome() {
   const [studentStats, setStudentStats] = useState<StudentStat[]>([]);
   const [dayStats, setDayStats] = useState<DayStat[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = previous, etc.
 
   // Ranking tab state
   const [studentRanks, setStudentRanks] = useState<StudentRank[]>([]);
@@ -317,7 +318,7 @@ export default function TeacherHome() {
     })));
     void loadOverview();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, students]);
+  }, [activeTab, students, weekOffset]);
 
   // Load ranking data + teacher's own points.
   // Pre-populate studentRanks immediately so students with 0 points are shown
@@ -361,11 +362,16 @@ export default function TeacherHome() {
     setOverviewLoading(true);
     try {
       const today = new Date();
-      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+      const referenceDay = new Date(today);
+      referenceDay.setDate(referenceDay.getDate() + weekOffset * 7);
+      const weekStart = startOfWeek(referenceDay, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(referenceDay, { weekStartsOn: 1 });
       const weekStartStr = format(weekStart, "yyyy-MM-dd");
       const weekEndStr = format(weekEnd, "yyyy-MM-dd");
-      const todayStr = format(today, "yyyy-MM-dd");
+      const actualTodayStr = format(today, "yyyy-MM-dd");
+      // For past weeks use the last day of that week as the "today" reference so
+      // the "Aktiv (letzter Tag)" card shows real data instead of 0%.
+      const todayStr = weekOffset === 0 ? actualTodayStr : weekEndStr;
       const daysOfWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
       console.log("[Übersicht] authMode:", authMode);
@@ -433,7 +439,7 @@ export default function TeacherHome() {
         }
       }
 
-      // Inject synthetic data for the demo student: 100% on past days, ~83% today
+      // Inject synthetic data for the demo student: 100% on past days, ~83% on reference day
       const demoStudent = students.find((s) => s.display_name === DEMO_STUDENT_DISPLAY_NAME);
       if (demoStudent) {
         const demoProgressId = getPrimaryProgressId(demoStudent);
@@ -441,7 +447,7 @@ export default function TeacherHome() {
         for (const day of pastDays) {
           const dateStr = format(day, "yyyy-MM-dd");
           if (!allRows.some((r) => getStudentProgressIds(demoStudent).includes(r.user_id) && r.date === dateStr)) {
-            const isToday = dateStr === todayStr;
+            const isRefDay = dateStr === todayStr;
             allRows.push({
               user_id: demoProgressId,
               date: dateStr,
@@ -450,8 +456,8 @@ export default function TeacherHome() {
               planks: 10,
               sit_ups: 25,
               jumping_jacks: 40,
-              steps: isToday ? 0 : 3000,
-              steps_tracking_active: !isToday,
+              steps: isRefDay ? 0 : 3000,
+              steps_tracking_active: !isRefDay,
             });
           }
         }
@@ -1221,16 +1227,53 @@ export default function TeacherHome() {
     </>
   );
 
+  const renderWeekNav = () => {
+    const today = new Date();
+    const referenceDay = new Date(today);
+    referenceDay.setDate(referenceDay.getDate() + weekOffset * 7);
+    const weekStart = startOfWeek(referenceDay, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(referenceDay, { weekStartsOn: 1 });
+    const weekLabel = weekOffset === 0
+      ? "Diese Woche"
+      : weekOffset === -1
+        ? "Letzte Woche"
+        : `${format(weekStart, "d. MMM", { locale: de })} – ${format(weekEnd, "d. MMM", { locale: de })}`;
+    return (
+      <div className="flex items-center justify-between rounded-[16px] border border-black/5 bg-white px-3 py-2 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+        <button
+          type="button"
+          onClick={() => setWeekOffset((w) => w - 1)}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95 transition"
+          aria-label="Vorherige Woche"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-black text-foreground">{weekLabel}</span>
+        <button
+          type="button"
+          onClick={() => setWeekOffset((w) => Math.min(0, w + 1))}
+          disabled={weekOffset >= 0}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95 transition disabled:opacity-30"
+          aria-label="Nächste Woche"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  };
+
   const renderUebersichtTab = () => {
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
     // Always render the class selector so teachers can switch even when a class is empty.
     const classSelector = renderClassSelector();
+    const weekNav = renderWeekNav();
 
     if (studentsLoading || overviewLoading) {
       return (
         <div className="space-y-3">
           {classSelector}
+          {weekNav}
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-16 animate-pulse rounded-[20px] bg-muted" />
           ))}
@@ -1242,6 +1285,7 @@ export default function TeacherHome() {
       return (
         <div className="space-y-4">
           {classSelector}
+          {weekNav}
           <Card className="rounded-[20px] border-black/5 bg-white p-4 text-sm text-muted-foreground">
             Für diese Klasse sind noch keine Schüler:innen angelegt.
           </Card>
@@ -1257,14 +1301,19 @@ export default function TeacherHome() {
       ? Math.round(studentStats.reduce((s, x) => s + x.weekActiveDays, 0) / (students.length * 5) * 100)
       : 0;
 
+    const isCurrentWeek = weekOffset === 0;
+
     return (
       <div className="space-y-4">
         {classSelector}
+        {weekNav}
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 gap-3">
           <Card className="rounded-[20px] border-primary/15 bg-primary/5 p-4 shadow-[0_12px_26px_rgba(34,197,94,0.10)]">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-primary/70">Heute aktiv</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-primary/70">
+              {isCurrentWeek ? "Heute aktiv" : "Aktiv (letzter Tag)"}
+            </p>
             <p className="mt-1 text-3xl font-black text-primary">{todayPct}%</p>
             <p className="text-xs font-semibold text-muted-foreground">
               {todayActiveCount} von {students.length} Schüler:innen

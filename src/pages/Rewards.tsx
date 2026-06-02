@@ -35,14 +35,35 @@ type ClassMilestone = {
 };
 
 const fallbackRewards: RewardItem[] = [
-  { id: "fallback-muripark-800", title: "Stofftasche groß",  partner: "Murpark", threshold: 800, category: "taschen", icon: "👜",  image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-700", title: "Beachtennis-Set",   partner: "Murpark", threshold: 700, category: "sport",   icon: "🏓",  image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-600", title: "Frisbee",           partner: "Murpark", threshold: 600, category: "sport",   icon: "🥏",  image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-500", title: "Notizbuch",         partner: "Murpark", threshold: 500, category: "kreativ", icon: "📓",  image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-400", title: "Stoffbeutel",       partner: "Murpark", threshold: 400, category: "taschen", icon: "🛍️", image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-300", title: "Kompaktspiegel",    partner: "Murpark", threshold: 300, category: "style",   icon: "🪞",  image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-200", title: "Buntstifte",        partner: "Murpark", threshold: 200, category: "kreativ", icon: "🖍️", image_url: null, sponsor_logo_url: null },
-  { id: "fallback-muripark-100", title: "Malset",            partner: "Murpark", threshold: 100, category: "kreativ", icon: "🎨",  image_url: null, sponsor_logo_url: null },
+  { id: "fallback-raiffeisen-2900", title: "JBL Box GO 4, blau",    partner: "Raiffeisen", threshold: 2900, category: "elektronik", icon: "🔵", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-raiffeisen-2800", title: "JBL Box GO 4, blau",    partner: "Raiffeisen", threshold: 2800, category: "elektronik", icon: "🔵", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-raiffeisen-2700", title: "JBL Box GO 4, weiß",    partner: "Raiffeisen", threshold: 2700, category: "elektronik", icon: "⚪", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-raiffeisen-2600", title: "JBL Wave 100",           partner: "Raiffeisen", threshold: 2600, category: "elektronik", icon: "🎧", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-raiffeisen-2500", title: "JBL Wave 100",           partner: "Raiffeisen", threshold: 2500, category: "elektronik", icon: "🎧", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-2400",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 2400, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-2300",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 2300, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-2200",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 2200, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-2100",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 2100, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-2000",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 2000, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-cineplexx-1900",  title: "2x Popcorngutschein",    partner: "Cineplexx",  threshold: 1900, category: "gutscheine", icon: "🎬", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-cineplexx-1800",  title: "2x Popcorngutschein",    partner: "Cineplexx",  threshold: 1800, category: "gutscheine", icon: "🎬", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-cineplexx-1700",  title: "2x Popcorngutschein",    partner: "Cineplexx",  threshold: 1700, category: "gutscheine", icon: "🎬", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-cineplexx-1600",  title: "2x Popcorngutschein",    partner: "Cineplexx",  threshold: 1600, category: "gutscheine", icon: "🎬", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-cineplexx-1500",  title: "2x Popcorngutschein",    partner: "Cineplexx",  threshold: 1500, category: "gutscheine", icon: "🎬", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-1400",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 1400, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-1300",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 1300, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-1200",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 1200, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-1100",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 1100, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-sport2000-1000",  title: "Sport 2000 Sachspende",  partner: "Sport 2000", threshold: 1000, category: "sport",      icon: "🏅", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-900",     title: "Frisbee",                partner: "Murpark",    threshold:  900, category: "sport",      icon: "🥏", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-800",     title: "Beachball-Set",          partner: "Murpark",    threshold:  800, category: "sport",      icon: "⚽", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-700",     title: "Stofftasche",            partner: "Murpark",    threshold:  700, category: "taschen",    icon: "👜", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-600",     title: "Notizbuch",              partner: "Murpark",    threshold:  600, category: "kreativ",    icon: "📓", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-500",     title: "Buntstift-Set",          partner: "Murpark",    threshold:  500, category: "kreativ",    icon: "🖍️", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-400",     title: "Malset",                 partner: "Murpark",    threshold:  400, category: "kreativ",    icon: "🎨", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-300",     title: "Taschenspiegel",         partner: "Murpark",    threshold:  300, category: "style",      icon: "🪞", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-200",     title: "Brillenputztuch",        partner: "Murpark",    threshold:  200, category: "style",      icon: "👓", image_url: null, sponsor_logo_url: null },
+  { id: "fallback-murpark-100",     title: "Taschentücher-Box",      partner: "Murpark",    threshold:  100, category: "style",      icon: "🤧", image_url: null, sponsor_logo_url: null },
 ];
 
 const fallbackMilestones: ClassMilestone[] = [
@@ -215,20 +236,6 @@ const Rewards = () => {
       <TopHeader />
 
       <div className="relative max-w-screen-xl mx-auto px-4 -mt-4">
-        {/* Coming soon overlay – automatically hidden from 08.06.2026 onwards */}
-        {new Date() < new Date("2026-06-08") && (
-          <div className="pointer-events-none absolute inset-x-4 top-0 bottom-0 z-30 flex items-start justify-center pt-24 rounded-[28px] bg-[#f5f5f5]/50 dark:bg-zinc-900/50">
-            <div className="rotate-[-7deg] text-center">
-              <p className="text-[3.8rem] font-black leading-none tracking-tight text-zinc-500/80 dark:text-zinc-400/80 drop-shadow-sm sm:text-[5.5rem]">
-                Coming
-              </p>
-              <p className="mt-2 text-[3.8rem] font-black leading-none tracking-tight text-zinc-500/80 dark:text-zinc-400/80 drop-shadow-sm sm:text-[5.5rem]">
-                soon
-              </p>
-              <p className="mt-3 text-xl font-bold text-zinc-400/80 dark:text-zinc-500/80 tracking-widest">08.06</p>
-            </div>
-          </div>
-        )}
 
         {/* Title */}
         <div className="mb-4">

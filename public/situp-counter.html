@@ -207,13 +207,13 @@
     let currentDeviceId = '';
     let counter = 0;
     let stage = "down"; // down = unten, up = oben
-    const KEYPOINT_CONFIDENCE = 0.20;
-    const MIN_VISIBLE_SCORE = 0.15;
-    const DOWN_ANGLE_THRESHOLD = 145;
-    const UP_ANGLE_THRESHOLD = 130;   // toleranter: Screenshot-Position (~110-125°) reicht
-    const DOWN_SHOULDER_LIFT = 0.10;  // relativ zu Schulter-Hüfte-Abstand
-    const UP_SHOULDER_LIFT = 0.28;    // relativ zu Schulter-Hüfte-Abstand
-    const REQUIRED_STABLE_FRAMES = 2;
+    const KEYPOINT_CONFIDENCE = 0.30;  // raised from 0.20 – require reliable detections
+    const MIN_VISIBLE_SCORE = 0.25;    // raised from 0.15
+    const DOWN_ANGLE_THRESHOLD = 158;  // raised from 145 – must be lying nearly flat
+    const UP_ANGLE_THRESHOLD = 90;     // lowered from 130 – must sit up significantly
+    const DOWN_SHOULDER_LIFT = 0.08;   // shoulder barely above hip = lying flat
+    const UP_SHOULDER_LIFT = 0.42;     // raised from 0.28 – shoulder clearly above hip
+    const REQUIRED_STABLE_FRAMES = 3;  // raised from 2 – require sustained position
     const MAX_HISTORY = 5;
     let missingPoseFrames = 0;
     let stableUpFrames = 0;
@@ -421,33 +421,42 @@
       let upVotes = 0;
       let downVotes = 0;
 
+      // Require angle signal when available
       if(hipAngleValue !== null){
         if(hipAngleValue >= DOWN_ANGLE_THRESHOLD) downVotes++;
-        if(hipAngleValue <= UP_ANGLE_THRESHOLD) upVotes++;
+        else if(hipAngleValue <= UP_ANGLE_THRESHOLD) upVotes++;
+        // Angles in the middle zone cast no vote (prevents noise counting)
       }
 
+      // Require shoulder lift signal when available
       if(shoulderLiftValue !== null){
         if(shoulderLiftValue <= DOWN_SHOULDER_LIFT) downVotes++;
-        if(shoulderLiftValue >= UP_SHOULDER_LIFT) upVotes++;
+        else if(shoulderLiftValue >= UP_SHOULDER_LIFT) upVotes++;
+        // Values in middle zone cast no vote
       }
 
-      // Nase als zusätzliches optionales Signal
-      if(noseAboveHip !== null){
-        if(noseAboveHip >= 1.8) upVotes++;
-        if(noseAboveHip <= 0.5) downVotes++;
+      // Nase als optionaler Tie-Breaker (nicht allein ausschlaggebend)
+      if(noseAboveHip !== null && upVotes === downVotes){
+        if(noseAboveHip >= 2.0) upVotes++;
+        if(noseAboveHip <= 0.4) downVotes++;
       }
 
-      if(downVotes > upVotes && downVotes > 0){
+      // Require at least 2 agreements for state transitions (stricter than single vote)
+      const SIGNAL_THRESHOLD = hipAngleValue !== null && shoulderLiftValue !== null ? 2 : 1;
+
+      if(downVotes >= SIGNAL_THRESHOLD && downVotes > upVotes){
         stableDownFrames++;
         stableUpFrames = 0;
-      } else if(upVotes > downVotes && upVotes > 0){
+      } else if(upVotes >= SIGNAL_THRESHOLD && upVotes > downVotes){
         stableUpFrames++;
         stableDownFrames = 0;
       } else {
-        // Zwischen-Feedback wenn die Position fast erreicht ist
-        if(stage === "down" && shoulderLiftValue !== null && shoulderLiftValue > DOWN_SHOULDER_LIFT && shoulderLiftValue < UP_SHOULDER_LIFT){
-          feedbackEl.textContent = "Heb deinen Oberkörper etwas weiter Richtung Knie.";
-          feedbackEl.style.color = "#b45309";
+        // Show intermediate feedback when climbing toward UP position
+        if(stage === "down" && shoulderLiftValue !== null){
+          if(shoulderLiftValue > DOWN_SHOULDER_LIFT && shoulderLiftValue < UP_SHOULDER_LIFT){
+            feedbackEl.textContent = "Weiter hoch – Oberkörper Richtung Knie bringen!";
+            feedbackEl.style.color = "#b45309";
+          }
         }
         stableUpFrames = 0;
         stableDownFrames = 0;
