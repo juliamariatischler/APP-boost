@@ -188,6 +188,8 @@
     let currentDeviceId = '';
     let counter = 0;
     let phase = "closed"; // "closed" = Füße zusammen, Arme unten; "open" = Arme oben, Beine breit
+    let poseReadyFrames = 0;
+    const POSE_READY_REQUIRED = 6;  // ~0.4s mit gültiger Pose bevor gezählt wird
     const KEYPOINT_CONFIDENCE = 0.38; // slightly raised for reliability
 
     // Hilfsfunktionen
@@ -363,6 +365,7 @@
       const nose = get(k,'nose');
 
       if(!(ready(ls)&&ready(rs)&&ready(la)&&ready(ra)&&ready(lw)&&ready(rw)&&ready(nose))){
+        poseReadyFrames = 0;
         // Tell user specifically what's missing
         if(!(ready(ls)||ready(rs))){
           feedbackEl.textContent = "Schultern nicht erkannt – frontal zur Kamera stellen, Handy weiter weg.";
@@ -376,6 +379,14 @@
           feedbackEl.textContent = "Nicht alle Körperpunkte erkennbar – ganz in den Bildbereich stellen.";
         }
         feedbackEl.style.color = "#b45309";
+        stageEl.textContent = "-";
+        return;
+      }
+
+      poseReadyFrames = Math.min(poseReadyFrames + 1, POSE_READY_REQUIRED + 1);
+      if(poseReadyFrames < POSE_READY_REQUIRED){
+        feedbackEl.textContent = "Position wird erkannt… kurz halten.";
+        feedbackEl.style.color = "#0369a1";
         stageEl.textContent = "-";
         return;
       }
@@ -435,7 +446,7 @@
     }
 
     document.getElementById('reset-button').addEventListener('click', () => {
-      counter = 0; phase = 'closed';
+      counter = 0; phase = 'closed'; poseReadyFrames = 0;
       countEl.textContent = '0'; stageEl.textContent = '-';
       feedbackEl.textContent = 'Zurückgesetzt!';
     });

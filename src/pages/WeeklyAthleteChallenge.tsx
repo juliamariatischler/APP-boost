@@ -43,14 +43,37 @@ const WeeklyAthleteChallenge = () => {
   useEffect(() => {
     if (!userId) return;
 
+    // localStorage zuerst lesen (schneller UI-Cache, deckt code-auth Schüler ab).
+    let localCompleted = false;
     try {
       const stored = localStorage.getItem(`${WEEKLY_VIDEO_REWARD_STORAGE_KEY}_${userId}`);
       const parsed: WeeklyRewardMap = stored ? JSON.parse(stored) : {};
-      setIsWeeklyVideoCompleted(Boolean(parsed[currentWeeklyVideo.weekKey]));
+      localCompleted = Boolean(parsed[currentWeeklyVideo.weekKey]);
     } catch {
-      setIsWeeklyVideoCompleted(false);
+      localCompleted = false;
     }
-  }, [currentWeeklyVideo.weekKey, userId]);
+    setIsWeeklyVideoCompleted(localCompleted);
+
+    // Server ist die maßgebliche Quelle: verhindert erneutes Abholen nach
+    // dem Löschen der App-Daten – für Supabase-Auth UND Code-Auth-Schüler.
+    void (async () => {
+      const { data: authData } = await supabase.auth.getSession();
+      const codeAuthParams =
+        codeSession?.device_id && codeSession?.session_token
+          ? { p_device_id: codeSession.device_id, p_session_token: codeSession.session_token }
+          : null;
+      if (!authData.session && !codeAuthParams) return;
+      const { data, error } = await (supabase.rpc as any)("get_weekly_video_status", {
+        p_week_key: currentWeeklyVideo.weekKey,
+        ...(codeAuthParams ?? {}),
+      });
+      if (error) return;
+      if ((data as { claimed?: boolean } | null)?.claimed) {
+        setIsWeeklyVideoCompleted(true);
+        persistWeeklyVideoReward(currentWeeklyVideo.weekKey);
+      }
+    })();
+  }, [currentWeeklyVideo.weekKey, userId, codeSession]);
 
   const persistWeeklyVideoReward = (weekKey: string) => {
     setIsWeeklyVideoCompleted(true);
@@ -85,16 +108,40 @@ const WeeklyAthleteChallenge = () => {
 
     const { data: authData } = await supabase.auth.getSession();
     const hasSupabaseSession = !!authData.session;
+    const codeAuthParams =
+      codeSession?.device_id && codeSession?.session_token
+        ? { p_device_id: codeSession.device_id, p_session_token: codeSession.session_token }
+        : null;
 
     try {
-      if (hasSupabaseSession) {
-        const { error } = await supabase.rpc("increment_points", { points_to_add: REWARD_POINTS });
+      if (hasSupabaseSession || codeAuthParams) {
+        // Atomare, idempotente Vergabe: schreibt Completion + Blitze server-seitig.
+        // Doppel-Abholung (auch nach localStorage-Löschen) wird durch den
+        // (user, week_key)-Primärschlüssel verhindert. Funktioniert für Supabase-Auth
+        // und – über device_id/session_token – auch für Code-Auth-Schüler.
+        const { data, error } = await (supabase.rpc as any)("claim_weekly_video_reward", {
+          p_week_key: currentWeeklyVideo.weekKey,
+          p_points: REWARD_POINTS,
+          ...(codeAuthParams ?? {}),
+        });
         if (error) throw error;
+
+        const result = data as { awarded?: boolean; already_claimed?: boolean } | null;
+        persistWeeklyVideoReward(currentWeeklyVideo.weekKey);
+
+        if (result?.already_claimed) {
+          toast.success("Dieses Wochenvideo hast du diese Woche schon geschafft.");
+          return;
+        }
+
         window.dispatchEvent(new CustomEvent("points-updated", { detail: { delta: REWARD_POINTS } }));
+        toast.success(`Wochenvideo geschafft! +${REWARD_POINTS} Blitze`);
+        return;
       }
 
+      // Keine Identität auflösbar → nur lokaler Abschluss-Merker als Fallback.
       persistWeeklyVideoReward(currentWeeklyVideo.weekKey);
-      toast.success(`Wochenvideo geschafft!${hasSupabaseSession ? ` +${REWARD_POINTS} Blitze` : ""}`);
+      toast.success("Wochenvideo geschafft!");
     } catch (error) {
       console.error("Weekly video reward failed", error);
       toast.error("Video beendet, aber die Blitze konnten nicht gutgeschrieben werden.");

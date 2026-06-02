@@ -341,6 +341,17 @@
     const STABLE_HOLD_REQUIRED = 8;      // ~0.5 s of stable pose before timer starts
     const ELBOW_DROP_MIN_RATIO = 0.06;   // elbow must be ≥6% frame height below shoulder (anti-flat-lying)
     const SHOULDER_ABOVE_ANKLE_RATIO = 0.05; // shoulder must be ≥5% frame height above ankle level
+
+    // ── Android-spezifische Plank-Logik (iOS bleibt vollständig unverändert) ──
+    // Auf Android ist das Kamera-Sichtfeld enger (digitaler Zoom), daher ist das
+    // Knie oft nicht im Bild. Dort sind Schulter + Ellbogen + Hüfte Pflicht und
+    // Knie/Knöchel optional. iOS nutzt weiterhin die ursprüngliche Logik.
+    const IS_ANDROID = /android/i.test(navigator.userAgent || '');
+    const ANDROID_ELBOW_UNDER_SHOULDER_RATIO = 0.18; // Ellbogen ~ unter Schulter (Anteil Bildbreite)
+    const ANDROID_HIP_ABOVE_ELBOW_RATIO = 0.04;      // Hüfte muss über Ellbogen-/Bodenhöhe liegen
+    const ANDROID_TORSO_TILT_MAX = 33;               // max. Neigung Schulter-Hüfte-Linie (Grad) – fängt das Absacken des Bauchs ab
+    const ANDROID_HIP_DROP_MAX_RATIO = 0.10;         // Hüfte darf max. 10% Bildhöhe unter Schulterhöhe fallen
+
     let stableHoldFrames = 0;
     let stableBreakFrames = 0;
     let missingPoseFrames = 0;
@@ -502,6 +513,24 @@
       currentFacingMode = settings.facingMode || nextFacingMode;
       currentDeviceId = settings.deviceId || '';
       updateVideoOrientation();
+      // Android: starken digitalen Zoom zurücknehmen, damit mehr ins Bild passt.
+      if(IS_ANDROID){ await applyAndroidZoomReset(); }
+    }
+
+    // Setzt auf Android den (oft per Default aktiven) digitalen Zoom auf das
+    // Minimum (i. d. R. 1.0). Greift nur auf Android und nur, wenn die Kamera
+    // Zoom unterstützt. iOS ruft diese Funktion nie auf.
+    async function applyAndroidZoomReset(){
+      const track = getActiveTrack();
+      const capabilities = track?.getCapabilities?.();
+      if(!track || !capabilities || !capabilities.zoom) return false;
+      try{
+        const minZoom = capabilities.zoom.min ?? 1;
+        await track.applyConstraints({ advanced: [{ zoom: minZoom }] });
+        return true;
+      }catch(_error){
+        return false;
+      }
     }
 
     async function applyZoomOut(){
@@ -673,7 +702,187 @@
       return (hip.y - expectedY) > canvas.height * HIP_SAG_MAX_RATIO;
     }
 
+    // ── Android-Plank-Erkennung ──────────────────────────────────────────
+    // Pflicht: Schulter + Ellbogen + Hüfte. Knie/Knöchel optional.
+    // Enthält Anti-Lying-Validierung (flaches Liegen zählt nicht) und eine
+    // alternative Körperlinien-Prüfung, falls kein Knie/Knöchel sichtbar ist.
+    function processPlankAndroid(pose){
+      const k=pose.keypoints;
+      const shoulder=pickSide(k,'shoulder');
+      const hip=pickSide(k,'hip');
+      const elbow=pickSide(k,'elbow');
+      const knee=pickSide(k,'knee');
+      const ankle=pickSide(k,'ankle');
+
+      const shoulderOk = shoulder?.score > POSE_SCORE;
+      const elbowOk    = elbow?.score    > POSE_SCORE;
+      const hipOk      = hip?.score      > POSE_SCORE;
+
+      // Pflichtpunkte: Schulter, Ellbogen, Hüfte.
+      if(!(shoulderOk && elbowOk && hipOk)){
+        missingPoseFrames++;
+        feedbackEl.style.color='#b45309';
+        if(!shoulderOk && !hipOk){
+          feedbackEl.textContent="Bitte Oberkörper und Hüfte vollständig ins Bild bringen.";
+        }else if(!shoulderOk){
+          feedbackEl.textContent="Bitte Schulter, Ellbogen und Hüfte sichtbar machen.";
+        }else if(!elbowOk){
+          feedbackEl.textContent="Bitte stütze dich auf die Unterarme.";
+        }else{
+          feedbackEl.textContent="Bitte Oberkörper und Hüfte vollständig ins Bild bringen.";
+        }
+        if(missingPoseFrames >= 4){
+          stageEl.textContent="-";
+          stableHoldFrames = 0;
+          stableBreakFrames = 0;
+          stopTimer();
+          isPlanking=false;
+        }
+        return;
+      }
+
+      if(!isSideView(shoulder, hip)){
+        missingPoseFrames++;
+        feedbackEl.textContent="Bitte seitlich zur Kamera stellen – oder Handy quer platzieren.";
+        feedbackEl.style.color='#b45309';
+        if(missingPoseFrames >= 4){
+          stageEl.textContent="-";
+          stableHoldFrames = 0;
+          stableBreakFrames = 0;
+          stopTimer();
+          isPlanking=false;
+        }
+        return;
+      }
+      missingPoseFrames = 0;
+
+      // ── Anti-Lying-Validierung ─────────────────────────────────────────
+      // (1) Schulter muss sichtbar über dem Ellbogen liegen → Unterarmstütz,
+      //     Oberkörper vom Boden abgestützt. (y wächst nach unten.)
+      const elbowDrop = elbow.y - shoulder.y;
+      if(elbowDrop < canvas.height * ELBOW_DROP_MIN_RATIO){
+        stableHoldFrames = 0;
+        stableBreakFrames++;
+        if(isPlanking){ stopTimer(); isPlanking=false; }
+        stageEl.textContent='KORRIGIEREN';
+        feedbackEl.textContent='Bitte stütze dich auf die Unterarme.';
+        feedbackEl.style.color='#b45309';
+        debugLog.textContent=`Ellenbogen nicht tief genug: Δy=${Math.round(elbowDrop)}px`;
+        return;
+      }
+
+      // (2) Hüfte darf nicht flach am Boden liegen → muss über Ellbogenhöhe sein.
+      const hipLift = elbow.y - hip.y;
+      if(hipLift < canvas.height * ANDROID_HIP_ABOVE_ELBOW_RATIO){
+        stableHoldFrames = 0;
+        stableBreakFrames++;
+        if(isPlanking){ stopTimer(); isPlanking=false; }
+        stageEl.textContent='KORRIGIEREN';
+        feedbackEl.textContent='Bitte hebe die Hüfte an – flaches Liegen zählt nicht als Plank.';
+        feedbackEl.style.color='#b45309';
+        debugLog.textContent=`Hüfte zu tief: Δy=${Math.round(hipLift)}px`;
+        return;
+      }
+
+      // (2b) ABSACK-GUARD: In einer echten Plank ist die Schulter-Hüfte-Linie
+      //      nahezu waagerecht. Sackt der Bauch zu Boden (Schulter bleibt oben,
+      //      Hüfte fällt herunter), kippt die Linie steil ab. Greift auch während
+      //      des Zählens und stoppt den Timer sofort. Doppelt abgesichert über
+      //      Winkel (skaleninvariant) UND absoluten Hüft-Drop relativ zur Schulter.
+      const torsoTilt = angleToHorizontal(shoulder, hip);
+      const hipBelowShoulder = hip.y - shoulder.y;   // >0 = Hüfte tiefer als Schulter
+      if(torsoTilt > ANDROID_TORSO_TILT_MAX ||
+         hipBelowShoulder > canvas.height * ANDROID_HIP_DROP_MAX_RATIO){
+        stableHoldFrames = 0;
+        stableBreakFrames++;
+        if(isPlanking){ stopTimer(); isPlanking=false; }
+        stageEl.textContent='KORRIGIEREN';
+        feedbackEl.textContent='Bitte hebe die Hüfte an – flaches Liegen zählt nicht als Plank.';
+        feedbackEl.style.color='#b45309';
+        debugLog.textContent=`Absacken erkannt: Tilt=${Math.round(torsoTilt)}° Hüft-Drop=${Math.round(hipBelowShoulder)}px`;
+        return;
+      }
+
+      // (3) Falls Knöchel sichtbar: Schulter muss klar über Bodenhöhe liegen.
+      if(ankle?.score > POSE_SCORE){
+        const shoulderLift = ankle.y - shoulder.y;
+        if(shoulderLift < canvas.height * SHOULDER_ABOVE_ANKLE_RATIO){
+          stableHoldFrames = 0;
+          stableBreakFrames++;
+          if(isPlanking){ stopTimer(); isPlanking=false; }
+          stageEl.textContent='KORRIGIEREN';
+          feedbackEl.textContent='Bitte hebe die Hüfte an – flaches Liegen zählt nicht als Plank.';
+          feedbackEl.style.color='#b45309';
+          return;
+        }
+      }
+
+      // (4) Ellbogen ungefähr unter der Schulter → echter Unterarmstütz.
+      if(Math.abs(elbow.x - shoulder.x) > canvas.width * ANDROID_ELBOW_UNDER_SHOULDER_RATIO){
+        stableHoldFrames = 0;
+        stableBreakFrames++;
+        if(isPlanking){ stopTimer(); isPlanking=false; }
+        stageEl.textContent='AUSRICHTEN';
+        feedbackEl.textContent='Bitte stütze dich auf die Unterarme (Ellbogen unter die Schulter).';
+        feedbackEl.style.color='#b45309';
+        return;
+      }
+
+      // ── Körperlinie prüfen ──────────────────────────────────────────────
+      // Bevorzugt Knie (falls sichtbar), sonst Knöchel, sonst Schulter-Hüfte-Neigung.
+      const kneeOk  = knee?.score  > POSE_SCORE;
+      const ankleOk = ankle?.score > POSE_SCORE;
+
+      if(kneeOk){
+        const hollowBack = detectHollowBack(shoulder, hip, knee);
+        if(hollowBack){
+          hollowBackFrames++;
+          stableHoldFrames = 0;
+          if(hollowBackFrames >= HOLLOW_BACK_GRACE && isPlanking){
+            stopTimer(); isPlanking=false; stableBreakFrames=0;
+          }
+          stageEl.textContent = isPlanking ? "HALTEN" : "KORRIGIEREN";
+          feedbackEl.textContent = "Bauch anspannen und Hüfte etwas höher bringen!";
+          feedbackEl.style.color='#b45309';
+          debugLog.textContent = `Hohlkreuz erkannt! (${hollowBackFrames}F)`;
+          return;
+        }
+        hollowBackFrames = 0;
+        const back = angle(shoulder, hip, knee);
+        updatePlankState(
+          back > BACK_ANGLE_THRESHOLD,
+          "Super – Körper gerade halten!",
+          "Achte auf eine gerade Linie von Schulter bis Knie."
+        );
+        debugLog.textContent = `Rückenwinkel (Knie): ${Math.round(back)}°`;
+        return;
+      }
+
+      if(ankleOk){
+        const back = angle(shoulder, hip, ankle);
+        updatePlankState(
+          back > BACK_ANGLE_THRESHOLD,
+          "Super – Körper gerade halten!",
+          "Achte auf eine gerade Linie von Schulter bis Fuß."
+        );
+        debugLog.textContent = `Rückenwinkel (Knöchel): ${Math.round(back)}°`;
+        return;
+      }
+
+      // Kein Knie/Knöchel sichtbar: Schulter-Hüfte-Linie ist oben bereits als
+      // waagerecht bestätigt (Absack-Guard) → Position halten, Stabilität zählt.
+      updatePlankState(
+        torsoTilt < ANDROID_TORSO_TILT_MAX,
+        "Super – Körper gerade halten!",
+        "Halte den Oberkörper gerade und waagerecht."
+      );
+      debugLog.textContent = `Torso-Neigung: ${Math.round(torsoTilt)}° (Knie/Fuß nicht sichtbar)`;
+    }
+
     function processPlank(pose){
+      // Android nutzt eine eigene Erkennung (Knie optional). iOS bleibt unverändert.
+      if(IS_ANDROID){ processPlankAndroid(pose); return; }
+
       const k=pose.keypoints;
       const shoulder=pickSide(k,'shoulder');
       const hip=pickSide(k,'hip');
@@ -830,11 +1039,6 @@
       }
       localStorage.setItem('planks_result', String(time));
       localStorage.setItem('planks_total', String(time));
-      try{
-        await submitWorkoutToAccount('ex_plank', time);
-      }catch(err){
-        console.error('Workout submit failed:', err);
-      }
       createCelebration(time, 'SEKUNDEN!', 'planks_result', '/dashboard');
     });
 

@@ -209,11 +209,11 @@
     let stage = "down"; // down = unten, up = oben
     const KEYPOINT_CONFIDENCE = 0.30;  // raised from 0.20 – require reliable detections
     const MIN_VISIBLE_SCORE = 0.25;    // raised from 0.15
-    const DOWN_ANGLE_THRESHOLD = 158;  // raised from 145 – must be lying nearly flat
-    const UP_ANGLE_THRESHOLD = 90;     // lowered from 130 – must sit up significantly
-    const DOWN_SHOULDER_LIFT = 0.08;   // shoulder barely above hip = lying flat
-    const UP_SHOULDER_LIFT = 0.42;     // raised from 0.28 – shoulder clearly above hip
-    const REQUIRED_STABLE_FRAMES = 3;  // raised from 2 – require sustained position
+    const DOWN_ANGLE_THRESHOLD = 150;  // loosened from 158 – Zurücklehnen reicht zum Reset
+    const UP_ANGLE_THRESHOLD = 115;    // loosened from 90 – normale Sit-up-Beugung genügt
+    const DOWN_SHOULDER_LIFT = 0.15;   // loosened from 0.08 – teilweises Zurücklegen zählt als unten
+    const UP_SHOULDER_LIFT = 0.30;     // loosened from 0.42 – Schulter klar über Hüfte (normaler Sit-up)
+    const REQUIRED_STABLE_FRAMES = 2;  // loosened from 3 – obere Position muss nur kurz stabil sein (~0,1–0,2s)
     const MAX_HISTORY = 5;
     let missingPoseFrames = 0;
     let stableUpFrames = 0;
@@ -447,8 +447,10 @@
         if(noseAboveHip <= 0.4) downVotes++;
       }
 
-      // Require at least 2 agreements for state transitions (stricter than single vote)
-      const SIGNAL_THRESHOLD = hipAngleValue !== null && shoulderLiftValue !== null ? 2 : 1;
+      // Ein klares Signal genügt: echtes Anheben der Schulter ODER deutliche Rumpfbeugung.
+      // Rauschen bleibt in den Mittelzonen (keine Stimme) und widersprüchliche Signale
+      // blockieren den Übergang weiterhin (unten wird upVotes > downVotes verlangt).
+      const SIGNAL_THRESHOLD = 1;
 
       if(downVotes >= SIGNAL_THRESHOLD && downVotes > upVotes){
         stableDownFrames++;
@@ -460,7 +462,7 @@
         // Show intermediate feedback when climbing toward UP position
         if(stage === "down" && shoulderLiftValue !== null){
           if(shoulderLiftValue > DOWN_SHOULDER_LIFT && shoulderLiftValue < UP_SHOULDER_LIFT){
-            feedbackEl.textContent = "Weiter hoch – Oberkörper Richtung Knie bringen!";
+            feedbackEl.textContent = "Bitte Oberkörper noch etwas weiter nach oben.";
             feedbackEl.style.color = "#b45309";
           }
         }
@@ -477,11 +479,11 @@
         if(stage === "down"){
           counter++;
           countEl.textContent = counter;
-          feedbackEl.textContent = "Super!";
+          feedbackEl.textContent = "Wiederholung gezählt!";
           feedbackEl.style.color = "#059669";
           if(BATTLE_MODE && BATTLE_GOAL !== null && counter >= BATTLE_GOAL){ finishBattle(); return; }
         } else {
-          feedbackEl.textContent = "Oben halten";
+          feedbackEl.textContent = "Sehr gut – wieder nach unten.";
           feedbackEl.style.color = "#059669";
         }
         stage = "up";
@@ -504,7 +506,7 @@
           } else if(!shoulderVisible){
             feedbackEl.textContent = "Schulter nicht sichtbar – geh etwas weiter weg von der Kamera.";
           } else {
-            feedbackEl.textContent = "Achte darauf, dass Schultern und Hüfte gut sichtbar sind.";
+            feedbackEl.textContent = "Bitte Schultern und Hüfte im Bild behalten.";
           }
           feedbackEl.style.color = "#b45309";
           stageEl.textContent = stage.toUpperCase();
