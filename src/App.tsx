@@ -10,6 +10,8 @@ import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import AppOnboarding from "@/components/AppOnboarding";
 import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
+import { RewardsHintModal } from "@/components/RewardsHintModal";
+import { AnnouncementModal } from "@/components/AnnouncementModal";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -102,6 +104,10 @@ const App = () => (
             <AppOnboarding />
             {/* 14-Tage-Feedback-Pop-up: erscheint einmalig nach 14 Tagen Nutzung */}
             <FeedbackPromptModal />
+            {/* Belohnungs-Hinweis: erscheint ab 09.06.2026 einmalig für jedes Kind */}
+            <RewardsHintModal />
+            {/* Datenbankgesteuerte Scheduled Pop-ups: Inhalt komplett via Supabase steuerbar */}
+            <AnnouncementModal />
             <Suspense fallback={<RouteFallback />}>
               <Routes>
                 {/* Code-based login routes */}

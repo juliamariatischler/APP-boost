@@ -61,6 +61,7 @@ type StaticProvider = {
 
 const STATIC_PROVIDERS: StaticProvider[] = [
   { id: "aikido-graz", sport: "Aikido", club: "ASKÖ-Aikido-Club Graz", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0664/1012658", contactEmail: "guenther.steger@gmx.at" },
+  { id: "aikido-pro", sport: "Aikido", club: "ASKÖ Aikido Pro", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/9430503", contactEmail: "V.lasnik@aikidopro.at" },
   { id: "football-giants", sport: "American Football", club: "GIANTS Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "8 bis 15 Jahre", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
   { id: "badminton-smash", sport: "Badminton", club: "BC Smash Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/5809058", contactEmail: "ruediger_rudolf@yahoo.de" },
   { id: "badminton-dropin", sport: "Badminton", club: "Drop In Badminton", trialInfo: "Flexibles Probetraining nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0699/11881222", contactEmail: "schmidt@dropin.at" },
@@ -108,6 +109,7 @@ const getSportEmoji = (sportType: string): string => {
   if (t.includes('laufen') || t.includes('leichtathletik')) return '🏃';
   if (t.includes('volleyball')) return '🏐';
   if (t.includes('spikeball') || t.includes('roundnet')) return '🎾';
+  if (t.includes('footvolley') || t.includes('futvolei')) return '🏐';
   return '⚡';
 };
 
