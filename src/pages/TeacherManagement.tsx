@@ -393,6 +393,10 @@ export default function TeacherManagement() {
       await createActivationPdf(results);
       toast.success(`${results.length} Aktivierungszettel als PDF erstellt.`);
       setExportDialogOpen(false);
+      // Alten angezeigten QR-Code entfernen – er wurde durch den Export ungültig
+      setActivationCode("");
+      setActivationQrDataUrl("");
+      setActivationStudentName("");
       await loadStudents(authMode, selectedClassId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "PDF konnte nicht erstellt werden");

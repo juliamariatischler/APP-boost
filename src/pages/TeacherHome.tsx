@@ -1371,13 +1371,13 @@ export default function TeacherHome() {
                   <div className="mt-1.5 flex items-center gap-3">
                     <div className="flex-1">
                       <div className="mb-0.5 flex items-center justify-between">
-                        <span className="text-[10px] font-semibold text-muted-foreground">Heute</span>
+                        <span className="text-[10px] font-semibold text-muted-foreground">{weekOffset === 0 ? "Heute" : "Letzter Tag"}</span>
                         <span className="text-[10px] font-black text-foreground">{s.todayPercent}%</span>
                       </div>
                       <Progress value={s.todayPercent} className="h-1.5" />
                     </div>
                     <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Diese Woche</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground">{weekOffset === 0 ? "Diese Woche" : "Die Woche"}</span>
                       <span className="text-[10px] font-black text-foreground">{s.weekActiveDays}/5 Tage</span>
                     </div>
                   </div>
