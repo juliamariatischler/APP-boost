@@ -61,7 +61,7 @@ type StaticProvider = {
 
 const STATIC_PROVIDERS: StaticProvider[] = [
   { id: "aikido-graz", sport: "Aikido", club: "ASKÖ-Aikido-Club Graz", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0664/1012658", contactEmail: "guenther.steger@gmx.at" },
-  { id: "aikido-pro", sport: "Aikido", club: "ASKÖ Aikido Pro", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/9430503", contactEmail: "V.lasnik@aikidopro.at" },
+  { id: "aikido-pro", sport: "Aikido", club: "ASKÖ Aikido Pro", trialInfo: "Termin bitte direkt mit dem Trainer (Valentin Lasnik) vereinbaren.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/9430503", contactEmail: "V.lasnik@aikidopro.at" },
   { id: "football-giants", sport: "American Football", club: "GIANTS Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "8 bis 15 Jahre", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
   { id: "badminton-smash", sport: "Badminton", club: "BC Smash Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/5809058", contactEmail: "ruediger_rudolf@yahoo.de" },
   { id: "badminton-dropin", sport: "Badminton", club: "Drop In Badminton", trialInfo: "Flexibles Probetraining nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0699/11881222", contactEmail: "schmidt@dropin.at" },
@@ -586,7 +586,7 @@ const TrialSessionsList = () => {
         const sportEmoji = getSportEmoji(sportType);
         const isHighlight = getExperienceLabel(s) === "Highlight-Erlebnis";
         const pointsReward = getSessionPoints(s);
-        const dateFormatted = new Date(s.date).toLocaleDateString("de-AT", { weekday: "long" }) + "s";
+        const dateFormatted = new Date(s.date).toLocaleDateString("de-AT", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
         const timeFormatted = `${s.start_time.slice(0, 5)}${s.end_time ? ` – ${s.end_time.slice(0, 5)}` : ""} Uhr`;
 
         return (
@@ -652,22 +652,33 @@ const TrialSessionsList = () => {
               </div>
 
               {club && (club.contact_email || club.contact_phone || club.website) && (
-                <div className="mx-5 mb-3 rounded-[16px] bg-gray-50 p-3.5 space-y-2">
-                  <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Kontakt</p>
-                  {club.contact_email && (
-                    <a href={`mailto:${club.contact_email}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
-                      <span className="text-base">✉️</span>{club.contact_email}
-                    </a>
-                  )}
+                <div className="mx-5 mb-3 space-y-2">
                   {club.contact_phone && (
-                    <a href={`tel:${club.contact_phone}`} className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <span className="text-base">📞</span>{club.contact_phone}
+                    <a
+                      href={`tel:${club.contact_phone}`}
+                      className="flex items-center gap-2.5 rounded-[16px] border border-primary/25 bg-primary/8 p-3.5"
+                    >
+                      <span className="text-lg">📞</span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-black uppercase tracking-[0.1em] text-primary/80">Finale Anmeldung per Telefon</p>
+                        <p className="truncate text-base font-black text-primary">{club.contact_phone}</p>
+                      </div>
                     </a>
                   )}
-                  {club.website && (
-                    <a href={club.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-primary">
-                      <span className="text-base">🌐</span>{club.website.replace(/^https?:\/\//, "")}
-                    </a>
+                  {(club.contact_email || club.website) && (
+                    <div className="rounded-[16px] bg-gray-50 p-3.5 space-y-2">
+                      <p className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Weiterer Kontakt</p>
+                      {club.contact_email && (
+                        <a href={`mailto:${club.contact_email}`} className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <span className="text-base">✉️</span>{club.contact_email}
+                        </a>
+                      )}
+                      {club.website && (
+                        <a href={club.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <span className="text-base">🌐</span>{club.website.replace(/^https?:\/\//, "")}
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
