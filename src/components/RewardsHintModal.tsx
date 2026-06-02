@@ -1,4 +1,4 @@
-// Einmaliger Belohnungs-Hinweis: erscheint ab 09.06.2026 genau einmal pro Kind.
+// Einmaliger Belohnungs-Hinweis: erscheint ab 04.06.2026 genau einmal pro Kind.
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Gift } from "lucide-react";

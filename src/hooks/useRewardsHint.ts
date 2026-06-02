@@ -1,11 +1,11 @@
-// Einmaliger Belohnungs-Hinweis: erscheint ab 09.06.2026 genau einmal pro Kind.
+// Einmaliger Belohnungs-Hinweis: erscheint ab 04.06.2026 genau einmal pro Kind.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 
 // Ab diesem Datum wird der Hinweis angezeigt.
-const SHOW_FROM = new Date("2026-06-09T00:00:00");
+const SHOW_FROM = new Date("2026-06-04T00:00:00");
 
 // Auf diesen Pfaden wird der Prompt nie gezeigt.
 const HIDDEN_PATHS = ["/", "/auth", "/login", "/reset-password", "/activate", "/rewards"];
