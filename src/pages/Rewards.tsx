@@ -379,9 +379,9 @@ const Rewards = () => {
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                     <Zap className="h-6 w-6 text-primary fill-primary" />
                   </div>
-                  <span className="font-bold text-foreground text-sm">Tageschallenge</span>
+                  <span className="font-bold text-foreground text-sm">Übung</span>
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                    +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
+                    +{BOOST_POINT_RULES.exerciseCompleted} ⚡
                   </span>
                 </button>
 
@@ -528,9 +528,9 @@ const Rewards = () => {
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                     <Zap className="h-6 w-6 text-primary fill-primary" />
                   </div>
-                  <span className="font-bold text-foreground text-sm">Tageschallenge</span>
+                  <span className="font-bold text-foreground text-sm">Übung</span>
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                    +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡
+                    +{BOOST_POINT_RULES.exerciseCompleted} ⚡
                   </span>
                 </button>
 

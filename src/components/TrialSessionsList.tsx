@@ -59,23 +59,6 @@ type StaticProvider = {
 
 const STATIC_PROVIDERS: StaticProvider[] = [
   { id: "aikido-pro", sport: "Aikido", club: "ASKÖ Aikido Pro", trialInfo: "Termin bitte direkt mit dem Trainer (Valentin Lasnik) vereinbaren.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/9430503", contactEmail: "V.lasnik@aikidopro.at" },
-  { id: "aikido-graz", sport: "Aikido", club: "ASKÖ-Aikido-Club Graz", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0664/1012658", contactEmail: "guenther.steger@gmx.at" },
-  { id: "football-giants", sport: "American Football", club: "GIANTS Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "8 bis 15 Jahre", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
-  { id: "badminton-smash", sport: "Badminton", club: "BC Smash Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/5809058", contactEmail: "ruediger_rudolf@yahoo.de" },
-  { id: "badminton-dropin", sport: "Badminton", club: "Drop In Badminton", trialInfo: "Flexibles Probetraining nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0699/11881222", contactEmail: "schmidt@dropin.at" },
-  { id: "baseball-dirtysox", sport: "Baseball", club: "Baseballverein Dirty Sox", trialInfo: "Probetraining November bis März nach Vereinbarung.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/3006954", contactEmail: "baseball@dirtysoxgraz.com" },
-  { id: "basketball-dbbc", sport: "Basketball", club: "Damen-Basketballclub Graz (DBBC)", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "10 bis 13 Jahre", contactPhone: "0664/1870654", contactEmail: "peter.dudau@dbbc.at" },
-  { id: "cheerleading-giants", sport: "Cheerleading", club: "GIANTS Graz Cheerleading", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0660/3217248", contactEmail: "office@grazgiants.at" },
-  { id: "cheerleading-royals", sport: "Cheerleading", club: "Graz Cheerleading Royals", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0664/1256882", contactEmail: "office@grazroyals.at" },
-  { id: "futsal-panthera", sport: "Futsal", club: "Panthera Graz Futsal Akademie", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "6607245799", contactEmail: "office@panthera-graz.at" },
-  { id: "fuenfkampf-atus", sport: "Moderner Fünfkampf", club: "ATUS Graz – Moderner Fünfkampf", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/3971712", contactEmail: "familie@kranacher.at" },
-  { id: "handball-hcssv", sport: "Handball", club: "HC SSV Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/6508281", contactEmail: "hsggraz@aon.at" },
-  { id: "judo-graz", sport: "Judo", club: "ASKÖ-Judoclub Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "7 bis 12 Jahre", contactPhone: "0650/4206694", contactEmail: "office@judo-graz.at" },
-  { id: "kickboxen-askoe", sport: "Kickboxen", club: "ASKÖ-Kickboxcenter Graz", trialInfo: "Probetraining ab 16 Jahren nach Vereinbarung.", ageLabel: "Ab 16 Jahren", contactPhone: "0664/9660066", contactEmail: "peter.jerovsek@kickboxcenter.at" },
-  { id: "selbst-tigerdrache", sport: "Selbstverteidigung", club: "Tiger und Drache", trialInfo: "Probetraining für Kinder und Erwachsene nach Vereinbarung.", ageLabel: "Kinder und Erwachsene", contactPhone: "0650/5678335", contactEmail: "info@tigerdrache.at" },
-  { id: "spikeball-roundnet", sport: "Spikeball / Roundnet", club: "Roundnet Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactEmail: "contact@roundnetclubgraz.at" },
-  { id: "trampolin-graz", sport: "Trampolinturnen", club: "Trampolin- und Freestyle-Club Graz", trialInfo: "Probetraining nach Vereinbarung möglich.", ageLabel: "Alle Altersgruppen", contactPhone: "0650/3907017", contactEmail: "hayngu@yahoo.com" },
-  { id: "turnen-abenteuer", sport: "Abenteuer- / Zirkusturnen / Parkour", club: "ATUS Graz – Abenteuerturnen", trialInfo: "Probetraining für Kinder nach Vereinbarung.", ageLabel: "Kinder", contactPhone: "0681/81429142", contactEmail: "veronika@sport-abenteuer-kittler.at" },
 ];
 
 // ─── Sichtbare Termin-Vereine (nur fixe, freigeschaltete Try-it Angebote) ──────
