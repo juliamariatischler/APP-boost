@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,29 @@ import { Button } from "@/components/ui/button";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 
 const HIDDEN_PATHS = ["/", "/auth", "/login", "/reset-password", "/activate"];
+
+// App-Store-Links für den plattform-schlauen "Aktualisieren"-Button.
+const STORE_LINKS = {
+  android: "https://play.google.com/store/apps/details?id=at.boostschule",
+  ios: "https://apps.apple.com/at/app/boostschule-fit-fun/id6765766658",
+} as const;
+
+// Löst eine cta_url auf. Spezialfall: beginnt sie mit "store" (optional gefolgt
+// von ":<web-fallback>"), wird je nach Plattform automatisch der richtige Store
+// geöffnet. Andernfalls wird die URL unverändert verwendet.
+function resolveCtaUrl(ctaUrl: string): string {
+  const raw = ctaUrl.trim();
+  const lower = raw.toLowerCase();
+  if (lower !== "store" && !lower.startsWith("store:")) {
+    return raw;
+  }
+
+  const fallback = raw.includes(":") ? raw.slice(raw.indexOf(":") + 1).trim() : "";
+  const platform = Capacitor.getPlatform(); // 'android' | 'ios' | 'web'
+  if (platform === "android") return STORE_LINKS.android;
+  if (platform === "ios") return STORE_LINKS.ios;
+  return fallback || STORE_LINKS.android; // Web-Fallback
+}
 
 export function AnnouncementModal() {
   const location = useLocation();
@@ -32,7 +56,10 @@ export function AnnouncementModal() {
 
   const handleCta = async () => {
     if (current.cta_url) {
-      window.open(current.cta_url, "_blank", "noopener,noreferrer");
+      const url = resolveCtaUrl(current.cta_url);
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
     }
     await handleClose();
   };
