@@ -126,7 +126,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="• Deine Schritt-Daten werden nicht an Dritte weitergegeben\n• Daten werden nicht auf Servern gespeichert\n• Du kannst den Zugriff jederzeit in Health Connect widerrufen"
+                android:text="• Deine Schritt-Daten werden ausschließlich auf EU-Servern gespeichert, um deinen Fortschritt und Klassen-Challenges zu ermöglichen\n• Sie werden nicht an Dritte weitergegeben\n• Du kannst den Zugriff jederzeit in Health Connect widerrufen"
                 android:textSize="14sp"
                 android:textColor="#374151"
                 android:lineSpacingMultiplier="1.4"

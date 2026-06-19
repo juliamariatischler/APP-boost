@@ -120,6 +120,7 @@ const privacySections = [
     paragraphs: [
       "BOOST richtet sich besonders an Schüler/innen. Deshalb gelten erhöhte Schutzstandards.",
       "BOOST achtet insbesondere darauf, dass nur notwendige Daten erhoben werden, Kinder keine unnötigen Kontaktdaten angeben müssen, keine personalisierte Werbung an Kinder ausgespielt wird, Profile nicht öffentlich im Internet auffindbar sind, Klassen- und Schulbereiche geschützt sind, Lehrkräfte nur berechtigte Klassen sehen, Bewegungsdaten nur für App-Funktionen verwendet werden und Erziehungsberechtigte einbezogen werden, soweit dies rechtlich oder organisatorisch erforderlich ist.",
+      "Bewegungs- und Gesundheitsdaten wie Schrittzahlen werden ausschließlich zur Motivation und für App-Funktionen wie Challenges und Belohnungen verwendet. Sie werden niemals für Entscheidungen über Beschäftigung, Versicherung oder vergleichbare Zwecke herangezogen und nicht ohne Einwilligung in sozialen Netzwerken geteilt.",
       "Bei Kindern unter 14 Jahren werden zustimmungspflichtige Funktionen nur mit Zustimmung der Erziehungsberechtigten ermöglicht.",
     ],
   },
@@ -211,7 +212,7 @@ const Legal = () => {
                 <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
                 <div>
                   <h3 className="text-lg font-black text-foreground">Datenschutzerklärung BOOST</h3>
-                  <p className="text-xs font-semibold text-muted-foreground">Zuletzt aktualisiert: 06.05.2026</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Zuletzt aktualisiert: 19.06.2026</p>
                 </div>
               </div>
               <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
