@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { useParentalGate } from "@/components/ParentalGate";
 
 const HIDDEN_PATHS = ["/", "/auth", "/login", "/reset-password", "/activate"];
 
@@ -39,6 +40,7 @@ function resolveCtaUrl(ctaUrl: string): string {
 export function AnnouncementModal() {
   const location = useLocation();
   const { current, dismiss } = useAnnouncements();
+  const { requestParentalGate } = useParentalGate();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -58,6 +60,9 @@ export function AnnouncementModal() {
     if (current.cta_url) {
       const url = resolveCtaUrl(current.cta_url);
       if (url) {
+        // Parental Gate vor dem Verlassen der App (Store/externe Links)
+        const passed = await requestParentalGate();
+        if (!passed) return;
         window.open(url, "_blank", "noopener,noreferrer");
       }
     }

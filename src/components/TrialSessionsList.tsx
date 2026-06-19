@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, ChevronRight, Loader2, X } from "lucide-react";
 import { BOOST_POINT_RULES } from "@/lib/gamification";
+import { useParentalGate } from "@/components/ParentalGate";
 import tryitFootballNetImg from "@/assets/quest-tryit-football-net.png";
 
 const POINTS_PROBETRAINING = BOOST_POINT_RULES.tryItProbetraining;
@@ -113,6 +114,12 @@ type VerificationStep = "input" | "sending" | "waiting" | "confirmed";
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const TrialSessionsList = () => {
+  const { requestParentalGate } = useParentalGate();
+  // Externer Link (Vereins-Website) erst nach Parental Gate öffnen
+  const openExternal = async (url: string) => {
+    const passed = await requestParentalGate();
+    if (passed) window.open(url, "_blank", "noopener,noreferrer");
+  };
   // Dynamic sessions state
   const [sessions, setSessions] = useState<TrialSession[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -598,9 +605,9 @@ const TrialSessionsList = () => {
                         </a>
                       )}
                       {club.website && (
-                        <a href={club.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-primary">
+                        <button type="button" onClick={() => void openExternal(club.website!)} className="flex items-center gap-2 text-sm font-semibold text-primary text-left">
                           <span className="text-base">🌐</span>{club.website.replace(/^https?:\/\//, "")}
-                        </a>
+                        </button>
                       )}
                     </div>
                   )}

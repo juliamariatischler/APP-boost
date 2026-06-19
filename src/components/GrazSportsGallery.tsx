@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useParentalGate } from "@/components/ParentalGate";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -671,6 +672,12 @@ const validateGuardianPhone = (phone: string): boolean =>
   /^\+?[0-9\s\/\-()]{7,20}$/.test(phone.trim());
 
 const GrazSportsGallery = () => {
+  const { requestParentalGate } = useParentalGate();
+  // Externe Vereins-Links/Mailto erst nach Parental Gate öffnen
+  const openExternal = async (url: string) => {
+    const passed = await requestParentalGate();
+    if (passed) window.open(url, "_blank", "noopener,noreferrer");
+  };
   const [selectedOffer, setSelectedOffer] = useState<SportOffer | null>(null);
   const [activeFilter, setActiveFilter] = useState<OfferFilter>("all");
   const [claimingOfferId, setClaimingOfferId] = useState<string | null>(null);
@@ -1223,28 +1230,25 @@ const GrazSportsGallery = () => {
                           >
                             Anfragen
                           </Button>
-                          <Button asChild variant="outline" className="flex-1">
-                            <a
-                              href={selectedOffer.websiteUrl}
-                              target={selectedOffer.websiteUrl.startsWith("mailto:") ? undefined : "_blank"}
-                              rel="noopener noreferrer"
-                            >
-                              Mehr Infos
-                              <ExternalLink className="ml-2 h-4 w-4" />
-                            </a>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => void openExternal(selectedOffer.websiteUrl)}
+                          >
+                            Mehr Infos
+                            <ExternalLink className="ml-2 h-4 w-4" />
                           </Button>
                         </>
                       ) : (
                         <>
-                          <Button asChild variant="outline">
-                            <a
-                              href={selectedOffer.websiteUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Vereinsseite
-                              <ExternalLink className="ml-2 h-4 w-4" />
-                            </a>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void openExternal(selectedOffer.websiteUrl)}
+                          >
+                            Vereinsseite
+                            <ExternalLink className="ml-2 h-4 w-4" />
                           </Button>
                           <Button
                             type="button"

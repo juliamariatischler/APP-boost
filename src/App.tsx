@@ -12,6 +12,7 @@ import AppOnboarding from "@/components/AppOnboarding";
 import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
 import { RewardsHintModal } from "@/components/RewardsHintModal";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
+import { ParentalGateProvider } from "@/components/ParentalGate";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -99,6 +100,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <CodeAuthProvider>
+          <ParentalGateProvider>
           <RecoveryRedirect>
             <NativeChrome />
             <AppOnboarding />
@@ -141,6 +143,7 @@ const App = () => (
               </Routes>
             </Suspense>
           </RecoveryRedirect>
+          </ParentalGateProvider>
         </CodeAuthProvider>
       </BrowserRouter>
     </TooltipProvider>

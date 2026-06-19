@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
+import { useParentalGate } from "@/components/ParentalGate";
 import { readNfcTag } from "@/lib/nfc";
 import {
   getActiveRoute,
@@ -28,6 +29,7 @@ import {
 
 const NfcRouteChallenge = () => {
   const { session: codeSession } = useCodeAuth();
+  const { requestParentalGate } = useParentalGate();
   const [deviceId, setDeviceId] = useState<string | undefined>(undefined);
   const [sessionToken, setSessionToken] = useState<string | undefined>(undefined);
   const [route, setRoute] = useState<NfcRouteWithStations | null>(null);
@@ -127,13 +129,17 @@ const NfcRouteChallenge = () => {
     }
   };
 
-  const openNavigation = (station: NfcStation) => {
+  const openNavigation = async (station: NfcStation) => {
     const url =
       station.google_maps_url ??
       (station.latitude != null && station.longitude != null
         ? `https://www.google.com/maps/search/?api=1&query=${station.latitude},${station.longitude}`
         : null);
-    if (url) window.open(url, '_blank', 'noopener');
+    if (!url) return;
+    // Parental Gate vor dem Öffnen externer Karten/Navigation
+    const passed = await requestParentalGate();
+    if (!passed) return;
+    window.open(url, '_blank', 'noopener');
   };
 
   const stationDone = (station: NfcStation): boolean =>
