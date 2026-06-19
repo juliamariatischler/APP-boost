@@ -21,7 +21,7 @@
 <body>
 
   <h1>Datenschutzerklärung</h1>
-  <p>Stand: April 2026</p>
+  <p>Stand: Juni 2026</p>
 
   <h2>1. Verantwortlicher</h2>
   <p>
@@ -33,7 +33,7 @@
   <h2>2. Welche Daten wir erheben</h2>
   <p>Die BoostSchule-App erhebt folgende Daten:</p>
   <ul>
-    <li><strong>Schrittzahl & Bewegungsdaten</strong> – aus Apple Health, nur mit deiner ausdrücklichen Zustimmung</li>
+    <li><strong>Schrittzahl</strong> – aus Apple Health (iOS) oder Google Health Connect (Android), nur mit deiner ausdrücklichen Zustimmung</li>
     <li><strong>Benutzerkonto</strong> – E-Mail-Adresse oder Schulcode, Benutzername</li>
     <li><strong>Aktivitätsdaten</strong> – Challenges, Punkte, Fortschritt innerhalb der App</li>
   </ul>
@@ -41,28 +41,46 @@
   <h2>3. Zweck der Datenverarbeitung</h2>
   <p>Wir verwenden deine Daten ausschließlich, um:</p>
   <ul>
-    <li>deinen Bewegungsfortschritt in der App anzuzeigen</li>
-    <li>Klassen-Ranglisten und Challenges zu ermöglichen</li>
+    <li>deinen täglichen Bewegungsfortschritt in der App anzuzeigen</li>
+    <li>Klassen-Ranglisten und Fitness-Challenges zu ermöglichen</li>
     <li>dein Konto zu verwalten</li>
   </ul>
 
-  <h2>4. Apple Health</h2>
+  <h2>4. Apple Health (iOS)</h2>
   <p>
-    Die App liest Schrittzahl und Distanz aus Apple Health – ausschließlich auf deinem Gerät.
+    Auf iOS-Geräten liest die App die Schrittzahl aus Apple Health – ausschließlich auf deinem Gerät.
     Wir schreiben <strong>keine</strong> Daten zurück in Apple Health.
     Gesundheitsdaten werden nicht an Dritte weitergegeben.
   </p>
 
-  <h2>5. Datenspeicherung</h2>
+  <h2>5. Google Health Connect (Android)</h2>
+  <p>
+    Auf Android-Geräten verwendet BoostSchule <strong>Google Health Connect</strong>, um die tägliche Schrittzahl zu lesen
+    (Berechtigung: <code>android.permission.health.READ_STEPS</code>).
+  </p>
+  <ul>
+    <li><strong>Gelesene Daten:</strong> ausschließlich Schrittzahl – keine anderen Gesundheitsdaten</li>
+    <li><strong>Zweck:</strong> Anzeige deines täglichen Bewegungsfortschritts und Teilnahme an klassenweiten Fitness-Challenges</li>
+    <li><strong>Nur Lesezugriff:</strong> Die App schreibt keine Daten zurück in Health Connect</li>
+    <li><strong>Keine Weitergabe:</strong> Schritt-Daten werden nicht an Dritte weitergegeben, nicht verkauft und nicht für Werbung genutzt</li>
+    <li><strong>Keine Serverspeicherung:</strong> Rohe Gesundheitsdaten verlassen dein Gerät nicht</li>
+    <li><strong>Widerruf:</strong> Du kannst den Zugriff jederzeit in der Health Connect App unter „App-Berechtigungen" entziehen</li>
+  </ul>
+  <p>
+    Die Nutzung von Health Connect durch BoostSchule entspricht der
+    <a href="https://support.google.com/googleplay/android-developer/answer/12229611">Google Play Richtlinie für Health Connect-Berechtigungen</a>.
+  </p>
+
+  <h2>6. Datenspeicherung</h2>
   <p>
     Kontodaten werden sicher in unserer Datenbank (Supabase, EU-Server) gespeichert.
     Gesundheitsdaten verlassen dein Gerät nicht.
   </p>
 
-  <h2>6. Weitergabe an Dritte</h2>
+  <h2>7. Weitergabe an Dritte</h2>
   <p>Wir geben deine Daten nicht an Dritte weiter – außer es ist gesetzlich vorgeschrieben.</p>
 
-  <h2>7. Deine Rechte (DSGVO)</h2>
+  <h2>8. Deine Rechte (DSGVO)</h2>
   <p>Du hast das Recht auf:</p>
   <ul>
     <li>Auskunft über deine gespeicherten Daten</li>
@@ -72,10 +90,10 @@
   </ul>
   <p>Anfragen bitte an: <a href="mailto:office@boostschule.at">office@boostschule.at</a></p>
 
-  <h2>8. Datensicherheit</h2>
+  <h2>9. Datensicherheit</h2>
   <p>Alle Datenübertragungen erfolgen verschlüsselt (HTTPS/TLS). Wir treffen angemessene technische Maßnahmen zum Schutz deiner Daten.</p>
 
-  <h2>9. Kontakt</h2>
+  <h2>10. Kontakt</h2>
   <p>
     Bei Fragen zum Datenschutz:<br />
     <a href="mailto:office@boostschule.at">office@boostschule.at</a>

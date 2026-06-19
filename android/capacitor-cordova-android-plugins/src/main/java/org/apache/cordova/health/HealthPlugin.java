@@ -54,6 +54,8 @@ import androidx.health.connect.client.units.Length;
 import androidx.health.connect.client.units.Percentage;
 import androidx.health.connect.client.units.Power;
 
+import at.boostschule.PermissionsRationaleActivity;
+
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
