@@ -13,6 +13,7 @@ import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
 import { RewardsHintModal } from "@/components/RewardsHintModal";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
 import { ParentalGateProvider } from "@/components/ParentalGate";
+import { PushRegistrar } from "@/components/PushRegistrar";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -103,6 +104,7 @@ const App = () => (
           <ParentalGateProvider>
           <RecoveryRedirect>
             <NativeChrome />
+            <PushRegistrar />
             <AppOnboarding />
             {/* 14-Tage-Feedback-Pop-up: erscheint einmalig nach 14 Tagen Nutzung */}
             <FeedbackPromptModal />

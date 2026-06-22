@@ -59,13 +59,14 @@ type StaticProvider = {
 // ─── Static providers (Probetraining verfügbar) ───────────────────────────────
 
 const STATIC_PROVIDERS: StaticProvider[] = [
-  { id: "aikido-pro", sport: "Aikido", club: "ASKÖ Aikido Pro", trialInfo: "Termin bitte direkt mit dem Trainer (Valentin Lasnik) vereinbaren.", ageLabel: "Alle Altersgruppen", contactPhone: "0676/9430503", contactEmail: "V.lasnik@aikidopro.at" },
+  // Aikido läuft jetzt als fixer Termin (Club "Aikido Graz", siehe VISIBLE_CLUB_IDS)
 ];
 
 // ─── Sichtbare Termin-Vereine (nur fixe, freigeschaltete Try-it Angebote) ──────
 const VISIBLE_CLUB_IDS = [
   "a1000000-0000-0000-0000-000000000006", // Footvolley Austria / Futvolei Club Graz
   "a1000000-0000-0000-0000-000000000007", // HIB Handball
+  "a1000000-0000-0000-0000-000000000008", // Aikido Graz
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -452,6 +453,7 @@ const TrialSessionsList = () => {
       )}
 
       {/* ─── Static providers section ─────────────────────────────────────────── */}
+      {STATIC_PROVIDERS.length > 0 && (
       <div className="space-y-3 pt-2">
         <div>
           <h3 className="text-[1.15rem] font-black leading-tight text-foreground">Probetraining nach Vereinbarung</h3>
@@ -496,6 +498,7 @@ const TrialSessionsList = () => {
           })}
         </div>
       </div>
+      )}
 
       <div className="rounded-[22px] border border-primary/20 bg-primary/5 p-4">
         <p className="text-sm font-black text-foreground">Probetrainings</p>

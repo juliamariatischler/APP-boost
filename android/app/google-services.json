@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "247242376909",
+    "project_id": "boostschule-app",
+    "storage_bucket": "boostschule-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:247242376909:android:4a8d34d1daeb73a56f8b84",
+        "android_client_info": {
+          "package_name": "at.boostschule"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBy0wor1SFsMwsERdP6AR1hWhqwWEhF7pc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
