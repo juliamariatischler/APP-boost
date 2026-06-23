@@ -15,6 +15,5 @@ export interface HealthProvider {
   requestAuthorization(): Promise<boolean>;
   getTodaySteps(): Promise<number>;
   getStepDiagnostics?(): Promise<StepDiagnostics>;
-  openHealthConnectStore?(): Promise<void>;
   openHealthSettings?(): Promise<void>;
 }

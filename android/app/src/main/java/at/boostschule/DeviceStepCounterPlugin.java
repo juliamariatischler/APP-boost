@@ -15,13 +15,6 @@ import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
-import androidx.health.connect.client.HealthConnectClient;
-import androidx.health.connect.client.records.StepsRecord;
-import androidx.health.connect.client.request.ReadRecordsRequest;
-import androidx.health.connect.client.response.ReadRecordsResponse;
-import androidx.health.connect.client.time.TimeRangeFilter;
-
-import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -30,13 +23,6 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
-
-import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.BuildersKt;
 
 @CapacitorPlugin(
     name = "DeviceStepCounter",
@@ -160,61 +146,5 @@ public class DeviceStepCounterPlugin extends Plugin {
         ret.put("value", Math.floor(value));
         ret.put("bootTime", System.currentTimeMillis() - SystemClock.elapsedRealtime());
         call.resolve(ret);
-    }
-
-    // ── Health Connect step query ─────────────────────────────────────────────
-
-    @PluginMethod
-    public void getHealthConnectSteps(PluginCall call) {
-        long startMs = call.getLong("startMs", 0L);
-        long endMs   = call.getLong("endMs",   System.currentTimeMillis());
-
-        new Thread(() -> {
-            try {
-                int sdkStatus = HealthConnectClient.getSdkStatus(getContext());
-                if (sdkStatus != HealthConnectClient.SDK_AVAILABLE) {
-                    JSObject ret = new JSObject();
-                    ret.put("available", false);
-                    ret.put("steps", 0);
-                    ret.put("error", "Health Connect not available, status=" + sdkStatus);
-                    call.resolve(ret);
-                    return;
-                }
-
-                HealthConnectClient client = HealthConnectClient.getOrCreate(getContext());
-                TimeRangeFilter range = TimeRangeFilter.between(
-                        Instant.ofEpochMilli(startMs),
-                        Instant.ofEpochMilli(endMs));
-
-                ReadRecordsRequest<StepsRecord> request = new ReadRecordsRequest<>(
-                        kotlin.jvm.JvmClassMappingKt.getKotlinClass(StepsRecord.class),
-                        range, new HashSet<>(), false, 5000, null);
-
-                ReadRecordsResponse<StepsRecord> response = BuildersKt.runBlocking(
-                        EmptyCoroutineContext.INSTANCE,
-                        (s, c) -> client.readRecords(request, c));
-
-                List<StepsRecord> records = response.getRecords();
-                long total = 0;
-                for (StepsRecord r : records) {
-                    total += r.getCount();
-                }
-                Log.d(TAG, "Health Connect steps: " + total + " from " + records.size() + " records");
-
-                JSObject ret = new JSObject();
-                ret.put("available", true);
-                ret.put("steps", total);
-                ret.put("recordCount", records.size());
-                call.resolve(ret);
-
-            } catch (Exception e) {
-                Log.e(TAG, "Health Connect query failed", e);
-                JSObject ret = new JSObject();
-                ret.put("available", false);
-                ret.put("steps", 0);
-                ret.put("error", e.getMessage() != null ? e.getMessage() : "unknown error");
-                call.resolve(ret);
-            }
-        }).start();
     }
 }

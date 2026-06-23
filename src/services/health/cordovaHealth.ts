@@ -3,7 +3,6 @@ type CordovaHealthMethod =
   | "requestAuthorization"
   | "query"
   | "queryAggregated"
-  | "getHealthConnectFromStore"
   | "openHealthSettings";
 
 const getCordovaHealthPlugin = () => {

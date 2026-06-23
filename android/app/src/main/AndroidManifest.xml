@@ -53,15 +53,6 @@
 
         </activity>
 
-        <activity
-            android:name=".PermissionsRationaleActivity"
-            android:exported="true"
-            android:theme="@style/AppTheme.NoActionBar">
-            <intent-filter>
-                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
-            </intent-filter>
-        </activity>
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -73,16 +64,10 @@
         </provider>
     </application>
 
-    <!-- Health Connect: required for package visibility on Android 11+ -->
-    <queries>
-        <package android:name="com.google.android.apps.healthdata" />
-    </queries>
-
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <uses-permission android:name="android.permission.health.READ_STEPS" />
 </manifest>

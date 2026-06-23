@@ -33,7 +33,7 @@
   <h2>2. Welche Daten wir erheben</h2>
   <p>Die BoostSchule-App erhebt folgende Daten:</p>
   <ul>
-    <li><strong>Schrittzahl</strong> – aus Apple Health (iOS) oder Google Health Connect (Android), nur mit deiner ausdrücklichen Zustimmung</li>
+    <li><strong>Schrittzahl</strong> – aus Apple Health (iOS) oder dem Schrittzähler-Sensor des Geräts (Android), nur mit deiner ausdrücklichen Zustimmung</li>
     <li><strong>Benutzerkonto</strong> – E-Mail-Adresse oder Schulcode, Benutzername</li>
     <li><strong>Aktivitätsdaten</strong> – Challenges, Punkte, Fortschritt innerhalb der App</li>
   </ul>
@@ -54,23 +54,19 @@
     Gesundheitsdaten werden nicht an Dritte weitergegeben.
   </p>
 
-  <h2>5. Google Health Connect (Android)</h2>
+  <h2>5. Schrittzähler (Android)</h2>
   <p>
-    Auf Android-Geräten verwendet BoostSchule <strong>Google Health Connect</strong>, um die tägliche Schrittzahl zu lesen
-    (Berechtigung: <code>android.permission.health.READ_STEPS</code>).
+    Auf Android-Geräten ermittelt BoostSchule die tägliche Schrittzahl direkt über den
+    <strong>Schrittzähler-Sensor des Geräts</strong> (Berechtigung: <code>android.permission.ACTIVITY_RECOGNITION</code> –
+    „körperliche Aktivität"). BoostSchule verwendet <strong>kein</strong> Google Health Connect.
   </p>
   <ul>
-    <li><strong>Gelesene Daten:</strong> ausschließlich Schrittzahl – keine anderen Gesundheitsdaten</li>
+    <li><strong>Gelesene Daten:</strong> ausschließlich die Schrittzahl des Geräte-Sensors – keine anderen Gesundheitsdaten</li>
     <li><strong>Zweck:</strong> Anzeige deines täglichen Bewegungsfortschritts und Teilnahme an klassenweiten Fitness-Challenges</li>
-    <li><strong>Nur Lesezugriff:</strong> Die App schreibt keine Daten zurück in Health Connect</li>
     <li><strong>Keine Weitergabe:</strong> Schritt-Daten werden nicht an Dritte weitergegeben, nicht verkauft und nicht für Werbung genutzt</li>
     <li><strong>Speicherung:</strong> Deine tägliche Schrittzahl wird auf EU-Servern (Supabase) gespeichert, um deinen Fortschritt und Klassen-Challenges zu ermöglichen. Es werden keine weiteren Gesundheitsdaten übertragen</li>
-    <li><strong>Widerruf:</strong> Du kannst den Zugriff jederzeit in der Health Connect App unter „App-Berechtigungen" entziehen</li>
+    <li><strong>Widerruf:</strong> Du kannst die Berechtigung „körperliche Aktivität" jederzeit in den Android-Einstellungen unter „Apps → BoostSchule → Berechtigungen" entziehen</li>
   </ul>
-  <p>
-    Die Nutzung von Health Connect durch BoostSchule entspricht der
-    <a href="https://support.google.com/googleplay/android-developer/answer/12229611">Google Play Richtlinie für Health Connect-Berechtigungen</a>.
-  </p>
 
   <h2>6. Datenspeicherung</h2>
   <p>

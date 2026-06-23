@@ -8,48 +8,52 @@ interface DeviceStepCounterResult {
   timedOut?: boolean;
 }
 
-interface HealthConnectStepsResult {
-  available: boolean;
-  steps: number;
-  recordCount?: number;
-  error?: string;
-}
-
 const getBaselineKey = (dateKey: string) => `boost:android-step-counter-baseline:${dateKey}`;
 
 const DeviceStepCounter = registerPlugin<{
   getCurrentCounter(): Promise<DeviceStepCounterResult>;
-  getHealthConnectSteps(opts: { startMs: number; endMs: number }): Promise<HealthConnectStepsResult>;
 }>('DeviceStepCounter');
 
-export const getAndroidHealthConnectSteps = async (startMs: number, endMs: number): Promise<number | null> => {
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+const isAndroidNative = (): boolean =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
+/**
+ * Reads the raw on-device step counter (Sensor.TYPE_STEP_COUNTER).
+ * Triggers the ACTIVITY_RECOGNITION permission prompt on first call if needed.
+ * Returns null when not on native Android.
+ */
+export const readAndroidStepCounter = async (): Promise<DeviceStepCounterResult | null> => {
+  if (!isAndroidNative()) {
     return null;
   }
 
   try {
-    const result = await DeviceStepCounter.getHealthConnectSteps({ startMs, endMs });
-    console.log('Android Health Connect direct steps result:', result);
-
-    if (!result.available) {
-      console.warn('Health Connect not available:', result.error);
-      return null;
-    }
-
-    return result.steps;
+    const result = await DeviceStepCounter.getCurrentCounter();
+    console.log('Android device step counter raw result:', result);
+    return result;
   } catch (error) {
-    console.error('getAndroidHealthConnectSteps failed:', error);
+    console.error('readAndroidStepCounter failed:', error);
     return null;
   }
 };
 
+/** True when the device exposes a hardware step counter. */
+export const isAndroidStepCounterSupported = async (): Promise<boolean> => {
+  const result = await readAndroidStepCounter();
+  return result?.supported === true;
+};
+
+/** Requests ACTIVITY_RECOGNITION and returns whether step access is granted. */
+export const requestAndroidStepPermission = async (): Promise<boolean> => {
+  const result = await readAndroidStepCounter();
+  return result?.supported === true && result?.permissionGranted === true;
+};
+
 export const getAndroidSensorStepsToday = async (): Promise<number | null> => {
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+  const result = await readAndroidStepCounter();
+  if (!result) {
     return null;
   }
-
-  const result = await DeviceStepCounter.getCurrentCounter();
-  console.log('Android device step counter raw result:', result);
 
   if (!result.supported || !result.permissionGranted) {
     return null;

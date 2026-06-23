@@ -35,7 +35,7 @@ export const getHealthPlatformContext = (): HealthPlatformContext => {
     return {
       platform: 'android',
       source: 'health_connect',
-      label: 'Health Connect',
+      label: 'Schrittzähler',
       isSupported: true,
     };
   }

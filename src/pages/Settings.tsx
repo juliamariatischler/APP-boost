@@ -58,14 +58,6 @@ const Settings = () => {
       return;
     }
 
-    if (HealthService.isNativeAndroid() && !healthAvailable) {
-      await HealthService.openHealthConnectStore();
-      toast.info("Health Connect ist nicht installiert.", {
-        description: HealthService.getHealthPermissionHelp(),
-      });
-      return;
-    }
-
     setConnectingHealth(true);
     const connected = await HealthService.connectHealthData();
     setConnectingHealth(false);

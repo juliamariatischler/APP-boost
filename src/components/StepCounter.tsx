@@ -73,7 +73,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isActiveRef.current) {
-        // Small delay so iOS HealthKit / Android Health Connect is ready after app resume
+        // Small delay so iOS HealthKit / Android step sensor is ready after app resume
         setTimeout(() => fetchAndUpdateSteps(), 1000);
       }
     };
@@ -330,7 +330,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
 
   return (
     <>
-      {/* First-time Health Connect setup dialog */}
+      {/* First-time step counter setup dialog */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
         <DialogContent className="max-w-sm mx-4">
           <DialogHeader>
@@ -345,8 +345,8 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
                 </p>
                 {isAndroid && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
-                    <p className="font-semibold mb-1">Android: Health Connect erforderlich</p>
-                    <p>Lade <strong>Health Connect</strong> kostenlos aus dem Play Store herunter, falls noch nicht installiert. Danach tippe auf „Verbinden" und erlaube den Zugriff auf Schritte.</p>
+                    <p className="font-semibold mb-1">Android: Schrittzähler aktivieren</p>
+                    <p>Tippe auf „Verbinden" und erlaube BOOST den Zugriff auf <strong>körperliche Aktivität</strong>. Deine Schritte werden direkt über den Schrittzähler deines Geräts gezählt.</p>
                   </div>
                 )}
                 {!isAndroid && isHealthSupported && (
@@ -482,7 +482,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       {/* Android sync delay hint */}
       {isActive && isAndroid && (
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          BOOST liest ausschließlich die heutigen Health-Connect-Schritte. Falls Samsung Health abweicht, prüfe bitte in Samsung Health und Health Connect die Freigabe für Schritte und tippe danach auf Aktualisieren.
+          BOOST zählt deine heutigen Schritte über den Schrittzähler deines Geräts. Trage dein Telefon bei dir und tippe auf Aktualisieren, falls die Anzeige abweicht.
         </p>
       )}
 
@@ -514,7 +514,7 @@ export const StepCounter = ({ userId, onPointsEarned }: StepCounterProps) => {
       {!isHealthSupported && (
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground text-center">
-            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Health Connect).
+            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Geräte-Schrittzähler).
           </p>
         </div>
       )}

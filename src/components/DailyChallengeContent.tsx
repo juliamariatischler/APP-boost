@@ -622,7 +622,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       {!isHealthSupported && (
         <div className="rounded-[18px] bg-muted/50 p-3 text-center">
           <p className="text-xs font-medium text-muted-foreground">
-            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Health Connect).
+            💡 Echte Schrittzählung funktioniert nur auf iOS (Apple Health) oder Android (Geräte-Schrittzähler).
           </p>
         </div>
       )}

@@ -12,7 +12,8 @@
     "cap:open:ios": "npx cap open ios",
     "lint": "eslint .",
     "patch:ios-warnings": "node scripts/patch-ios-spm-warnings.mjs",
-    "postinstall": "node scripts/patch-ios-spm-warnings.mjs",
+    "patch:health-android": "node scripts/patch-cordova-health-android.mjs",
+    "postinstall": "node scripts/patch-ios-spm-warnings.mjs && node scripts/patch-cordova-health-android.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
