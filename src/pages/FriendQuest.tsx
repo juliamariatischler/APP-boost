@@ -577,8 +577,11 @@ const FriendQuest = () => {
                     </div>
                     <div className="mt-3 flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      Gültig bis {new Date(createdInvite.expires_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                      Gültig bis {new Date(createdInvite.expires_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Der Code läuft nach 24 Stunden ab.
+                    </p>
                     {createdInvite.challenge_name && (
                       <Badge className="mt-3" variant="secondary">
                         {createdInvite.challenge_name}
@@ -735,7 +738,7 @@ const FriendQuest = () => {
                           <div>
                             <p className="font-semibold text-foreground">Code wartet auf Eingabe</p>
                             <p className="text-sm text-muted-foreground">
-                              Gültig bis {new Date(invite.expires_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                              Gültig bis {new Date(invite.expires_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · läuft nach 24 h ab
                             </p>
                           </div>
                         </div>

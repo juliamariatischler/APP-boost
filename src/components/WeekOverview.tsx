@@ -58,7 +58,7 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
 
     let blitze = completedExercises * BOOST_POINT_RULES.exerciseCompleted;
     if (
-      isDailyGoalComplete(day.steps || 0, {
+      isDailyGoalComplete({
         jumping_jacks: day.jumping_jacks,
         push_ups: day.push_ups,
         squats: day.squats,
@@ -201,7 +201,7 @@ export const WeekOverview = ({ userId }: WeekOverviewProps) => {
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Tagesziel mit {DAILY_STEP_GOAL} Schritten und allen Übungen:
+        Tagesziel mit allen Übungen:
         +{BOOST_POINT_RULES.dailyGoalCompleted} ⚡ extra.
       </p>
     </Card>

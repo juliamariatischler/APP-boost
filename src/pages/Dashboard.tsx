@@ -45,7 +45,6 @@ type WeeklyResult = {
   updated_at?: string | null;
 };
 
-const STEP_TASK_REWARD = 5;
 const COUNTER_STORAGE_KEYS = [
   { key: "jumpingjacks_result", dbKey: "jumping_jacks", max: 500 },
   { key: "squats_result", dbKey: "squats", max: 300 },
@@ -395,14 +394,8 @@ const Dashboard = () => {
         ];
       });
 
-      // Award flashes if the step goal was not yet met and is now met
-      const prevSteps = Number(existingRow?.steps || 0);
-      const prevActive = existingRow?.steps_tracking_active ?? false;
-      const wasGoalMet = prevActive && prevSteps >= DAILY_STEP_GOAL;
-      if (!wasGoalMet && realSteps >= DAILY_STEP_GOAL) {
-        await awardFlashes(STEP_TASK_REWARD);
-      }
-
+      // Schritte geben keine Blitze mehr und zählen nicht zum Tagesziel –
+      // sie werden nur zur Anzeige synchronisiert.
       if (realSteps > 0) {
         toast.success(`${realSteps.toLocaleString("de-DE")} Schritte synchronisiert!`);
       }
@@ -494,9 +487,8 @@ const Dashboard = () => {
       localStorage.removeItem(item.key);
     }
 
-    const steps = Number(existingRow?.steps || 0);
     const completedDelta = Math.max(0, countCompletedDailyExercises(next) - countCompletedDailyExercises(previous));
-    const dailyGoalDelta = !isDailyGoalComplete(steps, previous) && isDailyGoalComplete(steps, next)
+    const dailyGoalDelta = !isDailyGoalComplete(previous) && isDailyGoalComplete(next)
       ? BOOST_POINT_RULES.dailyGoalCompleted
       : 0;
     const flashDelta = completedDelta * BOOST_POINT_RULES.exerciseCompleted + dailyGoalDelta;
@@ -513,6 +505,9 @@ const Dashboard = () => {
   const todayKey = format(today, "yyyy-MM-dd");
   const todayResult = weeklyData.find((day) => day.date === todayKey);
   const todaySteps = todayResult?.steps_tracking_active ? Number(todayResult.steps || 0) : 0;
+  // Schritte werden auf Android nicht mehr angezeigt; auf iOS/Web bleiben sie als
+  // nicht-zählender Zusatz erhalten.
+  const showSteps = !HealthService.isNativeAndroid();
   const completedExerciseCount = todayResult
     ? countCompletedDailyExercises({
       jumping_jacks: todayResult.jumping_jacks || 0,
@@ -522,8 +517,9 @@ const Dashboard = () => {
       sit_ups: todayResult.sit_ups || 0,
     })
     : 0;
-  const dailyTaskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
-  const completedDailyTaskCount = (todaySteps >= DAILY_STEP_GOAL ? 1 : 0) + completedExerciseCount;
+  // Schritte zählen nicht mehr zum Tagesziel – nur die Übungen.
+  const dailyTaskCount = Object.keys(DAILY_EXERCISE_GOALS).length;
+  const completedDailyTaskCount = completedExerciseCount;
   const dailyProgressPercent = getDayProgressPercent(todayResult);
   const voltMoods = [
     {
@@ -575,7 +571,7 @@ const Dashboard = () => {
       progress: todaySteps,
       goal: DAILY_STEP_GOAL,
       unit: "S.",
-      reward: STEP_TASK_REWARD,
+      reward: 0,
       icon: <WalkingIcon className="h-5 w-5" />,
       iconClass: "bg-emerald-500/15 text-emerald-500",
       progressClass: "bg-emerald-400 shadow-[0_4px_12px_rgba(52,211,153,0.35)]",
@@ -743,7 +739,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="mb-5 grid grid-cols-3 overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_16px_34px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]">
+        <div className={`mb-5 grid overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-[0_16px_34px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.72)] ${showSteps ? "grid-cols-3" : "grid-cols-2"}`}>
+          {showSteps && (
           <button
             type="button"
             onClick={syncDashboardSteps}
@@ -758,7 +755,8 @@ const Dashboard = () => {
               <p className="mt-1 text-[11px] font-semibold leading-tight text-muted-foreground">Schritte</p>
             </div>
           </button>
-          <div className="flex min-w-0 flex-col items-center justify-center gap-1.5 border-x border-black/6 px-2 py-2 text-center">
+          )}
+          <div className={`flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center ${showSteps ? "border-x border-black/6" : "border-r border-black/6"}`}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
               <Check className="h-4 w-4 stroke-[3]" />
             </div>
@@ -790,7 +788,7 @@ const Dashboard = () => {
         </div>
         {userId && (
           <div className="mb-6 grid grid-cols-2 gap-2">
-            {dailyTasks.map((task) => {
+            {dailyTasks.filter((task) => showSteps || task.key !== "steps").map((task) => {
               const isComplete = task.progress >= task.goal;
               const progressPercent = Math.min(100, Math.round((task.progress / task.goal) * 100));
 
@@ -827,9 +825,11 @@ const Dashboard = () => {
                           <p className="text-[10px] font-black text-foreground/80">
                             {task.progress} / {task.goal} <span className="font-semibold text-foreground/55">{task.unit}</span>
                           </p>
-                          <p className="shrink-0 text-[9px] font-bold text-primary/75">
-                            +{task.reward} ⚡
-                          </p>
+                          {task.reward > 0 && (
+                            <p className="shrink-0 text-[9px] font-bold text-primary/75">
+                              +{task.reward} ⚡
+                            </p>
+                          )}
                         </div>
                         <div className="mt-1.5 w-full">
                           <div className="relative h-2.5 overflow-hidden rounded-full bg-white/95 shadow-[inset_0_1px_2px_rgba(15,23,42,0.1)]">

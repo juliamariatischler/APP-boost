@@ -123,17 +123,15 @@ export const STREAK_DAY_THRESHOLD_PERCENT = 80;
 export function getDailyProgressPercent(day?: DailyProgressValues | null): number {
   if (!day) return 0;
 
-  const steps = day.steps_tracking_active === false ? 0 : Number(day.steps || 0);
-  const completedTaskCount =
-    (steps >= DAILY_STEP_GOAL ? 1 : 0) +
-    countCompletedDailyExercises({
-      jumping_jacks: Number(day.jumping_jacks || 0),
-      push_ups: Number(day.push_ups || 0),
-      squats: Number(day.squats || 0),
-      planks: Number(day.planks || 0),
-      sit_ups: Number(day.sit_ups || 0),
-    });
-  const taskCount = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+  // Schritte zählen nicht mehr zum Tagesziel – nur die Übungen.
+  const completedTaskCount = countCompletedDailyExercises({
+    jumping_jacks: Number(day.jumping_jacks || 0),
+    push_ups: Number(day.push_ups || 0),
+    squats: Number(day.squats || 0),
+    planks: Number(day.planks || 0),
+    sit_ups: Number(day.sit_ups || 0),
+  });
+  const taskCount = Object.keys(DAILY_EXERCISE_GOALS).length;
 
   return Math.min(100, Math.round((completedTaskCount / taskCount) * 100));
 }
@@ -212,10 +210,9 @@ export function countCompletedDailyExercises(values: Partial<Record<keyof typeof
 }
 
 export function isDailyGoalComplete(
-  steps: number,
   values: Partial<Record<keyof typeof DAILY_EXERCISE_GOALS, number>>
 ): boolean {
-  return steps >= DAILY_STEP_GOAL && countCompletedDailyExercises(values) === Object.keys(DAILY_EXERCISE_GOALS).length;
+  return countCompletedDailyExercises(values) === Object.keys(DAILY_EXERCISE_GOALS).length;
 }
 
 // === Class Participation ===

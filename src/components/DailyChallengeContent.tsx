@@ -47,6 +47,9 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const [results, setResults] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const isHealthSupported = HealthService.isHealthPlatformSupported();
+  // Schritte werden auf Android nicht mehr angezeigt (Feature komplett entfernt);
+  // auf iOS bleiben sie als nicht-zählender Zusatz erhalten.
+  const showSteps = !HealthService.isNativeAndroid();
   const healthSourceLabel = HealthService.getHealthSourceLabel();
   const muscleTrainingInfo =
     userAge !== null && userAge <= 11
@@ -253,18 +256,17 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
       console.error("Error saving results:", error);
       toast.error("Fehler beim Speichern der Ergebnisse");
     } else {
-      const previousSteps = Number(existingRow?.steps || 0);
       const previouslyCompleted = countCompletedExercises(previousResults);
       const currentlyCompleted = countCompletedExercises(currentResults);
       const completionDelta = Math.max(0, currentlyCompleted - previouslyCompleted);
-      const previouslyCompletedDailyGoal = isDailyGoalComplete(previousSteps, {
+      const previouslyCompletedDailyGoal = isDailyGoalComplete({
         push_ups: previousResults["Push-ups"],
         squats: previousResults["Squats"],
         planks: previousResults["Planks"],
         sit_ups: previousResults["Sit-ups"],
         jumping_jacks: previousResults["Jumping Jacks"],
       });
-      const currentlyCompletedDailyGoal = isDailyGoalComplete(steps, {
+      const currentlyCompletedDailyGoal = isDailyGoalComplete({
         push_ups: currentResults["Push-ups"],
         squats: currentResults["Squats"],
         planks: currentResults["Planks"],
@@ -286,22 +288,9 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
 
   const saveSteps = async (realSteps: number) => {
     const today = new Date().toISOString().split("T")[0];
-    const { data: existingRow } = await supabase
-      .from("daily_results")
-      .select("push_ups, squats, planks, sit_ups, jumping_jacks, steps")
-      .eq("user_id", userId)
-      .eq("date", today)
-      .maybeSingle();
 
-    const previousResults = {
-      push_ups: Number(existingRow?.push_ups || 0),
-      squats: Number(existingRow?.squats || 0),
-      planks: Number(existingRow?.planks || 0),
-      sit_ups: Number(existingRow?.sit_ups || 0),
-      jumping_jacks: Number(existingRow?.jumping_jacks || 0),
-    };
-    const previousSteps = Number(existingRow?.steps || 0);
-
+    // Schritte werden nur noch zur Anzeige gespeichert – sie zählen nicht zum
+    // Tagesziel und geben keine Blitze mehr.
     await supabase
       .from("daily_results")
       .upsert(
@@ -312,13 +301,6 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
         },
         { onConflict: "user_id,date" }
       );
-
-    const dailyGoalWasComplete = isDailyGoalComplete(previousSteps, previousResults);
-    const dailyGoalIsComplete = isDailyGoalComplete(realSteps, previousResults);
-
-    if (!dailyGoalWasComplete && dailyGoalIsComplete) {
-      await awardFlashes(BOOST_POINT_RULES.dailyGoalCompleted);
-    }
   };
 
   const activateStepTracking = async () => {
@@ -418,7 +400,8 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
   const isStepsComplete = steps >= DAILY_STEP_GOAL;
   const completedExercises = exercises.filter(e => isExerciseComplete(e.name)).length;
   const allExercisesComplete = completedExercises === exercises.length;
-  const isDailyChallengeComplete = isStepsComplete && allExercisesComplete;
+  // Schritte zählen nicht mehr zum Tagesziel – nur alle Übungen sind entscheidend.
+  const isDailyChallengeComplete = allExercisesComplete;
 
   const stepsProgress = Math.min((steps / DAILY_STEP_GOAL) * 100, 100);
   if (loading) {
@@ -466,7 +449,8 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
         </div>
       </Card>
 
-      {/* PART 1: Steps */}
+      {/* PART 1: Steps (nur iOS/Web – auf Android entfernt) */}
+      {showSteps && (
       <Card className={`overflow-hidden rounded-[30px] border p-0 shadow-[0_18px_38px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.78)] ${
         isStepsComplete ? "border-primary/20 bg-[linear-gradient(180deg,#f0fff4_0%,#ffffff_72%)]" : "border-black/5 bg-white"
       }`}>
@@ -534,6 +518,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
         )}
         </div>
       </Card>
+      )}
 
       {/* PART 2: Exercises */}
       <Card className={`overflow-hidden rounded-[30px] border p-4 shadow-[0_18px_38px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.78)] sm:p-5 ${
@@ -546,7 +531,7 @@ export const DailyChallengeContent = ({ userId }: DailyChallengeContentProps) =>
             {allExercisesComplete ? <CheckCircle2 className="h-6 w-6" /> : "2"}
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-black leading-tight text-foreground">Challenge 2: Übungen</h3>
+            <h3 className="text-xl font-black leading-tight text-foreground">Challenge {showSteps ? 2 : 1}: Übungen</h3>
             <p className="mt-1 text-sm font-semibold text-muted-foreground">{completedExercises} von {exercises.length} abgeschlossen</p>
 
           </div>

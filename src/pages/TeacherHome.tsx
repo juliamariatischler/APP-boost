@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, Check, ChevronLeft, ChevronRight, ClipboardList, Footprints, Loader2, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, Medal, MessageSquare, Plus, QrCode, Send, Star, Trophy, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
@@ -15,7 +15,7 @@ import { TeacherBottomNav } from "@/components/TeacherBottomNav";
 import { useCodeAuth } from "@/contexts/CodeAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAppRole } from "@/lib/roles";
-import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, DAILY_STEP_GOAL, countCompletedDailyExercises } from "@/lib/gamification";
+import { BOOST_POINT_RULES, DAILY_EXERCISE_GOALS, countCompletedDailyExercises } from "@/lib/gamification";
 import { formatDisplayName } from "@/lib/formatName";
 import { JumpingJacksIcon, PlankIcon, PushUpIcon, SitUpIcon, SquatIcon } from "@/components/ExerciseIcons";
 import {
@@ -101,16 +101,15 @@ const getPrimaryProgressId = (student: ClassStudent) =>
   student.progress_user_id || student.auth_user_id || student.student_id;
 
 function getDayProgress(row: DailyRow): number {
-  const steps = row.steps_tracking_active ? Number(row.steps || 0) : 0;
-  const done = countCompletedDailyExercises({
+  // Schritte zählen nicht mehr zum Tagesziel – nur die Übungen.
+  const completed = countCompletedDailyExercises({
     jumping_jacks: row.jumping_jacks || 0,
     push_ups: row.push_ups || 0,
     squats: row.squats || 0,
     planks: row.planks || 0,
     sit_ups: row.sit_ups || 0,
   });
-  const completed = (steps >= DAILY_STEP_GOAL ? 1 : 0) + done;
-  const total = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+  const total = Object.keys(DAILY_EXERCISE_GOALS).length;
   return Math.min(100, Math.round((completed / total) * 100));
 }
 
@@ -697,7 +696,7 @@ export default function TeacherHome() {
 
   const updateExercise = (field: keyof TeacherProgress, delta: number) => {
     setTeacherProgress((prev) => {
-      const cap = field === "steps" ? DAILY_STEP_GOAL * 2 : (DAILY_EXERCISE_GOALS[field as keyof typeof DAILY_EXERCISE_GOALS] ?? 99) * 2;
+      const cap = (DAILY_EXERCISE_GOALS[field as keyof typeof DAILY_EXERCISE_GOALS] ?? 99) * 2;
       const next = { ...prev, [field]: Math.max(0, Math.min(cap, prev[field] + delta)) };
       if (teacherId) {
         const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -928,9 +927,8 @@ export default function TeacherHome() {
       sit_ups: teacherProgress.sit_ups,
       jumping_jacks: teacherProgress.jumping_jacks,
     });
-    const stepsDone = teacherProgress.steps >= DAILY_STEP_GOAL ? 1 : 0;
-    const totalDone = exerciseDone + stepsDone;
-    const totalTasks = Object.keys(DAILY_EXERCISE_GOALS).length + 1;
+    const totalDone = exerciseDone;
+    const totalTasks = Object.keys(DAILY_EXERCISE_GOALS).length;
     const progressPct = Math.round((totalDone / totalTasks) * 100);
 
     const exercises: {
@@ -995,28 +993,6 @@ export default function TeacherHome() {
           })}
         </div>
 
-        <Card className={`rounded-[20px] border-black/5 p-4 shadow-[0_8px_18px_rgba(0,0,0,0.06)] ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary/8 border-primary/30" : "bg-white"}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-muted">
-                <Footprints className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-black text-foreground">Schritte</p>
-                <p className="text-xs font-semibold text-muted-foreground">{teacherProgress.steps.toLocaleString("de")} / {DAILY_STEP_GOAL.toLocaleString("de")}</p>
-              </div>
-            </div>
-            {teacherProgress.steps >= DAILY_STEP_GOAL && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white">✓</span>}
-          </div>
-          <div className="mt-3 flex items-center gap-3">
-            <button type="button" onClick={() => updateExercise("steps", -500)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-black text-muted-foreground active:scale-95">−</button>
-            <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div className={`h-full rounded-full transition-all duration-300 ${teacherProgress.steps >= DAILY_STEP_GOAL ? "bg-primary" : "bg-primary/50"}`} style={{ width: `${Math.min(100, Math.round((teacherProgress.steps / DAILY_STEP_GOAL) * 100))}%` }} />
-            </div>
-            <button type="button" onClick={() => updateExercise("steps", 500)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white active:scale-95">+</button>
-          </div>
-          <p className="mt-2 text-center text-[10px] text-muted-foreground">+500 Schritte pro Tipp</p>
-        </Card>
       </div>
     );
   };

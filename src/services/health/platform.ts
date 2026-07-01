@@ -31,12 +31,12 @@ export const getHealthPlatformContext = (): HealthPlatformContext => {
     };
   }
 
+  // Android: Schrittzähler-Feature wurde entfernt (Kinder-App-Policy).
+  // Kein Health-/Sensor-Zugriff mehr → wie Web behandeln.
   if (runtime.platform === 'android') {
     return {
+      ...unsupportedContext,
       platform: 'android',
-      source: 'health_connect',
-      label: 'Schrittzähler',
-      isSupported: true,
     };
   }
 
