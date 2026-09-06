@@ -64,6 +64,7 @@ const STATIC_PROVIDERS: StaticProvider[] = [
 
 // ─── Sichtbare Termin-Vereine (nur fixe, freigeschaltete Try-it Angebote) ──────
 const VISIBLE_CLUB_IDS = [
+  "a1000000-0000-0000-0000-000000000001", // SK Sturm Graz Jugend
   "a1000000-0000-0000-0000-000000000006", // Footvolley Austria / Futvolei Club Graz
   "a1000000-0000-0000-0000-000000000007", // HIB Handball
   "a1000000-0000-0000-0000-000000000008", // Aikido Graz
