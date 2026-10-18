@@ -18,23 +18,31 @@ let currentSession: CodeSession | null = null;
 let currentOnOpen: ((data: Record<string, unknown>) => void) | undefined;
 let currentOnReceive: ((notification: ForegroundPush) => void) | undefined;
 
+type PushRpcCall = (
+  name: string,
+  args: Record<string, unknown>,
+) => PromiseLike<{ error: { message?: string } | null }>;
+
 // Meldet den zuletzt erhaltenen Token mit der aktuellen Session an Supabase.
 async function reportToken(): Promise<void> {
   if (!lastToken) return;
   try {
-    const callRpc = supabase.rpc as unknown as (
-      name: string,
-      args: Record<string, unknown>,
-    ) => PromiseLike<{ error: { message?: string } | null }>;
+    const installationId = getOrCreateDeviceId();
+    const callRpc = supabase.rpc.bind(supabase) as unknown as PushRpcCall;
     const { error } = await callRpc("register_push_subscription", {
       p_push_token:    lastToken,
       p_platform:      Capacitor.getPlatform(), // 'ios' | 'android'
       p_device_id:     currentSession?.device_id     ?? null,
       p_session_token: currentSession?.session_token ?? null,
-      p_installation_id: getOrCreateDeviceId(),
+      p_installation_id: installationId,
     });
-    if (error) console.warn("[PUSH] Registrierung abgelehnt:", error.message ?? error);
-  } catch {
+    if (error) {
+      console.warn("[PUSH] Registrierung abgelehnt:", error.message ?? error);
+      return;
+    }
+    console.info("[PUSH] Gerät registriert:", Capacitor.getPlatform(), installationId);
+  } catch (error) {
+    console.warn("[PUSH] Registrierung fehlgeschlagen:", error);
     // best-effort – ohne Token-Registrierung funktioniert die App normal weiter
   }
 }
@@ -99,10 +107,7 @@ export async function initPush(
 
 export async function clearPushIdentity(session: CodeSession): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  const callRpc = supabase.rpc as unknown as (
-    name: string,
-    args: Record<string, unknown>,
-  ) => PromiseLike<{ error: { message?: string } | null }>;
+  const callRpc = supabase.rpc.bind(supabase) as unknown as PushRpcCall;
   await callRpc("clear_push_subscription_identity", {
     p_installation_id: getOrCreateDeviceId(),
     p_device_id: session.device_id,

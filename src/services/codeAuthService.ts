@@ -44,7 +44,9 @@ const DEVICE_KEY  = "boost:device_id";
 export function getOrCreateDeviceId(): string {
   let id = localStorage.getItem(DEVICE_KEY);
   if (!id) {
-    id = crypto.randomUUID();
+    id = typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
     localStorage.setItem(DEVICE_KEY, id);
   }
   return id;
