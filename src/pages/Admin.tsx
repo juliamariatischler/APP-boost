@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import boostLogo from "@/assets/boost-logo.png";
 import { ArrowLeft, Loader2, UserPlus, UserMinus, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { PushAdmin } from "@/components/admin/PushAdmin";
 
 type Profile = {
   id: string;
@@ -735,6 +736,7 @@ const Admin = () => {
       </div>
 
       <div className="max-w-screen-xl mx-auto px-4 space-y-8">
+        <PushAdmin />
         <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-background to-emerald-50 p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">

@@ -107,46 +107,67 @@ async function getApnsToken(): Promise<string> {
   return jwt;
 }
 
-// ── Versand pro Plattform; gibt ungültige Tokens zurück ──────────────────────
-async function sendAndroid(tokens: string[], title: string, body: string, cta?: string | null) {
-  const dead: string[] = [];
-  if (tokens.length === 0) return dead;
+type Subscription = { id: string; push_token: string; platform: "ios" | "android" };
+type Delivery = {
+  subscription_id: string;
+  platform: "ios" | "android";
+  status: "accepted" | "failed";
+  provider_message_id?: string | null;
+  error?: string | null;
+  dead?: boolean;
+};
+
+function actionData(msg: Record<string, unknown>): Record<string, string> {
+  const actionType = String(msg.action_type ?? "none");
+  const actionValue = typeof msg.action_value === "string" ? msg.action_value : "";
+  const legacy = typeof msg.cta_url === "string" ? msg.cta_url : "";
+  return { action_type: actionType, action_value: actionValue, cta_url: legacy };
+}
+
+async function sendAndroid(subs: Subscription[], title: string, body: string, data: Record<string, string>) {
+  if (subs.length === 0) return [] as Delivery[];
   const accessToken = await getFcmAccessToken();
   const projectId   = Deno.env.get("FCM_PROJECT_ID")!;
   const url = `${FCM_HOST}/v1/projects/${projectId}/messages:send`;
 
-  await Promise.all(tokens.map(async (token) => {
+  return await Promise.all(subs.map(async (sub): Promise<Delivery> => {
     const message: Record<string, unknown> = {
-      token,
+      token: sub.push_token,
       notification: { title, body },
       android: { priority: "HIGH" },
+      data,
     };
-    if (cta) message.data = { cta_url: cta };
 
     const res = await fetch(url, {
       method: "POST",
       headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
     });
-    if (!res.ok) {
-      const txt = await res.text();
-      if (res.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(txt)) dead.push(token);
-      else console.error(`FCM ${res.status}: ${txt}`);
+    const txt = await res.text();
+    if (res.ok) {
+      let providerId: string | null = null;
+      try { providerId = JSON.parse(txt).name ?? null; } catch { /* no body */ }
+      return { subscription_id: sub.id, platform: "android", status: "accepted", provider_message_id: providerId };
     }
+    return {
+      subscription_id: sub.id,
+      platform: "android",
+      status: "failed",
+      error: `FCM ${res.status}: ${txt}`.slice(0, 1000),
+      dead: res.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(txt),
+    };
   }));
-  return dead;
 }
 
-async function sendIos(tokens: string[], title: string, body: string, cta?: string | null) {
-  const dead: string[] = [];
-  if (tokens.length === 0) return dead;
+async function sendIos(subs: Subscription[], title: string, body: string, data: Record<string, string>) {
+  if (subs.length === 0) return [] as Delivery[];
   const jwt   = await getApnsToken();
   const topic = Deno.env.get("APNS_TOPIC")!;
 
   const payload: Record<string, unknown> = {
     aps: { alert: { title, body }, sound: "default" },
+    ...data,
   };
-  if (cta) payload.cta_url = cta;
   const bodyStr = JSON.stringify(payload);
   const headers = {
     "authorization": `bearer ${jwt}`,
@@ -155,20 +176,23 @@ async function sendIos(tokens: string[], title: string, body: string, cta?: stri
     "apns-priority": "10",
   };
 
-  await Promise.all(tokens.map(async (token) => {
-    // Prod + Sandbox durchprobieren; nur bei echtem "Unregistered" als tot markieren.
-    let badOnAll = true;
+  return await Promise.all(subs.map(async (sub): Promise<Delivery> => {
+    let lastError = "BadDeviceToken";
     for (const host of APNS_HOSTS) {
-      const res = await fetch(`${host}/3/device/${token}`, { method: "POST", headers, body: bodyStr });
-      if (res.ok) { badOnAll = false; break; }
+      const res = await fetch(`${host}/3/device/${sub.push_token}`, { method: "POST", headers, body: bodyStr });
+      if (res.ok) {
+        return { subscription_id: sub.id, platform: "ios", status: "accepted", provider_message_id: res.headers.get("apns-id") };
+      }
       const txt = await res.text();
-      if (res.status === 410 || /Unregistered/.test(txt)) { dead.push(token); badOnAll = false; break; }
+      lastError = `APNs ${res.status}: ${txt}`;
+      if (res.status === 410 || /Unregistered/.test(txt)) {
+        return { subscription_id: sub.id, platform: "ios", status: "failed", error: lastError, dead: true };
+      }
       if (/BadDeviceToken/.test(txt)) continue; // falsche Umgebung → anderen Host probieren
-      console.error(`APNs ${res.status}: ${txt}`); badOnAll = false; break;
+      return { subscription_id: sub.id, platform: "ios", status: "failed", error: lastError.slice(0, 1000) };
     }
-    if (badOnAll) dead.push(token); // BadDeviceToken auf BEIDEN Hosts → wirklich ungültig
+    return { subscription_id: sub.id, platform: "ios", status: "failed", error: lastError, dead: true };
   }));
-  return dead;
 }
 
 // ── Hauptablauf ──────────────────────────────────────────────────────────────
@@ -185,13 +209,7 @@ serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? token;
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
 
-  // Fällige Nachrichten atomar "claimen" (pending → sending), damit nichts doppelt rausgeht
-  const { data: claimed, error: claimErr } = await supabase
-    .from("push_messages")
-    .update({ status: "sending" })
-    .eq("status", "pending")
-    .lte("scheduled_at", new Date().toISOString())
-    .select("*");
+  const { data: claimed, error: claimErr } = await supabase.rpc("claim_due_push_messages", { p_limit: 20 });
 
   if (claimErr) {
     console.error("claim error:", claimErr.message);
@@ -203,12 +221,12 @@ serve(async (req) => {
     });
   }
 
-  const results: Array<{ id: string; sent: number }> = [];
+  const results: Array<{ id: string; accepted: number; failed: number }> = [];
 
   for (const msg of claimed) {
     try {
       // Empfänger-Tokens je nach Zielgruppe auflösen
-      let q = supabase.from("push_subscriptions").select("push_token, platform");
+      let q = supabase.from("push_subscriptions").select("id, push_token, platform").eq("is_active", true);
       if (msg.target === "student" || msg.target === "teacher") {
         q = q.eq("user_type", msg.target);
       } else if (msg.target === "class") {
@@ -219,26 +237,46 @@ serve(async (req) => {
       const { data: subs, error: subErr } = await q;
       if (subErr) throw subErr;
 
-      const android = (subs ?? []).filter((s) => s.platform === "android").map((s) => s.push_token);
-      const ios     = (subs ?? []).filter((s) => s.platform === "ios").map((s) => s.push_token);
+      const android = (subs ?? []).filter((s) => s.platform === "android") as Subscription[];
+      const ios     = (subs ?? []).filter((s) => s.platform === "ios") as Subscription[];
+      const data = actionData(msg);
 
-      const [deadA, deadI] = await Promise.all([
-        sendAndroid(android, msg.title, msg.body, msg.cta_url),
-        sendIos(ios, msg.title, msg.body, msg.cta_url),
+      const [deliveriesA, deliveriesI] = await Promise.all([
+        sendAndroid(android, msg.title, msg.body, data),
+        sendIos(ios, msg.title, msg.body, data),
       ]);
+      const deliveries = [...deliveriesA, ...deliveriesI];
 
-      // Tote Tokens entfernen
-      const dead = [...deadA, ...deadI];
-      if (dead.length > 0) {
-        await supabase.from("push_subscriptions").delete().in("push_token", dead);
+      if (deliveries.length > 0) {
+        const { error: deliveryError } = await supabase.from("push_message_deliveries").insert(
+          deliveries.map(({ dead: _dead, ...delivery }) => ({ ...delivery, message_id: msg.id })),
+        );
+        if (deliveryError) throw deliveryError;
       }
 
-      const sent = android.length + ios.length - dead.length;
+      const deadIds = deliveries.filter((d) => d.dead).map((d) => d.subscription_id);
+      if (deadIds.length > 0) {
+        await supabase.from("push_subscriptions")
+          .update({ is_active: false, disabled_at: new Date().toISOString() })
+          .in("id", deadIds);
+      }
+
+      const accepted = deliveries.filter((d) => d.status === "accepted").length;
+      const failed = deliveries.length - accepted;
+      const status = deliveries.length === 0 || accepted === 0 ? "failed" : failed > 0 ? "partially_failed" : "sent";
       await supabase.from("push_messages")
-        .update({ status: "sent", sent_count: sent, sent_at: new Date().toISOString() })
+        .update({
+          status,
+          attempted_count: deliveries.length,
+          success_count: accepted,
+          failure_count: failed,
+          sent_count: accepted,
+          sent_at: new Date().toISOString(),
+          error: deliveries.length === 0 ? "Keine aktiven Empfänger gefunden" : null,
+        })
         .eq("id", msg.id);
 
-      results.push({ id: msg.id, sent });
+      results.push({ id: msg.id, accepted, failed });
     } catch (e) {
       console.error(`Nachricht ${msg.id} fehlgeschlagen:`, String(e));
       await supabase.from("push_messages")

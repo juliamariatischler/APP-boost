@@ -15,6 +15,7 @@ import {
   logout,
 } from "@/services/codeAuthService";
 import { CODE_SESSION_CLEARED_EVENT } from "@/lib/logout";
+import { clearPushIdentity } from "@/lib/push";
 
 interface CodeAuthContextValue {
   session: CodeSession | null;
@@ -83,7 +84,10 @@ export function CodeAuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      if (session) await logout(session);
+      if (session) {
+        await clearPushIdentity(session).catch(() => undefined);
+        await logout(session);
+      }
     } finally {
       setSession(null);
     }

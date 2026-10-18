@@ -4,20 +4,34 @@ import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import type { CodeSession } from "@/services/codeAuthService";
+import { getOrCreateDeviceId } from "@/services/codeAuthService";
+
+export type ForegroundPush = {
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+};
 
 let listenersBound = false;
 let lastToken: string | null = null;
 let currentSession: CodeSession | null = null;
+let currentOnOpen: ((data: Record<string, unknown>) => void) | undefined;
+let currentOnReceive: ((notification: ForegroundPush) => void) | undefined;
 
 // Meldet den zuletzt erhaltenen Token mit der aktuellen Session an Supabase.
 async function reportToken(): Promise<void> {
   if (!lastToken) return;
   try {
-    const { error } = await (supabase.rpc as any)("register_push_subscription", {
+    const callRpc = supabase.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ error: { message?: string } | null }>;
+    const { error } = await callRpc("register_push_subscription", {
       p_push_token:    lastToken,
       p_platform:      Capacitor.getPlatform(), // 'ios' | 'android'
       p_device_id:     currentSession?.device_id     ?? null,
       p_session_token: currentSession?.session_token ?? null,
+      p_installation_id: getOrCreateDeviceId(),
     });
     if (error) console.warn("[PUSH] Registrierung abgelehnt:", error.message ?? error);
   } catch {
@@ -32,10 +46,14 @@ async function reportToken(): Promise<void> {
  */
 export async function initPush(
   session: CodeSession | null,
-  onOpenUrl?: (url: string) => void,
+  onOpen?: (data: Record<string, unknown>) => void,
+  onReceive?: (notification: ForegroundPush) => void,
+  onPermissionDenied?: () => void,
 ): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   currentSession = session;
+  currentOnOpen = onOpen;
+  currentOnReceive = onReceive;
 
   if (listenersBound) {
     void reportToken();
@@ -54,8 +72,15 @@ export async function initPush(
 
   // Tippt der Nutzer auf die Benachrichtigung und es gibt einen Deep-Link → öffnen
   await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-    const url = (action.notification?.data as Record<string, unknown> | undefined)?.cta_url;
-    if (typeof url === "string" && url && onOpenUrl) onOpenUrl(url);
+    currentOnOpen?.((action.notification?.data as Record<string, unknown> | undefined) ?? {});
+  });
+
+  await PushNotifications.addListener("pushNotificationReceived", (notification) => {
+    currentOnReceive?.({
+      title: notification.title ?? "BOOST",
+      body: notification.body ?? "",
+      data: (notification.data as Record<string, unknown> | undefined) ?? {},
+    });
   });
 
   // Erlaubnis einholen (zeigt auf iOS den System-Dialog)
@@ -64,7 +89,23 @@ export async function initPush(
   if (receive === "prompt" || receive === "prompt-with-rationale") {
     receive = (await PushNotifications.requestPermissions()).receive;
   }
-  if (receive !== "granted") return;
+  if (receive !== "granted") {
+    onPermissionDenied?.();
+    return;
+  }
 
   await PushNotifications.register(); // löst den 'registration'-Listener aus
+}
+
+export async function clearPushIdentity(session: CodeSession): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  const callRpc = supabase.rpc as unknown as (
+    name: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ error: { message?: string } | null }>;
+  await callRpc("clear_push_subscription_identity", {
+    p_installation_id: getOrCreateDeviceId(),
+    p_device_id: session.device_id,
+    p_session_token: session.session_token,
+  });
 }
