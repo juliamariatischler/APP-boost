@@ -10,7 +10,6 @@ import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import AppOnboarding from "@/components/AppOnboarding";
 import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
-import { RewardsHintModal } from "@/components/RewardsHintModal";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
 import { ParentalGateProvider } from "@/components/ParentalGate";
 import { PushRegistrar } from "@/components/PushRegistrar";
@@ -30,7 +29,6 @@ const Klasse = lazy(() => import("./pages/Klasse"));
 const Profil = lazy(() => import("./pages/Profil"));
 const ChallengeDetail = lazy(() => import("./pages/ChallengeDetail"));
 const Admin = lazy(() => import("./pages/Admin"));
-const Rewards = lazy(() => import("./pages/Rewards"));
 const Activity = lazy(() => import("./pages/Activity"));
 const Boost = lazy(() => import("./pages/Boost"));
 const Legal = lazy(() => import("./pages/Legal"));
@@ -109,7 +107,6 @@ const App = () => (
             {/* 14-Tage-Feedback-Pop-up: erscheint einmalig nach 14 Tagen Nutzung */}
             <FeedbackPromptModal />
             {/* Belohnungs-Hinweis: erscheint ab 09.06.2026 einmalig für jedes Kind */}
-            <RewardsHintModal />
             {/* Datenbankgesteuerte Scheduled Pop-ups: Inhalt komplett via Supabase steuerbar */}
             <AnnouncementModal />
             <Suspense fallback={<RouteFallback />}>
@@ -131,7 +128,7 @@ const App = () => (
                 <Route path="/profil" element={<Profil />} />
                 <Route path="/challenge/:id" element={<ChallengeDetail />} />
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/rewards" element={<Rewards />} />
+                <Route path="/rewards" element={<Navigate to="/profil" replace />} />
                 <Route path="/activity" element={<Activity />} />
                 <Route path="/boost" element={<Boost />} />
                 <Route path="/legal" element={<Legal />} />
