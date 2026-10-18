@@ -586,21 +586,6 @@ const Profil = () => {
 
             <button
               type="button"
-              onClick={() => navigate("/rewards")}
-              className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
-            >
-              <div className="flex items-center gap-3">
-                <Award className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium text-foreground">Belohnungen</p>
-                  <p className="text-sm text-muted-foreground">Persönliche und Klassen-Rewards</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-
-            <button
-              type="button"
               onClick={() => setFeedbackOpen(true)}
               className="flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left transition hover:bg-muted/60"
             >
